@@ -1,0 +1,217 @@
+package net.kprod.dsb;
+
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.*;
+import com.google.api.services.drive.model.File;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class DriveServiceImpl implements DriveService {
+    private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
+
+
+    private Drive drive;
+
+    private static final String APPLICATION_NAME = "Google Drive API Java Quickstart";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    //private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_METADATA_READONLY);
+    private static final List<String> SCOPES = Arrays.asList(DriveScopes.DRIVE_FILE);
+
+    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
+
+    private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
+            throws IOException {
+        // Load client secrets.
+        InputStream in = DriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
+        if (in == null) {
+            throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
+        }
+        GoogleClientSecrets clientSecrets =
+                GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+        // Build flow and trigger user authorization request.
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+                .setAccessType("offline")
+                .build();
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setHost("vps-a2dd2c59.vps.ovh.net").setPort(8087).build();
+        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        //returns an authorized Credential object.
+        return credential;
+    }
+
+    @PostConstruct
+    public void oauthInit() throws IOException, GeneralSecurityException {
+        // Build a new authorized API client service.
+        LOG.info("init oauth credentials");
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+        LOG.info("connected !");
+
+        this.watch();
+
+    }
+
+    public void watchStop() throws IOException {
+
+        drive.channels().stop(channel);
+
+    }
+
+    public void watch() throws IOException {
+
+        String channelId = UUID.randomUUID().toString();
+
+        String notifyHost = "https://53f2-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        channel = new Channel()
+                .setType("web_hook")
+                .setAddress(notifyHost + "/notify")
+                .setId(channelId); // ID unique pour le canal
+
+        // Définir le champ "startPageToken" pour commencer à surveiller
+        lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
+
+        // Créer une surveillance pour les changements
+        Channel response = drive.changes().watch(lastPageToken, channel).execute();
+
+        // Afficher les détails de la notification
+        resourceId = response.getResourceId();
+        //System.out.println("Notification Channel Created:");
+        //System.out.println("Resource ID: " + response.getResourceId());
+        //System.out.println("Channel ID: " + response.getId());
+        //System.out.println("Expiration: " + response.getExpiration());
+
+        long now = System.currentTimeMillis();
+        long exp = response.getExpiration();
+
+        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", response.getResourceId(), channelId, lastPageToken, (exp - now));
+
+
+    }
+
+    String lastPageToken = null;
+    String resourceId = null;
+    Channel channel;
+
+    public void getChanges() {
+
+
+        try {
+            ChangeList changes = drive.changes().list(lastPageToken).execute();
+            LOG.info("Changes {}", changes.size());
+            lastPageToken = changes.getNewStartPageToken();
+
+            if(!changes.isEmpty()) {
+                for (Change change : changes.getChanges()) {
+                    //if (change.getFileId() != null && change.getFileId().equals(resourceId)) {
+
+                    LOG.info(" >lastPageToken {} filename {} fileId {} mime {} change type : {} ", lastPageToken, change.getFile().getName(), change.getFileId(), change.getFile().getMimeType(), change.getChangeType());
+
+                    String path = "/tmp/" + change.getFile().getName();
+
+                    this.downloadFile(change.getFileId(), path);
+
+                    LOG.info("downloaded to {} ", path);
+
+                }
+            }
+            else {
+                LOG.info("no changes found");
+            }
+
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public String getFileName(String fileId) throws IOException {
+        // Appeler la méthode files.get pour récupérer le nom du fichier
+        File file = drive.files().get(fileId).setFields("name").execute();
+        return file.getName();
+    }
+
+    public void downloadFile(String fileId, String destinationPath) throws IOException {
+        // Récupérer les informations du fichier
+        File file = drive.files().get(fileId).setFields("name, mimeType").execute();
+
+        // Vérifier si le fichier est téléchargeable
+        if (file.getMimeType().equals("application/vnd.google-apps.document") ||
+                file.getMimeType().equals("application/vnd.google-apps.spreadsheet") ||
+                file.getMimeType().equals("application/vnd.google-apps.presentation")) {
+            throw new IOException("Le fichier est un document Google. Utilisez l'exportation au lieu du téléchargement.");
+        }
+
+        // Télécharger le contenu du fichier
+        try (OutputStream outputStream = new FileOutputStream(destinationPath)) {
+            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
+        }
+    }
+
+    public void list() throws IOException {
+        //'${1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi}' in parents
+        //q=parent:1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi
+
+        String query = "'1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi' in parents and trashed = false";
+        FileList result = drive.files().list()
+                .setQ(query)
+                .setFields("files(id, name)")
+                .execute();
+
+        List<File> files = result.getFiles();
+
+        if (files == null || files.isEmpty()) {
+            System.out.println("No files found.");
+        } else {
+            System.out.println("Files in folder:");
+            for (File file : files) {
+                System.out.printf("File ID: %s, Name: %s\n", file.getId(), file.getName());
+            }
+        }
+
+
+//        // Print the names and IDs for up to 10 files.
+//        FileList result = drive.files().list()
+//                .setPageSize(10)
+//                .setFields("nextPageToken, files(id, name)")
+//                .execute();
+//        List<File> files = result.getFiles();
+//        if (files == null || files.isEmpty()) {
+//            LOG.warn("No files found.");
+//        } else {
+//            LOG.info("Found {} files.", files.size());
+//            for (File file : files) {
+//                System.out.printf("%s (%s)\n", file.getName(), file.getId());
+//                LOG.info("{} id {}", file.getName(), file.getId());
+//            }
+//        }
+    }
+}

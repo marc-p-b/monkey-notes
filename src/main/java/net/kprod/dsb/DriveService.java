@@ -1,7 +1,5 @@
 package net.kprod.dsb;
 
-import com.google.api.services.drive.model.File;
-
 import java.io.IOException;
 
 public interface DriveService {
@@ -11,5 +9,6 @@ public interface DriveService {
     String getFileName(String fileId) throws IOException;
     void downloadFile(String fileId, String destinationPath) throws IOException;
     void getChanges();
+    void flushChanges();
 
 }

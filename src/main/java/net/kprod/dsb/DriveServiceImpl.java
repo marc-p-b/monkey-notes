@@ -18,19 +18,27 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.time.ZonedDateTime;
+import java.util.*;
 
 @Service
 public class DriveServiceImpl implements DriveService {
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
+
+    @Autowired
+    private ApplicationContext ctx;
+
+    private List<ChangedFile> watchedFileChanges;
+    private Map<String, UUID> lastChanges;
 
     private Drive drive;
 
@@ -86,9 +94,12 @@ public class DriveServiceImpl implements DriveService {
 
     public void watch() throws IOException {
 
+        lastChanges = new HashMap<>();
+        watchedFileChanges = new ArrayList<>();
+
         String channelId = UUID.randomUUID().toString();
 
-        String notifyHost = "https://53f2-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        String notifyHost = "https://972d-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
         channel = new Channel()
                 .setType("web_hook")
                 .setAddress(notifyHost + "/notify")
@@ -129,15 +140,18 @@ public class DriveServiceImpl implements DriveService {
 
             if(!changes.isEmpty()) {
                 for (Change change : changes.getChanges()) {
-                    //if (change.getFileId() != null && change.getFileId().equals(resourceId)) {
 
-                    LOG.info(" >lastPageToken {} filename {} fileId {} mime {} change type : {} ", lastPageToken, change.getFile().getName(), change.getFileId(), change.getFile().getMimeType(), change.getChangeType());
+                    //LOG.info(" >lastPageToken {} filename {} fileId {} mime {} change type : {} ", lastPageToken, change.getFile().getName(), change.getFileId(), change.getFile().getMimeType(), change.getChangeType());
 
-                    String path = "/tmp/" + change.getFile().getName();
 
-                    this.downloadFile(change.getFileId(), path);
+                    ChangedFile changedFile = new ChangedFile(change);
+                    LOG.info("Added a change fileId {} name {} uuid {} time {}", change.getFileId(), change.getFile().getName(), changedFile.getUuid(), changedFile.getTimestamp().toEpochSecond());
 
-                    LOG.info("downloaded to {} ", path);
+
+                    watchedFileChanges.add(changedFile);
+                    lastChanges.put(change.getFileId(), changedFile.getUuid());
+
+                    taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(10).toInstant());
 
                 }
             }
@@ -149,6 +163,46 @@ public class DriveServiceImpl implements DriveService {
 
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+    }
+
+    public void flushChanges() {
+
+        for(Map.Entry<String, UUID> lastEntry : lastChanges.entrySet()) {
+
+            String fileId = lastEntry.getKey();
+            UUID uuid = lastEntry.getValue();
+
+            LOG.info("flush change fileId {} uuid {}", fileId, uuid);
+
+            long remaining = watchedFileChanges.stream()
+                            .filter(changedFile -> changedFile.getChange().getFileId().equals(fileId))
+                            .count();
+
+            if(remaining > 1) {
+                Optional<ChangedFile> first = watchedFileChanges.stream()
+                        .sorted(Comparator.comparing(ChangedFile::getTimestamp))
+                        .findFirst();
+                LOG.info("removed {}", first.get().getTimestamp().toEpochSecond());
+                watchedFileChanges.remove(first.get());
+            } else {
+                Optional<ChangedFile> optLast = watchedFileChanges.stream()
+                        .filter(changedFile -> changedFile.getChange().getFileId().equals(fileId))
+                        .findFirst();
+
+                Change lastChange = optLast.get().getChange();
+
+                LOG.info(" >> Processing change for fileId{} name {}", lastChange.getFileId(), lastChange.getFile().getName());
+                String path = "/tmp/" + lastChange.getFile().getName();
+                try {
+                    this.downloadFile(lastChange.getFileId(), path);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                LOG.info("  >> downloaded to {} ", path);
+            }
+
         }
 
     }
@@ -197,21 +251,5 @@ public class DriveServiceImpl implements DriveService {
             }
         }
 
-
-//        // Print the names and IDs for up to 10 files.
-//        FileList result = drive.files().list()
-//                .setPageSize(10)
-//                .setFields("nextPageToken, files(id, name)")
-//                .execute();
-//        List<File> files = result.getFiles();
-//        if (files == null || files.isEmpty()) {
-//            LOG.warn("No files found.");
-//        } else {
-//            LOG.info("Found {} files.", files.size());
-//            for (File file : files) {
-//                System.out.printf("%s (%s)\n", file.getName(), file.getId());
-//                LOG.info("{} id {}", file.getName(), file.getId());
-//            }
-//        }
     }
 }

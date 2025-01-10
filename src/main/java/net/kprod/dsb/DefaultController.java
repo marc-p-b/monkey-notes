@@ -53,50 +53,80 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
+
+
     @PostMapping("/notify")
     public ResponseEntity<String> notifyChange(
+            @RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
+            @RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
+            @RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI) {
 
-        @RequestHeader("X-Goog-Channel-ID") String channelId,
-        @RequestHeader("X-Goog-Resource-ID") String resourceId,
-        @RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
-        @RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
-        @RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI,
-
-        @RequestBody(required = false) String body) {
-
-            // Log les informations de la notification
         LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
-//        LOG.info("Channel ID: " + channelId);
-        //LOG.info("Resource ID: " + resourceId);
-        //LOG.info("Resource State: " + resourceState);
         LOG.info("Message Number: " + messageNumber);
         LOG.info("resourceURI: " + resourceURI);
-//        LOG.info("Body: " + body);
-//
-//            // Vérifiez l'état de la ressource (ex: "add", "update", "delete")
-//            if (resourceState != null) {
-//                switch (resourceState) {
-//                    case "add":
-//                        LOG.info("A new resource was added.");
-//                        break;
-//                    case "update":
-//                        LOG.info("A resource was updated.");
-//                        break;
-//                    case "delete":
-//                        LOG.info("A resource was deleted.");
-//                        break;
-//                    default:
-//                        LOG.info("Unknown resource state: " + resourceState);
-//                }
-//            }
-
-
 
         driveService.getChanges();
 
-            // Retourner un statut HTTP 200 pour confirmer la réception
-            return new ResponseEntity<>("Notification received", HttpStatus.OK);
-        }
+        return new ResponseEntity<>("Notification received", HttpStatus.OK);
+    }
+
+
+
+
+
+//    @PostMapping("/notify")
+//    public ResponseEntity<String> notifyChange(
+//    ){
+//        LOG.info("Notify changed");
+//
+//        return new ResponseEntity<>("Notification received", HttpStatus.OK);};
+
+
+
+
+//    @PostMapping("/notify")
+//    public ResponseEntity<String> notifyChange(
+//
+//        @RequestHeader(value = "X-Goog-Channel-ID", required = false) String channelId,
+//        @RequestHeader(value = "X-Goog-Resource-ID", required = false) String resourceId,
+//        @RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
+//        @RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
+//        @RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI,
+//        @RequestBody(required = false) String body) {
+//
+//            // Log les informations de la notification
+//        LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
+////        LOG.info("Channel ID: " + channelId);
+//        //LOG.info("Resource ID: " + resourceId);
+//        //LOG.info("Resource State: " + resourceState);
+//        LOG.info("Message Number: " + messageNumber);
+//        LOG.info("resourceURI: " + resourceURI);
+////        LOG.info("Body: " + body);
+////
+////            // Vérifiez l'état de la ressource (ex: "add", "update", "delete")
+////            if (resourceState != null) {
+////                switch (resourceState) {
+////                    case "add":
+////                        LOG.info("A new resource was added.");
+////                        break;
+////                    case "update":
+////                        LOG.info("A resource was updated.");
+////                        break;
+////                    case "delete":
+////                        LOG.info("A resource was deleted.");
+////                        break;
+////                    default:
+////                        LOG.info("Unknown resource state: " + resourceState);
+////                }
+////            }
+//
+//
+//
+//        driveService.getChanges();
+//
+//            // Retourner un statut HTTP 200 pour confirmer la réception
+//            return new ResponseEntity<>("Notification received", HttpStatus.OK);
+//        }
 
 
 

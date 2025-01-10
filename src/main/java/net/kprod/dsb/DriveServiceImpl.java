@@ -18,11 +18,14 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -50,6 +53,12 @@ public class DriveServiceImpl implements DriveService {
 
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
+    @Autowired
+    private ProcessFile processFile;
+
+    //https://stackoverflow.com/questions/77410607/zorin-os-python-installation-error-with-pyenv-for-no-module-named-ssl
+
+
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
         // Load client secrets.
@@ -67,12 +76,15 @@ public class DriveServiceImpl implements DriveService {
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setHost("vps-a2dd2c59.vps.ovh.net").setPort(8087).build();
+        //LocalServerReceiver receiver = new LocalServerReceiver.Builder().setHost("8fbb-2001-41d0-305-2100-00-1b7f.ngrok-free.app").setPort(-1)
+                //.build();
         Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
         //returns an authorized Credential object.
         return credential;
     }
 
-    @PostConstruct
+    //@PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void oauthInit() throws IOException, GeneralSecurityException {
         // Build a new authorized API client service.
         LOG.info("init oauth credentials");
@@ -99,7 +111,8 @@ public class DriveServiceImpl implements DriveService {
 
         String channelId = UUID.randomUUID().toString();
 
-        String notifyHost = "https://972d-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        String notifyHost = "https://a236-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+
         channel = new Channel()
                 .setType("web_hook")
                 .setAddress(notifyHost + "/notify")
@@ -201,6 +214,8 @@ public class DriveServiceImpl implements DriveService {
                     throw new RuntimeException(e);
                 }
                 LOG.info("  >> downloaded to {} ", path);
+
+                processFile.asyncProcessFile(Path.of(path).toFile());
             }
 
         }

@@ -101,7 +101,7 @@ public class DriveServiceImpl implements DriveService {
         watchedFileChanges = new ArrayList<>();
 
         String channelId = UUID.randomUUID().toString();
-        String notifyHost = "https://a236-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        String notifyHost = "https://1dfd-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")

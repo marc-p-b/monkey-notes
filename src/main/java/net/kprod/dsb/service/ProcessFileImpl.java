@@ -1,4 +1,4 @@
-package net.kprod.dsb;
+package net.kprod.dsb.service;
 
 import org.springframework.stereotype.Service;
 
@@ -11,6 +11,7 @@ public class ProcessFileImpl implements ProcessFile {
         @Override
     public void asyncProcessFile(File file) {
             //sudo apt install poppler-utils
+            //https://stackoverflow.com/questions/77410607/zorin-os-python-installation-error-with-pyenv-for-no-module-named-ssl
             //pdftoppm doc1.pdf doc -png
 
             String path = file.getAbsolutePath();

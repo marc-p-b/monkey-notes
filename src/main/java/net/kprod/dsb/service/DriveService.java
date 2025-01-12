@@ -1,4 +1,4 @@
-package net.kprod.dsb;
+package net.kprod.dsb.service;
 
 import java.io.IOException;
 

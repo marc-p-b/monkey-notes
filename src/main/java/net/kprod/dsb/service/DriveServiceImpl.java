@@ -1,4 +1,4 @@
-package net.kprod.dsb;
+package net.kprod.dsb.service;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -12,9 +12,10 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import com.google.api.services.drive.model.*;
 import com.google.api.services.drive.model.File;
-import jakarta.annotation.PostConstruct;
+import com.google.api.services.drive.model.*;
+import net.kprod.dsb.ChangedFile;
+import net.kprod.dsb.ServiceRunnableTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,32 +41,26 @@ public class DriveServiceImpl implements DriveService {
     @Autowired
     private ApplicationContext ctx;
 
-    private List<ChangedFile> watchedFileChanges;
-    private Map<String, UUID> lastChanges;
-
-    private Drive drive;
+    @Autowired
+    private ProcessFile processFile;
 
     private static final String APPLICATION_NAME = "Google Drive API Java Quickstart";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
-    //private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_METADATA_READONLY);
     private static final Set<String> SCOPES = DriveScopes.all();
-//            Arrays.asList(
-//
-//            DriveScopes.DRIVE_METADATA_READONLY,
-//            DriveScopes.DRIVE_FILE);
-
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
-    @Autowired
-    private ProcessFile processFile;
+    private List<ChangedFile> watchedFileChanges;
+    private Map<String, UUID> lastChanges;
+    private String lastPageToken = null;
+    private String resourceId = null;
+    private Channel channel;
+    private Drive drive;
 
-    //https://stackoverflow.com/questions/77410607/zorin-os-python-installation-error-with-pyenv-for-no-module-named-ssl
 
 
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
-        // Load client secrets.
         InputStream in = DriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
         if (in == null) {
             throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
@@ -73,24 +68,20 @@ public class DriveServiceImpl implements DriveService {
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
-        // Build flow and trigger user authorization request.
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
                 .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                 .setAccessType("offline")
                 .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setHost("vps-a2dd2c59.vps.ovh.net").setPort(8087).build();
-        //LocalServerReceiver receiver = new LocalServerReceiver.Builder().setHost("8fbb-2001-41d0-305-2100-00-1b7f.ngrok-free.app").setPort(-1)
-                //.build();
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                .setHost("vps-a2dd2c59.vps.ovh.net")
+                .setPort(8087).build();
         Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
-        //returns an authorized Credential object.
         return credential;
     }
 
-    //@PostConstruct
     @EventListener(ApplicationReadyEvent.class)
     public void oauthInit() throws IOException, GeneralSecurityException {
-        // Build a new authorized API client service.
         LOG.info("init oauth credentials");
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
@@ -99,57 +90,36 @@ public class DriveServiceImpl implements DriveService {
         LOG.info("connected !");
 
         this.watch();
-
     }
 
     public void watchStop() throws IOException {
-
         drive.channels().stop(channel);
-
     }
 
     public void watch() throws IOException {
-
         lastChanges = new HashMap<>();
         watchedFileChanges = new ArrayList<>();
 
         String channelId = UUID.randomUUID().toString();
-
         String notifyHost = "https://a236-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")
                 .setAddress(notifyHost + "/notify")
-                .setId(channelId); // ID unique pour le canal
+                .setId(channelId);
 
-        // Définir le champ "startPageToken" pour commencer à surveiller
         lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
-
-        // Créer une surveillance pour les changements
         Channel response = drive.changes().watch(lastPageToken, channel).execute();
 
-        // Afficher les détails de la notification
         resourceId = response.getResourceId();
-        //System.out.println("Notification Channel Created:");
-        //System.out.println("Resource ID: " + response.getResourceId());
-        //System.out.println("Channel ID: " + response.getId());
-        //System.out.println("Expiration: " + response.getExpiration());
 
         long now = System.currentTimeMillis();
         long exp = response.getExpiration();
 
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", response.getResourceId(), channelId, lastPageToken, (exp - now));
-
-
     }
 
-    String lastPageToken = null;
-    String resourceId = null;
-    Channel channel;
-
     public void getChanges() {
-
-
         try {
             ChangeList changes = drive.changes().list(lastPageToken).execute();
             LOG.info("Changes {}", changes.size());
@@ -157,31 +127,20 @@ public class DriveServiceImpl implements DriveService {
 
             if(!changes.isEmpty()) {
                 for (Change change : changes.getChanges()) {
-
-                    //LOG.info(" >lastPageToken {} filename {} fileId {} mime {} change type : {} ", lastPageToken, change.getFile().getName(), change.getFileId(), change.getFile().getMimeType(), change.getChangeType());
-
-
                     ChangedFile changedFile = new ChangedFile(change);
                     LOG.info("Added a change fileId {} name {} uuid {} time {}", change.getFileId(), change.getFile().getName(), changedFile.getUuid(), changedFile.getTimestamp().toEpochSecond());
 
-
                     watchedFileChanges.add(changedFile);
                     lastChanges.put(change.getFileId(), changedFile.getUuid());
-
                     taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(10).toInstant());
-
                 }
             }
             else {
                 LOG.info("no changes found");
             }
-
-
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     public void flushChanges() {
@@ -221,9 +180,7 @@ public class DriveServiceImpl implements DriveService {
 
                 processFile.asyncProcessFile(Path.of(path).toFile());
             }
-
         }
-
     }
 
     public String getFileName(String fileId) throws IOException {
@@ -250,9 +207,6 @@ public class DriveServiceImpl implements DriveService {
     }
 
     public void list() throws IOException {
-        //'${1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi}' in parents
-        //q=parent:1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi
-
         String query = "'1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi' in parents and trashed = false";
         FileList result = drive.files().list()
                 .setQ(query)

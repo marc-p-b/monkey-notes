@@ -49,7 +49,11 @@ public class DriveServiceImpl implements DriveService {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
     //private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_METADATA_READONLY);
-    private static final List<String> SCOPES = Arrays.asList(DriveScopes.DRIVE_FILE);
+    private static final Set<String> SCOPES = DriveScopes.all();
+//            Arrays.asList(
+//
+//            DriveScopes.DRIVE_METADATA_READONLY,
+//            DriveScopes.DRIVE_FILE);
 
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 

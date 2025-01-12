@@ -28,6 +28,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -58,8 +60,6 @@ public class DriveServiceImpl implements DriveService {
     private Channel channel;
     private Channel responseChannel;
     private Drive drive;
-
-
 
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
@@ -144,12 +144,10 @@ public class DriveServiceImpl implements DriveService {
                     }
                     ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
                     changedFile.setFuture(future);
-                    mapScheduled.put(changedFile.getChange().getFileId(), changedFile);
+                    mapScheduled.put(fileId, changedFile);
 
                     LOG.info("Map content :");
-                    mapScheduled.entrySet().stream().forEach(entry -> {
-                        LOG.info(" > uuid {} name {}", entry.getKey(), entry.getValue().getChange().getFile().getName());
-                    });
+                    mapScheduled.forEach((key, value) -> LOG.info(" > uuid {} name {}", key, value.getChange().getFile().getName()));
                 }
             }
             else {
@@ -170,7 +168,28 @@ public class DriveServiceImpl implements DriveService {
 
         setDone.forEach(fileId -> {
             Change change = mapScheduled.get(fileId).getChange();
-            LOG.info("Flushing fileid {} name {}", fileId, change.getFile().getName());
+            String filename = change.getFile().getName();
+            LOG.info("Flushing fileid {} name {}", fileId, filename);
+
+            Path destPath = Paths.get("/tmp", fileId);
+            boolean createdPath = destPath.toFile().mkdir();
+
+            Path destFile = Paths.get(destPath.toString(), filename);
+
+            if(createdPath) {
+                try {
+                    downloadFile(fileId, destFile);
+                    LOG.info("Downloaded name {} to {}", filename, destPath);
+
+                    processFile.asyncProcessFile(destPath, destFile.toFile());
+
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                LOG.error("Failed to create directory {}", destPath);
+            }
+
             mapScheduled.remove(fileId);
         });
 
@@ -183,7 +202,7 @@ public class DriveServiceImpl implements DriveService {
         return file.getName();
     }
 
-    public void downloadFile(String fileId, String destinationPath) throws IOException {
+    public void downloadFile(String fileId, Path destinationPath) throws IOException {
         // Récupérer les informations du fichier
         File file = drive.files().get(fileId).setFields("name, mimeType").execute();
 
@@ -195,7 +214,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         // Télécharger le contenu du fichier
-        try (OutputStream outputStream = new FileOutputStream(destinationPath)) {
+        try (OutputStream outputStream = new FileOutputStream(destinationPath.toFile())) {
             drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
         }
     }

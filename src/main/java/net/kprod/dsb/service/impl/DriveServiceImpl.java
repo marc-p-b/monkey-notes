@@ -1,4 +1,4 @@
-package net.kprod.dsb.service;
+package net.kprod.dsb.service.impl;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -16,6 +16,8 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.*;
 import net.kprod.dsb.ChangedFile;
 import net.kprod.dsb.ServiceRunnableTask;
+import net.kprod.dsb.service.DriveService;
+import net.kprod.dsb.service.ProcessFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +28,11 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ScheduledFuture;
+import java.util.stream.Collectors;
 
 @Service
 public class DriveServiceImpl implements DriveService {
@@ -50,11 +53,10 @@ public class DriveServiceImpl implements DriveService {
     private static final Set<String> SCOPES = DriveScopes.all();
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
-    private List<ChangedFile> watchedFileChanges;
-    private Map<String, UUID> lastChanges;
     private String lastPageToken = null;
     private String resourceId = null;
     private Channel channel;
+    private Channel responseChannel;
     private Drive drive;
 
 
@@ -93,13 +95,11 @@ public class DriveServiceImpl implements DriveService {
     }
 
     public void watchStop() throws IOException {
-        drive.channels().stop(channel);
+        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
+        drive.channels().stop(responseChannel);
     }
 
     public void watch() throws IOException {
-        lastChanges = new HashMap<>();
-        watchedFileChanges = new ArrayList<>();
-
         String channelId = UUID.randomUUID().toString();
         String notifyHost = "https://1dfd-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
@@ -109,30 +109,47 @@ public class DriveServiceImpl implements DriveService {
                 .setId(channelId);
 
         lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
-        Channel response = drive.changes().watch(lastPageToken, channel).execute();
+        responseChannel = drive.changes().watch(lastPageToken, channel).execute();
 
-        resourceId = response.getResourceId();
+        resourceId = responseChannel.getResourceId();
 
         long now = System.currentTimeMillis();
-        long exp = response.getExpiration();
+        long exp = responseChannel.getExpiration();
 
-        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", response.getResourceId(), channelId, lastPageToken, (exp - now));
+        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), channelId, lastPageToken, (exp - now));
     }
+
+    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
+    private long flushDelay = 12;
 
     public void getChanges() {
         try {
             ChangeList changes = drive.changes().list(lastPageToken).execute();
-            LOG.info("Changes {}", changes.size());
+            LOG.info("Changes {} kind {}", changes.size(), changes.getKind());
             lastPageToken = changes.getNewStartPageToken();
+
 
             if(!changes.isEmpty()) {
                 for (Change change : changes.getChanges()) {
-                    ChangedFile changedFile = new ChangedFile(change);
-                    LOG.info("Added a change fileId {} name {} uuid {} time {}", change.getFileId(), change.getFile().getName(), changedFile.getUuid(), changedFile.getTimestamp().toEpochSecond());
 
-                    watchedFileChanges.add(changedFile);
-                    lastChanges.put(change.getFileId(), changedFile.getUuid());
-                    taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(10).toInstant());
+
+                    ChangedFile changedFile = new ChangedFile(change);
+                    String fileId = change.getFileId();
+                    LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
+                    LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
+
+                    if(mapScheduled.containsKey(fileId)) {
+                        LOG.info(" > already contains the same file uuid, cancel schedule");
+                        mapScheduled.get(fileId).getFuture().cancel(true);
+                    }
+                    ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
+                    changedFile.setFuture(future);
+                    mapScheduled.put(changedFile.getChange().getFileId(), changedFile);
+
+                    LOG.info("Map content :");
+                    mapScheduled.entrySet().stream().forEach(entry -> {
+                        LOG.info(" > uuid {} name {}", entry.getKey(), entry.getValue().getChange().getFile().getName());
+                    });
                 }
             }
             else {
@@ -145,42 +162,19 @@ public class DriveServiceImpl implements DriveService {
 
     public void flushChanges() {
 
-        for(Map.Entry<String, UUID> lastEntry : lastChanges.entrySet()) {
+        long now = System.currentTimeMillis();
+        Set<String> setDone = mapScheduled.entrySet().stream()
+                .filter(e->now - e.getValue().getTimestamp() > (flushDelay - 1))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
 
-            String fileId = lastEntry.getKey();
-            UUID uuid = lastEntry.getValue();
+        setDone.forEach(fileId -> {
+            Change change = mapScheduled.get(fileId).getChange();
+            LOG.info("Flushing fileid {} name {}", fileId, change.getFile().getName());
+            mapScheduled.remove(fileId);
+        });
 
-            LOG.info("flush change fileId {} uuid {}", fileId, uuid);
 
-            long remaining = watchedFileChanges.stream()
-                            .filter(changedFile -> changedFile.getChange().getFileId().equals(fileId))
-                            .count();
-
-            if(remaining > 1) {
-                Optional<ChangedFile> first = watchedFileChanges.stream()
-                        .sorted(Comparator.comparing(ChangedFile::getTimestamp))
-                        .findFirst();
-                LOG.info("removed {}", first.get().getTimestamp().toEpochSecond());
-                watchedFileChanges.remove(first.get());
-            } else {
-                Optional<ChangedFile> optLast = watchedFileChanges.stream()
-                        .filter(changedFile -> changedFile.getChange().getFileId().equals(fileId))
-                        .findFirst();
-
-                Change lastChange = optLast.get().getChange();
-
-                LOG.info(" >> Processing change for fileId{} name {}", lastChange.getFileId(), lastChange.getFile().getName());
-                String path = "/tmp/" + lastChange.getFile().getName();
-                try {
-                    this.downloadFile(lastChange.getFileId(), path);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                LOG.info("  >> downloaded to {} ", path);
-
-                processFile.asyncProcessFile(Path.of(path).toFile());
-            }
-        }
     }
 
     public String getFileName(String fileId) throws IOException {

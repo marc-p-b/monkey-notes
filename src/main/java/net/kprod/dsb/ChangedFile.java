@@ -4,27 +4,32 @@ import com.google.api.services.drive.model.Change;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.concurrent.ScheduledFuture;
 
 public class ChangedFile {
         private Change change;
-        private UUID uuid;
-        private OffsetDateTime timestamp;
+        ScheduledFuture<?> future;
+        private long timestamp;
 
         public ChangedFile(Change change) {
                 this.change = change;
-                uuid = UUID.randomUUID();
-                timestamp = OffsetDateTime.now();
+                timestamp = System.currentTimeMillis();
         }
 
         public Change getChange() {
                 return change;
         }
 
-        public UUID getUuid() {
-                return uuid;
+        public long getTimestamp() {
+                return timestamp;
         }
 
-        public OffsetDateTime getTimestamp() {
-                return timestamp;
+        public ScheduledFuture<?> getFuture() {
+                return future;
+        }
+
+        public ChangedFile setFuture(ScheduledFuture<?> future) {
+                this.future = future;
+                return this;
         }
 }

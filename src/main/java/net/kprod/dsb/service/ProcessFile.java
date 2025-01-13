@@ -4,5 +4,5 @@ import java.io.File;
 import java.nio.file.Path;
 
 public interface ProcessFile {
-    void asyncProcessFile(Path workingDir, File file);
+    void asyncProcessFile(String fileId, Path workingDir, File file);
 }

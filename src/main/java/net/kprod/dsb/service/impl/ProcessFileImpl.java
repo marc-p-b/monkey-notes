@@ -27,8 +27,9 @@ public class ProcessFileImpl implements ProcessFile {
         String filePath = "\"" + file.getAbsolutePath() + "\"";
         String name = "\"" + file.getName() + "\"";
 
-        String pyQwen = "/home/debian/qwen-72b.py";
-        String pyBin = "/home/debian/.pyenv/shims/python";
+        //String pyQwen = "/home/debian/qwen-72b.py";
+        //String pyBin = "/home/debian/.pyenv/shims/python";
+        String bashQwen = "/home/debian/run-qwen.sh";
 
         try {
             String[] cmd = {"/bin/sh", "-c", "cd " + workPath + " && " + "/usr/bin/pdftoppm " + filePath + " " + name + " -png"};
@@ -57,10 +58,16 @@ public class ProcessFileImpl implements ProcessFile {
 
         argImages = "\"" + argImages + "\"";
 
-        String fileName = "\"" + file.getName().split("\\.")[1] + "\"";
+
+        //fileId = sys.argv[1]
+        //fileName = sys.argv[2]
+        //images = sys.argv[3]
+
+        String fileName = "\"" + file.getName().split("\\.")[0] + "\"";
 
         try {
-            String[] cmd = {"/bin/bash", pyBin, pyQwen, fileId, fileName, argImages};
+            //String[] cmd = {"/bin/sh", "-c", bashQwen, fileId, fileName, argImages};
+            String[] cmd = {"/bin/sh", "-c", bashQwen + " " + fileId + " " +fileName + " " + argImages};
             LOG.info("Executing command: {}", String.join(" ", cmd));
             Process res = Runtime.getRuntime().exec(cmd);
             res.waitFor();

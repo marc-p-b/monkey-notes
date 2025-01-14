@@ -9,7 +9,7 @@ public interface DriveService {
     void watchStop() throws IOException;
     String getFileName(String fileId) throws IOException;
     void downloadFile(String fileId, Path destinationPath) throws IOException;
-    void getChanges();
+    void getChanges(String channelId);
     void flushChanges();
 
 }

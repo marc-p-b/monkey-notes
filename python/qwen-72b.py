@@ -25,6 +25,7 @@ fileName = sys.argv[2]
 images = sys.argv[3]
 
 for img in images.split(","):
+    print("adding " + img)
     history.append(add_img(img))
 
 result = client.predict(

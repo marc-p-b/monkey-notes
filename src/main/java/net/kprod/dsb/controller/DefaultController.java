@@ -61,15 +61,18 @@ public class DefaultController {
 
     @PostMapping("/notify")
     public ResponseEntity<String> notifyChange(
-            @RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
-            @RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
-            @RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI) {
+            //@RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
+            //@RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
+            //@RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI,
+            @RequestHeader(value = "X-Goog-Channel-Id", required = false) String channelId
+            ) {
 
-        LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
-        LOG.info("Message Number: " + messageNumber);
-        LOG.info("resourceURI: " + resourceURI);
+        LOG.info("Received notify: channel {}", channelId);
+        //LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
+        //LOG.info("Message Number: " + messageNumber);
+        //LOG.info("resourceURI: " + resourceURI);
 
-        driveService.getChanges();
+        driveService.getChanges(channelId);
 
         return new ResponseEntity<>("Notification received", HttpStatus.OK);
     }

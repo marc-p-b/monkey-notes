@@ -60,6 +60,7 @@ public class DriveServiceImpl implements DriveService {
     private Channel channel;
     private Channel responseChannel;
     private Drive drive;
+    private String currentChannelId;
 
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
@@ -100,13 +101,13 @@ public class DriveServiceImpl implements DriveService {
     }
 
     public void watch() throws IOException {
-        String channelId = UUID.randomUUID().toString();
+        currentChannelId = UUID.randomUUID().toString();
         String notifyHost = "https://ac9d-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")
                 .setAddress(notifyHost + "/notify")
-                .setId(channelId);
+                .setId(currentChannelId);
 
         lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
         responseChannel = drive.changes().watch(lastPageToken, channel).execute();
@@ -116,16 +117,23 @@ public class DriveServiceImpl implements DriveService {
         long now = System.currentTimeMillis();
         long exp = responseChannel.getExpiration();
 
-        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), channelId, lastPageToken, (exp - now));
+        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
     }
 
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private long flushDelay = 12;
 
-    public void getChanges() {
+    public void getChanges(String channelId) {
+        if(channelId.equals(currentChannelId) == false) {
+//            Drive.Channels channels = drive.channels();
+//            drive.channels().stop();
+            LOG.info("channel id {} not current {}", channelId, currentChannelId);
+            return;
+        }
+
         try {
             ChangeList changes = drive.changes().list(lastPageToken).execute();
-            LOG.info("Changes {} kind {}", changes.size(), changes.getKind());
+            //LOG.info("Changes {} kind {}", changes.size(), changes.getKind());
             lastPageToken = changes.getNewStartPageToken();
 
 
@@ -135,18 +143,18 @@ public class DriveServiceImpl implements DriveService {
 
                     ChangedFile changedFile = new ChangedFile(change);
                     String fileId = change.getFileId();
-                    LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
-                    LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
+                    //LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
+                    //LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
 
                     if(mapScheduled.containsKey(fileId)) {
-                        LOG.info(" > already contains the same file uuid, cancel schedule");
+                        //LOG.info(" > already contains the same file uuid, cancel schedule");
                         mapScheduled.get(fileId).getFuture().cancel(true);
                     }
                     ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
                     changedFile.setFuture(future);
                     mapScheduled.put(fileId, changedFile);
 
-                    LOG.info("Map content :");
+                    //LOG.info("Map content :");
                     mapScheduled.forEach((key, value) -> LOG.info(" > uuid {} name {}", key, value.getChange().getFile().getName()));
                 }
             }

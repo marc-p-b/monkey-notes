@@ -6,6 +6,8 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.FileContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
@@ -14,10 +16,18 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.*;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.ChangedFile;
 import net.kprod.dsb.ServiceRunnableTask;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ProcessFile;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,7 +112,7 @@ public class DriveServiceImpl implements DriveService {
 
     public void watch() throws IOException {
         currentChannelId = UUID.randomUUID().toString();
-        String notifyHost = "https://ac9d-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        String notifyHost = "https://9d6b-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")
@@ -201,6 +211,59 @@ public class DriveServiceImpl implements DriveService {
         });
     }
 
+    @Override
+    public java.io.File createTranscriptPdf(String fileId, String textContent) throws IOException {
+
+        textContent = textContent.replaceAll("\\p{C}", "(!)");
+
+        LOG.info("create transcript file {}", fileId);
+        PDDocument document = new PDDocument();
+        PDPage page = new PDPage();
+        document.addPage(page);
+
+        PDPageContentStream contentStream = new PDPageContentStream(document, page);
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+        contentStream.beginText();
+        contentStream.showText(textContent);
+        contentStream.endText();
+        contentStream.close();
+
+        String strpath = "/tmp/" + fileId + ".pdf";
+        Path path = Paths.get(strpath);
+
+        document.save(strpath);
+        document.close();
+
+        LOG.info("created transcript file {}", fileId);
+
+        return path.toFile();
+    }
+
+    @Override
+    public File upload(String name, java.io.File file) {
+        LOG.info("upload file {}", name);
+
+        File fileMetadata = new File();
+        fileMetadata.setName(name);
+        fileMetadata.setParents(Collections.singletonList("1T_bQ38EwGpzHQNkE6ih1sfVpk4ssSaVB"));
+
+
+        //java.io.File filePath = new java.io.File("files/photo.jpg");
+        FileContent mediaContent = new FileContent("image/jpeg", file);
+        try {
+            File driveFile = drive.files().create(fileMetadata, mediaContent)
+                    .setFields("id, parents")
+                    .execute();
+            System.out.println("File ID: " + driveFile.getId());
+            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
+            return driveFile;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     public String getFileName(String fileId) throws IOException {
         // Appeler la méthode files.get pour récupérer le nom du fichier
         File file = drive.files().get(fileId).setFields("name").execute();
@@ -223,6 +286,8 @@ public class DriveServiceImpl implements DriveService {
             drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
         }
     }
+
+
 
     public void list() throws IOException {
         String query = "'1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi' in parents and trashed = false";

@@ -25,6 +25,7 @@ import net.kprod.dsb.service.ProcessFile;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
@@ -112,7 +113,7 @@ public class DriveServiceImpl implements DriveService {
 
     public void watch() throws IOException {
         currentChannelId = UUID.randomUUID().toString();
-        String notifyHost = "https://9d6b-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
+        String notifyHost = "https://a809-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")
@@ -213,30 +214,93 @@ public class DriveServiceImpl implements DriveService {
 
     @Override
     public java.io.File createTranscriptPdf(String fileId, String textContent) throws IOException {
+        textContent = textContent.replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+        PDDocument doc = null;
+        java.io.File file = null;
+        try
+        {
+            doc = new PDDocument();
+            PDPage page = new PDPage();
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
 
-        textContent = textContent.replaceAll("\\p{C}", "(!)");
+            PDFont pdfFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA);;
+            float fontSize = 12;
+            float leading = 1.5f * fontSize;
 
-        LOG.info("create transcript file {}", fileId);
-        PDDocument document = new PDDocument();
-        PDPage page = new PDPage();
-        document.addPage(page);
+            PDRectangle mediabox = page.getMediaBox();
+            float margin = 20;
+            float width = mediabox.getWidth() - 2*margin;
+            float startX = mediabox.getLowerLeftX() + margin;
+            float startY = mediabox.getUpperRightY() - margin;
 
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-        contentStream.beginText();
-        contentStream.showText(textContent);
-        contentStream.endText();
-        contentStream.close();
+            String text = textContent;
+            List<String> lines = new ArrayList<>();
+            int lastSpace = -1;
+            float size = 0;
+            String subString;
+            while (text.length() > 0)
+            {
+                int nlIndex = text.indexOf('\n');
+                int spaceIndex = text.indexOf(' ', lastSpace + 1);
 
-        String strpath = "/tmp/" + fileId + ".pdf";
-        Path path = Paths.get(strpath);
+                if (spaceIndex < 0) {
+                    spaceIndex = text.length();
+                }
 
-        document.save(strpath);
-        document.close();
+                subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
+                size = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
 
-        LOG.info("created transcript file {}", fileId);
+                if (nlIndex < spaceIndex && nlIndex != -1) {
+                    subString = text.substring(0, nlIndex);
 
-        return path.toFile();
+                    lines.add(subString.replaceAll("\\p{C}", ""));
+                    text = text.substring(nlIndex).trim();
+                    //System.out.printf("> %s\n", subString);
+                } else if (size > width) {
+                    if (lastSpace < 0) {
+                        lastSpace = spaceIndex;
+                    }
+                    subString = text.substring(0, lastSpace);
+
+                    lines.add(subString.replaceAll("\\p{C}", ""));
+                    text = text.substring(lastSpace).trim();
+                    //System.out.printf("> %s\n", subString);
+                    lastSpace = -1;
+                }
+                else if (spaceIndex == text.length()) {
+                    lines.add(text.replaceAll("\\p{C}", ""));
+                    //System.out.printf(">%s\n", text);
+                    text = "";
+                }
+                else {
+                    lastSpace = spaceIndex;
+                }
+            }
+
+            contentStream.beginText();
+            contentStream.setFont(pdfFont, fontSize);
+            contentStream.newLineAtOffset(startX, startY);
+            for (String line: lines)
+            {
+                contentStream.showText(line);
+                contentStream.newLineAtOffset(0, -leading);
+            }
+            contentStream.endText();
+            contentStream.close();
+
+            file = new java.io.File("/tmp/",  fileId + ".pdf");
+            doc.save(file);
+        }
+        finally
+        {
+            if (doc != null)
+            {
+                doc.close();
+            }
+        }
+
+        return file;
     }
 
     @Override

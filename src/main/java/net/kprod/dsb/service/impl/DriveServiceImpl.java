@@ -375,6 +375,17 @@ public class DriveServiceImpl implements DriveService {
         //LOG.info("inbound is {} vs [{}]", inboundFolderId, file.getParents());
         if(setParents.contains(inboundFolderId) == false) {
             LOG.info("{} is not within inbound folder, rejected", fileId);
+
+            for(String p : setParents) {
+                LOG.info("check level 2");
+                File file2 = drive.files().get(p).setFields("parents").execute();
+                Set<String> setParents2 = file2.getParents().stream().collect(Collectors.toSet());
+                if (setParents2.contains(inboundFolderId)) {
+                    LOG.info("level2 - {} is within inbound folder, accept", fileId);
+                    return true;
+                }
+            }
+
             return false;
         }
 

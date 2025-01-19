@@ -3,13 +3,17 @@ package net.kprod.dsb.controller;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.service.DriveService;
+import net.kprod.dsb.service.PdfService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +24,9 @@ public class DefaultController {
 
     @Autowired
     private DriveService driveService;
+
+    @Autowired
+    private PdfService pdfService;
 
     @GetMapping("/list")
     public ResponseEntity<String> list() {
@@ -62,7 +69,7 @@ public class DefaultController {
         String fileName = context.read("$.fileName");
         String transcript = context.read("$.text-content[-1][-1]");
         try {
-            File pdfTranscriptFile = driveService.createTranscriptPdf(fileId, transcript);
+            File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
             driveService.upload(fileName + ".pdf", pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);

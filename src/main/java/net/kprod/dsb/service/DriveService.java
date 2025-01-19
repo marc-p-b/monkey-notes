@@ -19,6 +19,5 @@ public interface DriveService {
     void downloadFile(String fileId, Path destinationPath) throws IOException;
     void getChanges(String channelId);
     void flushChanges();
-    java.io.File createTranscriptPdf(String fileId, String textContent) throws IOException;
     File upload (String name, java.io.File file);
 }

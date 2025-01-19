@@ -6,7 +6,6 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -16,8 +15,6 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.*;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.ChangedFile;
 import net.kprod.dsb.ServiceRunnableTask;
 import net.kprod.dsb.service.DriveService;
@@ -72,6 +69,12 @@ public class DriveServiceImpl implements DriveService {
 
     @Value("${app.notify.path}")
     String notifyPath;
+
+    @Value("${app.drive.folders.in}")
+    String inFolderId;
+
+    @Value("${app.drive.folders.out}")
+    String outFolderId;
 
     private static final String APPLICATION_NAME = "Google Drive API Java Quickstart";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
@@ -169,7 +172,9 @@ public class DriveServiceImpl implements DriveService {
                     //LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
                     //LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
 
-                    if(mapScheduled.containsKey(fileId)) {
+                    //getFileParent(fileId);
+
+                    if(mapScheduled.containsKey(fileId) && checkParentFolderIn(fileId)) {
                         //LOG.info(" > already contains the same file uuid, cancel schedule");
                         mapScheduled.get(fileId).getFuture().cancel(true);
                     }
@@ -321,11 +326,11 @@ public class DriveServiceImpl implements DriveService {
 
         File fileMetadata = new File();
         fileMetadata.setName(name);
-        fileMetadata.setParents(Collections.singletonList("1T_bQ38EwGpzHQNkE6ih1sfVpk4ssSaVB"));
+        fileMetadata.setParents(Collections.singletonList(outFolderId));
 
 
         //java.io.File filePath = new java.io.File("files/photo.jpg");
-        FileContent mediaContent = new FileContent("image/jpeg", file);
+        FileContent mediaContent = new FileContent("application/pdf", file);
         try {
             File driveFile = drive.files().create(fileMetadata, mediaContent)
                     .setFields("id, parents")
@@ -341,9 +346,17 @@ public class DriveServiceImpl implements DriveService {
     }
 
     public String getFileName(String fileId) throws IOException {
-        // Appeler la méthode files.get pour récupérer le nom du fichier
         File file = drive.files().get(fileId).setFields("name").execute();
         return file.getName();
+    }
+
+    public boolean checkParentFolderIn(String fileId) throws IOException {
+        File file = drive.files().get(fileId).setFields("parents").execute();
+
+        LOG.info("getFileParent list {}", file.getParents());
+
+        Set<String> set = new HashSet<>(file.getParents());
+        return set.contains(fileId);
     }
 
     public void downloadFile(String fileId, Path destinationPath) throws IOException {

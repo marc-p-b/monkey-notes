@@ -32,6 +32,7 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
@@ -60,6 +61,18 @@ public class DriveServiceImpl implements DriveService {
     @Autowired
     private ProcessFile processFile;
 
+    @Value("${app.google.auth.receiver.host}")
+    String googleLocalServerReceiverHost;
+
+    @Value("${app.google.auth.receiver.port}")
+    int googleLocalServerReceiverPort;
+
+    @Value("${app.url.self}")
+    String notifyHostUrl;
+
+    @Value("${app.notify.path}")
+    String notifyPath;
+
     private static final String APPLICATION_NAME = "Google Drive API Java Quickstart";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
@@ -73,7 +86,7 @@ public class DriveServiceImpl implements DriveService {
     private Drive drive;
     private String currentChannelId;
 
-    private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
+    private Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
         InputStream in = DriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
         if (in == null) {
@@ -88,8 +101,8 @@ public class DriveServiceImpl implements DriveService {
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder()
-                .setHost("vps-a2dd2c59.vps.ovh.net")
-                .setPort(8087).build();
+                .setHost(googleLocalServerReceiverHost)
+                .setPort(googleLocalServerReceiverPort).build();
         Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
         return credential;
     }
@@ -113,11 +126,10 @@ public class DriveServiceImpl implements DriveService {
 
     public void watch() throws IOException {
         currentChannelId = UUID.randomUUID().toString();
-        String notifyHost = "https://a809-2001-41d0-305-2100-00-1b7f.ngrok-free.app";
 
         channel = new Channel()
                 .setType("web_hook")
-                .setAddress(notifyHost + "/notify")
+                .setAddress(notifyHostUrl + notifyPath)
                 .setId(currentChannelId);
 
         lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();

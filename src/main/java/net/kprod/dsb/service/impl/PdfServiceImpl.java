@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PdfServiceImpl implements PdfService {
@@ -35,17 +37,22 @@ public class PdfServiceImpl implements PdfService {
 
             PDRectangle mediabox = page.getMediaBox();
             float margin = 20;
-            float width = mediabox.getWidth() - 2*margin;
+            float pageWidth = mediabox.getWidth() - 2 * margin;
+            float pageHeight = mediabox.getHeight() - 2 * margin;
             float startX = mediabox.getLowerLeftX() + margin;
             float startY = mediabox.getUpperRightY() - margin;
 
             String text = textContent;
             List<String> lines = new ArrayList<>();
+            Map<Integer, List<String>> pages = new HashMap<>();
+
             int lastSpace = -1;
-            float size = 0;
+            float lineWidth = 0;
+            float lineHeight = (pdfFont.getFontDescriptor().getCapHeight()) / 1000 * fontSize;
+
             String subString;
-            while (text.length() > 0)
-            {
+            int pageNumber = 1;
+            while (text.length() > 0) {
                 int nlIndex = text.indexOf('\n');
                 int spaceIndex = text.indexOf(' ', lastSpace + 1);
 
@@ -54,7 +61,7 @@ public class PdfServiceImpl implements PdfService {
                 }
 
                 subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
-                size = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
+                lineWidth = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
 
                 if (nlIndex < spaceIndex && nlIndex != -1) {
                     subString = text.substring(0, nlIndex);
@@ -62,7 +69,7 @@ public class PdfServiceImpl implements PdfService {
                     lines.add(subString.replaceAll("\\p{C}", ""));
                     text = text.substring(nlIndex).trim();
                     //System.out.printf("> %s\n", subString);
-                } else if (size > width) {
+                } else if (lineWidth > pageWidth) {
                     if (lastSpace < 0) {
                         lastSpace = spaceIndex;
                     }
@@ -81,30 +88,53 @@ public class PdfServiceImpl implements PdfService {
                 else {
                     lastSpace = spaceIndex;
                 }
+
+                //if(lineHeight * lines.size() >= pageHeight) {
+                if (lines.size() > 42) {
+                    pages.put(pageNumber, new ArrayList<>(lines));
+                    pageNumber++;
+                    lines.clear();
+                }
+
             }
+            pages.put(pageNumber, new ArrayList<>(lines));
 
             contentStream.beginText();
             contentStream.setFont(pdfFont, fontSize);
             contentStream.newLineAtOffset(startX, startY);
-            for (String line: lines)
-            {
-                contentStream.showText(line);
-                contentStream.newLineAtOffset(0, -leading);
+
+            for(Map.Entry<Integer, List<String>> entry : pages.entrySet()) {
+
+                for (String line : entry.getValue()) {
+                    contentStream.showText(line);
+                    contentStream.newLineAtOffset(0, -leading);
+                }
+                contentStream.endText();
+                contentStream.close();
+
+                if(pages.containsKey(entry.getKey() + 1)) {
+
+                    page = new PDPage();
+                    contentStream = new PDPageContentStream(doc, page);
+                    doc.addPage(page);
+
+                    contentStream.beginText();
+                    contentStream.setFont(pdfFont, fontSize);
+                    contentStream.newLineAtOffset(startX, startY);
+                }
+
             }
-            contentStream.endText();
-            contentStream.close();
+            //contentStream.endText();
+            //contentStream.close();
 
             file = new java.io.File("/tmp/",  fileId + ".pdf");
             doc.save(file);
         }
-        finally
-        {
-            if (doc != null)
-            {
+        finally {
+            if (doc != null) {
                 doc.close();
             }
         }
-
         return file;
     }
 }

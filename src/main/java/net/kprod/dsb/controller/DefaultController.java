@@ -63,7 +63,7 @@ public class DefaultController {
         String transcript = context.read("$.text-content[-1][-1]");
         try {
             File pdfTranscriptFile = driveService.createTranscriptPdf(fileId, transcript);
-            driveService.upload(fileName, pdfTranscriptFile);
+            driveService.upload(fileName + ".pdf", pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

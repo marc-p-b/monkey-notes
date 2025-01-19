@@ -172,8 +172,6 @@ public class DriveServiceImpl implements DriveService {
                     //LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
                     //LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
 
-                    //getFileParent(fileId);
-
                     if(mapScheduled.containsKey(fileId) && checkParentFolderIn(fileId)) {
                         //LOG.info(" > already contains the same file uuid, cancel schedule");
                         mapScheduled.get(fileId).getFuture().cancel(true);

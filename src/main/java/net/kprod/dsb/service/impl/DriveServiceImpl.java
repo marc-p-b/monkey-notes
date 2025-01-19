@@ -71,7 +71,7 @@ public class DriveServiceImpl implements DriveService {
     String notifyPath;
 
     @Value("${app.drive.folders.in}")
-    String inFolderId;
+    String inboundFolderId;
 
     @Value("${app.drive.folders.out}")
     String outFolderId;
@@ -153,7 +153,7 @@ public class DriveServiceImpl implements DriveService {
         if(channelId.equals(currentChannelId) == false) {
 //            Drive.Channels channels = drive.channels();
 //            drive.channels().stop();
-            LOG.info("channel id {} not current {}", channelId, currentChannelId);
+            //LOG.info("channel id {} not current {}", channelId, currentChannelId);
             return;
         }
 
@@ -169,24 +169,32 @@ public class DriveServiceImpl implements DriveService {
 
                     ChangedFile changedFile = new ChangedFile(change);
                     String fileId = change.getFileId();
-                    //LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
+                    LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
                     //LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
 
-                    if(mapScheduled.containsKey(fileId) && checkParentFolderIn(fileId)) {
-                        //LOG.info(" > already contains the same file uuid, cancel schedule");
-                        mapScheduled.get(fileId).getFuture().cancel(true);
+                    if(checkInboundFile(fileId)) {
+                        if(mapScheduled.containsKey(fileId)) {
+                            LOG.info("already got a change for file {}", fileId);
+                            //LOG.info(" > already contains the same file uuid, cancel schedule");
+                            mapScheduled.get(fileId).getFuture().cancel(true);
+                        }
+                        LOG.info("accept file change {}", fileId);
+                        ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
+                        changedFile.setFuture(future);
+                        mapScheduled.put(fileId, changedFile);
+
+                    } else {
+                        LOG.info("rejected file {}", fileId);
                     }
-                    ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
-                    changedFile.setFuture(future);
-                    mapScheduled.put(fileId, changedFile);
+
 
                     //LOG.info("Map content :");
-                    mapScheduled.forEach((key, value) -> LOG.info(" > uuid {} name {}", key, value.getChange().getFile().getName()));
+                    //mapScheduled.forEach((key, value) -> LOG.info(" > uuid {} name {}", key, value.getChange().getFile().getName()));
                 }
             }
-            else {
-                LOG.info("no changes found");
-            }
+//            else {
+//                LOG.info("no changes found");
+//            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -348,13 +356,30 @@ public class DriveServiceImpl implements DriveService {
         return file.getName();
     }
 
-    public boolean checkParentFolderIn(String fileId) throws IOException {
-        File file = drive.files().get(fileId).setFields("parents").execute();
+    public boolean checkInboundFile(String fileId) throws IOException {
+        File file = drive.files().get(fileId).setFields("parents, mimeType, md5Checksum").execute();
 
-        LOG.info("getFileParent list {}", file.getParents());
+        String mimeGoogleFolder = "application/vnd.google-apps.folder";
 
-        Set<String> set = new HashSet<>(file.getParents());
-        return set.contains(fileId);
+        LOG.info("getFileParent list {} mime {} md5 {}", file.getParents(), file.getMimeType(), file.getMd5Checksum());
+
+        file.getParents().forEach(c->LOG.info(" > parent {}", c));
+
+        Set<String> setParents = file.getParents().stream().collect(Collectors.toSet());
+
+        if(file.getMimeType().equals(mimeGoogleFolder)) {
+            LOG.info("{} is a folder, rejected", fileId);
+            return false;
+        }
+
+        //LOG.info("inbound is {} vs [{}]", inboundFolderId, file.getParents());
+        if(setParents.contains(inboundFolderId) == false) {
+            LOG.info("{} is not within inbound folder, rejected", fileId);
+            return false;
+        }
+
+
+        return true;
     }
 
     public void downloadFile(String fileId, Path destinationPath) throws IOException {

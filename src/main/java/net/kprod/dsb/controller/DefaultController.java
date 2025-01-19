@@ -79,7 +79,7 @@ public class DefaultController {
             @RequestHeader(value = "X-Goog-Channel-Id", required = false) String channelId
             ) {
 
-        LOG.info("Received notify: channel {}", channelId);
+        //LOG.info("Received notify: channel {}", channelId);
         //LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
         //LOG.info("Message Number: " + messageNumber);
         //LOG.info("resourceURI: " + resourceURI);

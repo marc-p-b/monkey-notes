@@ -113,6 +113,9 @@ public class DriveServiceImpl implements DriveService {
         LOG.info("connected !");
 
         this.watch();
+
+        //this.checkInboundFile("1PZxb0xf5LlZOEiYKAvT_8zI12K4tuVlj");
+
     }
 
     public void watchStop() throws IOException {
@@ -209,6 +212,7 @@ public class DriveServiceImpl implements DriveService {
             Path destPath = Paths.get("/tmp", fileId);
             boolean createdPath = destPath.toFile().mkdir();
 
+            //TODO verifier dossier existe
             Path destFile = Paths.get(destPath.toString(), filename);
 
             if(createdPath) {
@@ -263,37 +267,70 @@ public class DriveServiceImpl implements DriveService {
 
         String mimeGoogleFolder = "application/vnd.google-apps.folder";
 
-        LOG.info("getFileParent list {} mime {} md5 {}", file.getParents(), file.getMimeType(), file.getMd5Checksum());
+        //LOG.info("getFileParent list {} mime {} md5 {}", file.getParents(), file.getMimeType(), file.getMd5Checksum());
 
-        file.getParents().forEach(c->LOG.info(" > parent {}", c));
+        //file.getParents().forEach(c->LOG.info(" > parent {}", c));
 
-        Set<String> setParents = file.getParents().stream().collect(Collectors.toSet());
+        //Set<String> setParents = file.getParents().stream().collect(Collectors.toSet());
 
         if(file.getMimeType().equals(mimeGoogleFolder)) {
             LOG.info("{} is a folder, rejected", fileId);
             return false;
         }
 
-        //LOG.info("inbound is {} vs [{}]", inboundFolderId, file.getParents());
-        if(setParents.contains(inboundFolderId) == false) {
-            LOG.info("{} is not within inbound folder, rejected", fileId);
-
-            for(String p : setParents) {
-                LOG.info("check level 2");
-                File file2 = drive.files().get(p).setFields("parents").execute();
-                Set<String> setParents2 = file2.getParents().stream().collect(Collectors.toSet());
-                if (setParents2.contains(inboundFolderId)) {
-                    LOG.info("level2 - {} is within inbound folder, accept", fileId);
-                    return true;
-                }
-            }
-
-            return false;
+        //level 1
+        Optional<String> level1FolderId = checkDriveParents(file.getParents());
+        if(level1FolderId.isPresent()) {
+            //cache this value
+            //LOG.info("parent {} is ok", level1FolderId.get());
+            return true;
+        } else {
+            Optional<String> folderId = recursCheck(file.getParents());
+            return folderId.isPresent();
+            //LOG.info("parent {} is ok", folderId.orElse("nope !"));
         }
 
-
-        return true;
+        //return false;
     }
+
+    public Optional<String> recursCheck(List<String> fileIds) {
+
+        List<String> checkedId = new ArrayList<>();
+
+        for(String fileId : fileIds) {
+            List<String> lvlParents = getDriveParents(fileId);
+            if(lvlParents == null || lvlParents.isEmpty()) {
+                //max reached
+                return Optional.empty();
+            }
+            checkedId.addAll(lvlParents);
+            Optional<String> lvlFolderId = checkDriveParents(lvlParents);
+            if(lvlFolderId.isPresent()) {
+                //cache this
+                LOG.info("parent {} is ok", lvlFolderId.get());
+                return lvlFolderId;
+            }
+        }
+        LOG.info("go recursCheck with ids {}", checkedId);
+        return recursCheck(checkedId);
+
+    }
+
+    public List<String> getDriveParents(String fileId) {
+        try {
+            File dFile = drive.files().get(fileId).setFields("parents").execute();
+            return dFile.getParents();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<String> checkDriveParents(List<String> parents) {
+       return parents.stream()
+                .filter(id -> inboundFolderId.equals(id))
+                .findFirst();
+    }
+
 
     public void downloadFile(String fileId, Path destinationPath) throws IOException {
         // Récupérer les informations du fichier

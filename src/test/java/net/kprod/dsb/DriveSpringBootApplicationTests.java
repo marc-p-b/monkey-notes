@@ -1,5 +1,6 @@
 package net.kprod.dsb;
 
+import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.PdfService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,16 +11,19 @@ import java.io.IOException;
 @SpringBootTest
 class DriveSpringBootApplicationTests {
 
+//	@Autowired
+//	PdfService pdfService;
+
 	@Autowired
-	PdfService pdfService;
+	DriveService driveService;
 
 	@Test
 	void contextLoads() throws IOException {
 
-		pdfService.createTranscriptPdf("test000", theText);
+		//pdfService.createTranscriptPdf("test000", theText);
 
 
-
+	driveService.checkInboundFile("1H7IkAMJ3avrzRJEd7cD0V4hWQ_EOTiHu");
 
 
 

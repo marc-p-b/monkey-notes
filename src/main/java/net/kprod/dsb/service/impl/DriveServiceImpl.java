@@ -17,6 +17,7 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.*;
 import net.kprod.dsb.ChangedFile;
 import net.kprod.dsb.ServiceRunnableTask;
+import net.kprod.dsb.WatchExpirationRunnableTask;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ProcessFile;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
@@ -40,6 +42,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class DriveServiceImpl implements DriveService {
+    public static final long CHANGES_WATCH_EXPIRATION = 3600;// * 24 * 2;
+    public static final int RENEW_OFFSET = 500;
+
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
     @Autowired
@@ -126,7 +131,10 @@ public class DriveServiceImpl implements DriveService {
     public void watch() throws IOException {
         currentChannelId = UUID.randomUUID().toString();
 
+        OffsetDateTime odt = OffsetDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION);
+
         channel = new Channel()
+                .setExpiration(odt.toInstant().toEpochMilli())
                 .setType("web_hook")
                 .setAddress(notifyHostUrl + notifyPath)
                 .setId(currentChannelId);
@@ -140,6 +148,19 @@ public class DriveServiceImpl implements DriveService {
         long exp = responseChannel.getExpiration();
 
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
+
+
+        ScheduledFuture<?> future = taskScheduler.schedule(new WatchExpirationRunnableTask(ctx), ZonedDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION - RENEW_OFFSET).toInstant());
+
+    }
+
+    public void renewWatch() throws IOException {
+        LOG.info("renew watch");
+
+        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
+        drive.channels().stop(responseChannel);
+
+        this.watch();
     }
 
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
@@ -210,24 +231,38 @@ public class DriveServiceImpl implements DriveService {
             LOG.info("Flushing fileid {} name {}", fileId, filename);
 
             Path destPath = Paths.get("/tmp", fileId);
-            boolean createdPath = destPath.toFile().mkdir();
-
-            //TODO verifier dossier existe
             Path destFile = Paths.get(destPath.toString(), filename);
 
-            if(createdPath) {
-                try {
-                    downloadFile(fileId, destFile);
-                    LOG.info("Downloaded name {} to {}", filename, destPath);
-
-                    processFile.asyncProcessFile(fileId, destPath, destFile.toFile());
-
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            if(destPath.toFile().exists()) {
+                LOG.info("folder {} already exists", fileId);
+                if(destFile.toFile().exists()) {
+                    if(destPath.toFile().delete()) {
+                        LOG.info("deleted folder {}", fileId);
+                    } else {
+                        LOG.info("failed to delete folder {}", fileId);
+                    }
                 }
             } else {
-                LOG.error("Failed to create directory {}", destPath);
+                if(destPath.toFile().mkdir()) {
+                    LOG.info("created folder {}", fileId);
+                } else {
+                    LOG.error("failed to create directory {}", destPath.toFile().getAbsolutePath());
+                }
             }
+
+            try {
+                LOG.info("download file id {} from gdrive", fileId);
+                downloadFile(fileId, destFile);
+                LOG.info("Downloaded name {} to {}", filename, destPath);
+
+                LOG.info("async process file id {}", fileId);
+                processFile.asyncProcessFile(fileId, destPath, destFile.toFile());
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+
             mapScheduled.remove(fileId);
         });
     }

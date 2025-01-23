@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface DriveService {
     void list() throws IOException;
     void watch() throws IOException;
+    void renewWatch() throws IOException;
     void watchStop() throws IOException;
     String getFileName(String fileId) throws IOException;
     void downloadFile(String fileId, Path destinationPath) throws IOException;

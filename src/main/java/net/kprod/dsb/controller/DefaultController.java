@@ -28,16 +28,16 @@ public class DefaultController {
     @Autowired
     private PdfService pdfService;
 
-    @GetMapping("/list")
-    public ResponseEntity<String> list() {
-
-        try {
-            driveService.list();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return ResponseEntity.ok().body("OK");
-    }
+//    @GetMapping("/list")
+//    public ResponseEntity<String> list() {
+//
+//        try {
+//            driveService.list();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        return ResponseEntity.ok().body("OK");
+//    }
 
     @GetMapping("/watch")
     public ResponseEntity<String> watch() {
@@ -68,9 +68,13 @@ public class DefaultController {
         String fileId = context.read("$.fileId");
         String fileName = context.read("$.fileName");
         String transcript = context.read("$.text-content[-1][-1]");
+        String transciptFileName = fileName + "-transcript.pdf";
         try {
+            //a trick to force android / autosync app on boox to download file
+            driveService.deleteSimilarNameFromTranscripts(transciptFileName);
+
             File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
-            driveService.upload(fileName + "-transcript.pdf", pdfTranscriptFile);
+            driveService.upload(transciptFileName, pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

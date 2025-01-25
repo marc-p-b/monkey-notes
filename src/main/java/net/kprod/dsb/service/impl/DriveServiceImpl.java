@@ -44,6 +44,10 @@ import java.util.stream.Collectors;
 public class DriveServiceImpl implements DriveService {
     public static final long CHANGES_WATCH_EXPIRATION = 3600;// * 24 * 2;
     public static final int RENEW_OFFSET = 500;
+    public static final String GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+    public static final String GOOGLE_APP_DOC_MIME_TYPE = "application/vnd.google-apps.document";
+    public static final String GOOGLE_APP_SPREADSHEET_MIME_TYPE = "application/vnd.google-apps.spreadsheet";
+    public static final String GOOGLE_APP_PREZ_MIME_TYPE = "application/vnd.google-apps.presentation";
 
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
@@ -167,32 +171,31 @@ public class DriveServiceImpl implements DriveService {
     private long flushDelay = 12;
 
     public void getChanges(String channelId) {
+        //not from current channel watch
         if(channelId.equals(currentChannelId) == false) {
-//            Drive.Channels channels = drive.channels();
-//            drive.channels().stop();
-            //LOG.info("channel id {} not current {}", channelId, currentChannelId);
             return;
         }
 
+        ChangeList changes = null;
         try {
-            ChangeList changes = drive.changes().list(lastPageToken).execute();
-            //LOG.info("Changes {} kind {}", changes.size(), changes.getKind());
+            changes = drive.changes().list(lastPageToken).execute();
             lastPageToken = changes.getNewStartPageToken();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
+        if(!changes.isEmpty()) {
+            for (Change change : changes.getChanges()) {
+                ChangedFile changedFile = new ChangedFile(change);
 
-            if(!changes.isEmpty()) {
-                for (Change change : changes.getChanges()) {
+                String fileId = change.getFileId();
 
-
-                    ChangedFile changedFile = new ChangedFile(change);
-                    String fileId = change.getFileId();
+                if(change.getFile() != null) {
                     LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
-                    //LOG.info(" > change kind {} removed {} type {} changeType {}", change.getKind(), change.getRemoved(), change.getType(), change.getChangeType());
 
                     if(checkInboundFile(fileId)) {
                         if(mapScheduled.containsKey(fileId)) {
                             LOG.info("already got a change for file {}", fileId);
-                            //LOG.info(" > already contains the same file uuid, cancel schedule");
                             mapScheduled.get(fileId).getFuture().cancel(true);
                         }
                         LOG.info("accept file change {}", fileId);
@@ -203,17 +206,10 @@ public class DriveServiceImpl implements DriveService {
                     } else {
                         LOG.info("rejected file {}", fileId);
                     }
-
-
-                    //LOG.info("Map content :");
-                    //mapScheduled.forEach((key, value) -> LOG.info(" > uuid {} name {}", key, value.getChange().getFile().getName()));
+                } else {
+                    LOG.warn("No file with this id found {}", fileId);
                 }
             }
-//            else {
-//                LOG.info("no changes found");
-//            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -275,8 +271,6 @@ public class DriveServiceImpl implements DriveService {
         fileMetadata.setName(name);
         fileMetadata.setParents(Collections.singletonList(outFolderId));
 
-
-        //java.io.File filePath = new java.io.File("files/photo.jpg");
         FileContent mediaContent = new FileContent("application/pdf", file);
         try {
             File driveFile = drive.files().create(fileMetadata, mediaContent)
@@ -292,23 +286,33 @@ public class DriveServiceImpl implements DriveService {
         return null;
     }
 
+    @Override
+    public void delete(String fileId) {
+        LOG.info("delete file {}", fileId);
+
+        try {
+            drive.files().delete(fileId).execute();
+
+            LOG.info("deleted file {}", fileId);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public String getFileName(String fileId) throws IOException {
         File file = drive.files().get(fileId).setFields("name").execute();
         return file.getName();
     }
 
-    public boolean checkInboundFile(String fileId) throws IOException {
-        File file = drive.files().get(fileId).setFields("parents, mimeType, md5Checksum").execute();
+    public boolean checkInboundFile(String fileId) {
+        File file = null;
+        try {
+            file = drive.files().get(fileId).setFields("parents, mimeType, md5Checksum").execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        String mimeGoogleFolder = "application/vnd.google-apps.folder";
-
-        //LOG.info("getFileParent list {} mime {} md5 {}", file.getParents(), file.getMimeType(), file.getMd5Checksum());
-
-        //file.getParents().forEach(c->LOG.info(" > parent {}", c));
-
-        //Set<String> setParents = file.getParents().stream().collect(Collectors.toSet());
-
-        if(file.getMimeType().equals(mimeGoogleFolder)) {
+        if(file.getMimeType().equals(GOOGLE_DRIVE_FOLDER_MIME_TYPE)) {
             LOG.info("{} is a folder, rejected", fileId);
             return false;
         }
@@ -368,41 +372,40 @@ public class DriveServiceImpl implements DriveService {
 
 
     public void downloadFile(String fileId, Path destinationPath) throws IOException {
-        // Récupérer les informations du fichier
         File file = drive.files().get(fileId).setFields("name, mimeType").execute();
 
-        // Vérifier si le fichier est téléchargeable
-        if (file.getMimeType().equals("application/vnd.google-apps.document") ||
-                file.getMimeType().equals("application/vnd.google-apps.spreadsheet") ||
-                file.getMimeType().equals("application/vnd.google-apps.presentation")) {
-            throw new IOException("Le fichier est un document Google. Utilisez l'exportation au lieu du téléchargement.");
+        if (file.getMimeType().equals(GOOGLE_APP_DOC_MIME_TYPE) ||
+                file.getMimeType().equals(GOOGLE_APP_SPREADSHEET_MIME_TYPE) ||
+                file.getMimeType().equals(GOOGLE_APP_PREZ_MIME_TYPE)) {
+            throw new IOException("Google App document cannot be downloaded");
         }
 
-        // Télécharger le contenu du fichier
         try (OutputStream outputStream = new FileOutputStream(destinationPath.toFile())) {
             drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
         }
     }
 
-
-
-    public void list() throws IOException {
-        String query = "'1U6QBcbfqhHBmY9lLpk73oCBRMsfNKYvi' in parents and trashed = false";
+    public List<File> listFileByName(String name, String folderId) throws IOException {
+        String query = "'" + folderId + "' in parents and name='" + name + "'and trashed = false";
         FileList result = drive.files().list()
                 .setQ(query)
-                .setFields("files(id, name)")
+                .setFields("files(id)")
                 .execute();
 
-        List<File> files = result.getFiles();
+        return result.getFiles();
+    }
 
-        if (files == null || files.isEmpty()) {
-            System.out.println("No files found.");
-        } else {
-            System.out.println("Files in folder:");
-            for (File file : files) {
-                System.out.printf("File ID: %s, Name: %s\n", file.getId(), file.getName());
+    @Override
+    public void deleteSimilarNameFromTranscripts(String name) {
+        LOG.info("delete previous files {}", name);
+        try {
+            List<File> list = listFileByName(name, outFolderId);
+            for(File file : list) {
+                LOG.info("deleted file {} id {}", file.getName(), file.getId());
+                delete(file.getId());
             }
+        } catch (IOException e) {
+            LOG.error("file does not exists with name {}", name, e);
         }
-
     }
 }

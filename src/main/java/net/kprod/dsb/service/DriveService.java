@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DriveService {
-    void list() throws IOException;
+    List<File> listFileByName(String name, String folderId) throws IOException;
     void watch() throws IOException;
     void renewWatch() throws IOException;
     void watchStop() throws IOException;
@@ -27,4 +27,6 @@ public interface DriveService {
     List<String> getDriveParents(String fileId);
     Optional<String> checkDriveParents(List<String> parents);
     boolean checkInboundFile(String fileId) throws IOException;
+    void delete(String fileId);
+    void deleteSimilarNameFromTranscripts(String name);
 }

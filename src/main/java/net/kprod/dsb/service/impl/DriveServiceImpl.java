@@ -18,6 +18,7 @@ import com.google.api.services.drive.model.*;
 import net.kprod.dsb.ChangedFile;
 import net.kprod.dsb.ServiceRunnableTask;
 import net.kprod.dsb.WatchExpirationRunnableTask;
+import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ProcessFile;
 import org.slf4j.Logger;
@@ -50,6 +51,9 @@ public class DriveServiceImpl implements DriveService {
     public static final String GOOGLE_APP_PREZ_MIME_TYPE = "application/vnd.google-apps.presentation";
 
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
+
+    @Autowired
+    private MonitoringService monitoringService;
 
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
@@ -252,7 +256,7 @@ public class DriveServiceImpl implements DriveService {
                 LOG.info("Downloaded name {} to {}", filename, destPath);
 
                 LOG.info("async process file id {}", fileId);
-                processFile.asyncProcessFile(fileId, destPath, destFile.toFile());
+                processFile.asyncProcessFile(monitoringService.getCurrentMonitoringData(), fileId, destPath, destFile.toFile());
 
             } catch (IOException e) {
                 throw new RuntimeException(e);

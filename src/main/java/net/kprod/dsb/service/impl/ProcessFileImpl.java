@@ -1,8 +1,14 @@
 package net.kprod.dsb.service.impl;
 
+import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.monitoring.AsyncResult;
+import net.kprod.dsb.monitoring.MonitoringData;
+import net.kprod.dsb.monitoring.MonitoringService;
+import net.kprod.dsb.monitoring.SupplyAsync;
 import net.kprod.dsb.service.ProcessFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -10,15 +16,36 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
 public class ProcessFileImpl implements ProcessFile {
 
+    private final MonitoringService monitoringService;
     private Logger LOG = LoggerFactory.getLogger(ProcessFileImpl.class);
 
+    public ProcessFileImpl(MonitoringService monitoringService) {
+        this.monitoringService = monitoringService;
+    }
+
+    @Async
     @Override
-    public void asyncProcessFile(String fileId, Path workingDir, File file) {
+    public CompletableFuture<AsyncResult> asyncProcessFile(MonitoringData monitoringData, String fileId, Path workingDir, File file) {
+
+        SupplyAsync sa = null;
+        try {
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> runAsyncProcess(fileId, workingDir, file));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+        return CompletableFuture.supplyAsync(sa);
+
+    }
+
+    private void runAsyncProcess(String fileId, Path workingDir, File file) {
+
+    //public void asyncProcessFile(String fileId, Path workingDir, File file) {
         //sudo apt install poppler-utils
         //https://stackoverflow.com/questions/77410607/zorin-os-python-installation-error-with-pyenv-for-no-module-named-ssl
         //pdftoppm doc1.pdf doc -png

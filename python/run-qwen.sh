@@ -1,7 +1,15 @@
-PYTHON=/home/debian/.pyenv/shims/python
-QWEN=/home/debian/qwen-72b.py
-LOG=/home/debian/log-qwen1.txt
-LOG2=/home/debian/log-qwen2.txt
+#ovh debian config
+
+#PYTHON=/home/debian/.pyenv/shims/python
+#QWEN=/home/debian/qwen-72b.py
+#LOG=/home/debian/log-qwen1.txt
+#LOG2=/home/debian/log-qwen2.txt
+
+#container config
+PYTHON=/usr/bin/python3
+QWEN=/qwen-72b.py
+LOG=/log-runner.txt
+LOG2=/log-qwen.txt
 
 if [ ! -f $LOG ];then
   touch $LOG

@@ -8,6 +8,7 @@ import net.kprod.dsb.monitoring.SupplyAsync;
 import net.kprod.dsb.service.ProcessFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class ProcessFileImpl implements ProcessFile {
+
+    @Value("${app.qwen.launcher}")
+    private String pathQwenLauncher;
+
+    @Value("${app.pdf2ppm}")
+    private String pathPdf2ppm;
 
     private final MonitoringService monitoringService;
     private Logger LOG = LoggerFactory.getLogger(ProcessFileImpl.class);
@@ -54,12 +61,11 @@ public class ProcessFileImpl implements ProcessFile {
         String filePath = "\"" + file.getAbsolutePath() + "\"";
         String name = "\"" + file.getName() + "\"";
 
-        //String pyQwen = "/home/debian/qwen-72b.py";
-        //String pyBin = "/home/debian/.pyenv/shims/python";
-        String bashQwen = "/home/debian/run-qwen.sh";
+        //String bashQwen = "/home/debian/run-qwen.sh";
 
         try {
-            String[] cmd = {"/bin/sh", "-c", "cd " + workPath + " && " + "/usr/bin/pdftoppm " + filePath + " " + name + " -png"};
+            //String[] cmd = {"/bin/sh", "-c", "cd " + workPath + " && " + "/usr/bin/pdftoppm " + filePath + " " + name + " -png"};
+            String[] cmd = {"/bin/sh", "-c", "cd " + workPath + " && " + pathPdf2ppm + " " + filePath + " " + name + " -png"};
             LOG.info("Executing command: {}", String.join(" ", cmd));
             Process res = Runtime.getRuntime().exec(cmd);
             res.waitFor();
@@ -94,7 +100,7 @@ public class ProcessFileImpl implements ProcessFile {
 
         try {
             //String[] cmd = {"/bin/sh", "-c", bashQwen, fileId, fileName, argImages};
-            String[] cmd = {"/bin/sh", "-c", bashQwen + " " + fileId + " " +fileName + " " + argImages};
+            String[] cmd = {"/bin/sh", "-c", pathQwenLauncher + " " + fileId + " " +fileName + " " + argImages};
             LOG.info("Executing command: {}", String.join(" ", cmd));
             Process res = Runtime.getRuntime().exec(cmd);
             res.waitFor();

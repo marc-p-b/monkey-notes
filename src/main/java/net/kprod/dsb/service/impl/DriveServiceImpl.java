@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
@@ -109,9 +110,15 @@ public class DriveServiceImpl implements DriveService {
                 .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                 .setAccessType("offline")
                 .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+
+//        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+//                .setHost(googleLocalServerReceiverHost)
+//                .setPort(googleLocalServerReceiverPort).build();
+
+        VerificationCodeReceiver receiver = new VerificationCodeReceiverImpl.Builder()
                 .setHost(googleLocalServerReceiverHost)
                 .setPort(googleLocalServerReceiverPort).build();
+
         Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
         return credential;
     }
@@ -126,8 +133,6 @@ public class DriveServiceImpl implements DriveService {
         LOG.info("connected !");
 
         this.watch();
-
-        //this.checkInboundFile("1PZxb0xf5LlZOEiYKAvT_8zI12K4tuVlj");
 
     }
 

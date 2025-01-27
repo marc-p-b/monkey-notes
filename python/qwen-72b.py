@@ -24,6 +24,20 @@ fileId = sys.argv[1]
 fileName = sys.argv[2]
 images = sys.argv[3]
 
+print("args id " + fileId + " name " + fileName + " imgs " + images)
+
+if len(fileId) == 0:
+    print("no fileId provided, exiting")
+    exit()
+
+if len(fileName) == 0:
+    print("no fileName provided, exiting")
+    exit()
+
+if len(images) == 0:
+    print("no images provided, exiting")
+    exit()
+
 for img in images.split(","):
     print("adding " + img)
     history.append(add_img(img))

@@ -100,7 +100,12 @@ public class ProcessFileImpl implements ProcessFile {
 
         try {
             //String[] cmd = {"/bin/sh", "-c", bashQwen, fileId, fileName, argImages};
-            String[] cmd = {"/bin/sh", "-c", pathQwenLauncher + " " + fileId + " " +fileName + " " + argImages};
+            //PYTHON=/usr/bin/python3
+            //QWEN=/qwen-72b.py
+
+            //String[] cmd = {"/usr/bin/python3", "qwen-72b.py", fileId, fileName, argImages};
+            String[] cmd = {"/bin/sh", "-c", "/scripts/run-qwen.sh " + fileId + " " + fileName + " " + argImages};
+
             LOG.info("Executing command: {}", String.join(" ", cmd));
             Process res = Runtime.getRuntime().exec(cmd);
             res.waitFor();

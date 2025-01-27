@@ -7,9 +7,9 @@
 
 #container config
 PYTHON=/usr/bin/python3
-QWEN=/qwen-72b.py
-LOG=/log-runner.txt
-LOG2=/log-qwen.txt
+QWEN=/scripts/qwen-72b.py
+LOG=/logs/log-runner.txt
+LOG2=/logs/log-qwen.txt
 
 if [ ! -f $LOG ];then
   touch $LOG
@@ -17,6 +17,6 @@ fi
 
 echo "--------" >> $LOG
 date >> $LOG
-echo "call qwen $1 $2 $3" >> $LOG
+echo "call qwen 1 $1 2 $2 3 $3" >> $LOG
 $PYTHON $QWEN "$1" "$2" "$3" > $LOG2 2>&1
 echo "qwen has finished" >> $LOG

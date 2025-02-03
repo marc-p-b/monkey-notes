@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DriveServiceImpl implements DriveService {
-    public static final long CHANGES_WATCH_EXPIRATION = 3600;// * 24 * 2;
-    public static final int RENEW_OFFSET = 500;
+    public static final long CHANGES_WATCH_EXPIRATION = 1500;//3600;// * 24 * 2;
+    public static final int RENEW_OFFSET = 100;
     public static final String GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
     public static final String GOOGLE_APP_DOC_MIME_TYPE = "application/vnd.google-apps.document";
     public static final String GOOGLE_APP_SPREADSHEET_MIME_TYPE = "application/vnd.google-apps.spreadsheet";

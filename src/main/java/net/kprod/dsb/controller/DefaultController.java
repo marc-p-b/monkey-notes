@@ -27,15 +27,25 @@ public class DefaultController {
     @Autowired
     private PdfService pdfService;
 
-    @GetMapping("/watch")
-    public ResponseEntity<String> watch() {
+    @GetMapping("/renew")
+    public ResponseEntity<String> renew() {
         try {
-            driveService.watch();
+            driveService.renewWatch();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return ResponseEntity.ok().body("OK");
     }
+
+//    @GetMapping("/watch")
+//    public ResponseEntity<String> watch() {
+//        try {
+//            driveService.watch();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        return ResponseEntity.ok().body("OK");
+//    }
 
     @GetMapping("/stop")
     public ResponseEntity<String> stop() {

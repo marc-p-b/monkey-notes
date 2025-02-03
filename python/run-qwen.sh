@@ -19,4 +19,6 @@ echo "--------" >> $LOG
 date >> $LOG
 echo "call qwen 1 $1 2 $2 3 $3" >> $LOG
 $PYTHON $QWEN "$1" "$2" "$3" > $LOG2 2>&1
+date >> $LOG
 echo "qwen has finished" >> $LOG
+

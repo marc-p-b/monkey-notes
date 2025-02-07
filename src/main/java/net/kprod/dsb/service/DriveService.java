@@ -1,20 +1,22 @@
 package net.kprod.dsb.service;
 
 import com.google.api.services.drive.model.File;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import jakarta.servlet.http.HttpServletRequest;
+import net.kprod.dsb.ChangedFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface DriveService {
+    void initAuth();
+    void grantCallback(String code);
+    void refreshToken();
     List<File> listFileByName(String name, String folderId) throws IOException;
+
+    List<String> getWaitList();
     void watch() throws IOException;
     void renewWatch() throws IOException;
     void watchStop() throws IOException;

@@ -74,7 +74,7 @@ public class MonitoringServiceImpl implements MonitoringService {
             MDC.put(MONITORING_PROCESS_SUFFIX, monitoringData.getSuffix().get());
         }
 
-        LOG.info("Start monitoring processName [{}] id [{}]",
+        LOG.debug("Start monitoring processName [{}] id [{}]",
                 monitoringData.getService(),
                 monitoringData.getId());
     }
@@ -82,7 +82,7 @@ public class MonitoringServiceImpl implements MonitoringService {
     // mark process as finished
     @Override
     public void end(long elapsedTime) {
-        LOG.info("End monitoring processName [{}] id [{}] took [{}] ms",
+        LOG.debug("End monitoring processName [{}] id [{}] took [{}] ms",
                 this.getProcessName(),
                 this.getProcessId(),
                 elapsedTime);

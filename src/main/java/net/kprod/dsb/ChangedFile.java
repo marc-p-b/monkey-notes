@@ -32,4 +32,9 @@ public class ChangedFile {
                 this.future = future;
                 return this;
         }
+
+        @Override
+        public String toString() {
+                return new StringBuilder().append("fileId ").append(change.getFileId()).append(" name ").append(change.getFile().getName()).toString();
+        }
 }

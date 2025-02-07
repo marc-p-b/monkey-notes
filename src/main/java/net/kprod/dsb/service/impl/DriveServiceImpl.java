@@ -1,24 +1,18 @@
 package net.kprod.dsb.service.impl;
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.FileContent;
+import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.*;
-import net.kprod.dsb.ChangedFile;
-import net.kprod.dsb.ServiceRunnableTask;
-import net.kprod.dsb.WatchExpirationRunnableTask;
+import net.kprod.dsb.*;
 import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ProcessFile;
@@ -32,10 +26,16 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.math.BigInteger;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -44,38 +44,58 @@ import java.util.stream.Collectors;
 
 @Service
 public class DriveServiceImpl implements DriveService {
-    public static final long CHANGES_WATCH_EXPIRATION = 1500;//3600;// * 24 * 2;
-    public static final int RENEW_OFFSET = 100;
+    private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
+
+    private static final long TOKEN_REFRESH_INTERVAL = 3500;
+    private static final long CHANGES_WATCH_EXPIRATION = 3000;
+    private static final long FLUSH_INTERVAL = 60;
+
+    @Value("${app.drive.auth.client-id}")
+    private String CLIENT_ID;
+
+    @Value("${app.drive.auth.client-secret}")
+    private String CLIENT_SECRET;
+
+    private static final Set<String> SCOPES = Set.of(
+            DriveScopes.DRIVE,
+            DriveScopes.DRIVE_READONLY,
+            DriveScopes.DRIVE_FILE,
+            DriveScopes.DRIVE_METADATA,
+            DriveScopes.DRIVE_METADATA_READONLY);
+    private static final String APPLICATION_NAME = "Drive Notepad Sync";
+    private String lastPageToken = null;
+    private String resourceId = null;
+    private Channel channel;
+    private Channel responseChannel;
+    private Drive drive;
+    private String currentChannelId;
     public static final String GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
     public static final String GOOGLE_APP_DOC_MIME_TYPE = "application/vnd.google-apps.document";
     public static final String GOOGLE_APP_SPREADSHEET_MIME_TYPE = "application/vnd.google-apps.spreadsheet";
     public static final String GOOGLE_APP_PREZ_MIME_TYPE = "application/vnd.google-apps.presentation";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-    private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
+    private Credential credential;
+    private String refreshToken;
+
+    private GoogleAuthorizationCodeFlow authFlow;
+    private NetHttpTransport HTTP_TRANSPORT;
+    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
 
     @Autowired
     private MonitoringService monitoringService;
 
     @Autowired
-    private ThreadPoolTaskScheduler taskScheduler;
-
-    @Autowired
-    private ApplicationContext ctx;
-
-    @Autowired
     private ProcessFile processFile;
 
-    @Value("${app.google.auth.receiver.host}")
-    String googleLocalServerReceiverHost;
-
-    @Value("${app.google.auth.receiver.port}")
-    int googleLocalServerReceiverPort;
-
     @Value("${app.url.self}")
-    String notifyHostUrl;
+    String appHost;
 
     @Value("${app.notify.path}")
     String notifyPath;
+
+    @Value("${app.oauth-callback.path}")
+    String oauthCallbackPath;
 
     @Value("${app.drive.folders.in}")
     String inboundFolderId;
@@ -83,57 +103,93 @@ public class DriveServiceImpl implements DriveService {
     @Value("${app.drive.folders.out}")
     String outFolderId;
 
-    private static final String APPLICATION_NAME = "Google Drive API Java Quickstart";
-    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-    private static final String TOKENS_DIRECTORY_PATH = "tokens";
-    private static final Set<String> SCOPES = DriveScopes.all();
-    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
-    private String lastPageToken = null;
-    private String resourceId = null;
-    private Channel channel;
-    private Channel responseChannel;
-    private Drive drive;
-    private String currentChannelId;
+    @Autowired
+    private ApplicationContext ctx;
 
-    private Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
-            throws IOException {
-        InputStream in = DriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
-        if (in == null) {
-            throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
-        }
-        GoogleClientSecrets clientSecrets =
-                GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
 
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-                .setAccessType("offline")
-                .build();
+    @Autowired
+    private ProcessFileImpl processFileImpl;
 
-//        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
-//                .setHost(googleLocalServerReceiverHost)
-//                .setPort(googleLocalServerReceiverPort).build();
-
-        VerificationCodeReceiver receiver = new VerificationCodeReceiverImpl.Builder()
-                .setHost(googleLocalServerReceiverHost)
-                .setPort(googleLocalServerReceiverPort).build();
-
-        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
-        return credential;
-    }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void oauthInit() throws IOException, GeneralSecurityException {
-        LOG.info("init oauth credentials");
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+    public void initAuth() {
+        HttpTransport httpTransport = new NetHttpTransport();
+
+        //request auth
+        //todo storage does not works this way (NPE here : createAndStoreCredential)
+        //.setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+
+        authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
+
+                .setAccessType("offline")
+                .setApprovalPrompt("force")
+                .build();
+        String url = authFlow
+                .newAuthorizationUrl()
+                .setRedirectUri(appHost + oauthCallbackPath)
+                .build();
+
+        LOG.info("Authorise your app through using your browser : {}", url);
+    }
+
+    public void grantCallback(String code) {
+        LOG.info("Auth granted");
+
+        GoogleTokenResponse tokenResponse = null;
+        try {
+            //request token
+            tokenResponse = authFlow
+                    .newTokenRequest(code)
+                    .setRedirectUri(appHost + oauthCallbackPath)
+                    .execute();
+
+        } catch (IOException e) {
+            LOG.error("Failed to request auth token", e);
+        }
+
+        refreshToken = tokenResponse.getRefreshToken();
+
+        try {
+            credential = authFlow
+                    .createAndStoreCredential(tokenResponse, null);
+        } catch (IOException e) {
+            LOG.error("Failed to create credential", e);
+        }
+
+        LOG.info("Credential created");
+        try {
+            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        } catch (IOException | GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
+        drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
-        LOG.info("connected !");
 
+        //todo future
+        ScheduledFuture<?> future = taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
         this.watch();
+    }
 
+    public void refreshToken()  {
+        LOG.info("Refresh token");
+
+        credential.setRefreshToken(refreshToken);
+        try {
+            credential.refreshToken();
+        } catch (IOException e) {
+            LOG.error("Refresh token failed", e);
+        }
+
+        //todo future
+        ScheduledFuture<?> future = taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
+
+        drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
     }
 
     public void watchStop() throws IOException {
@@ -141,7 +197,7 @@ public class DriveServiceImpl implements DriveService {
         drive.channels().stop(responseChannel);
     }
 
-    public void watch() throws IOException {
+    public void watch() {
         currentChannelId = UUID.randomUUID().toString();
 
         OffsetDateTime odt = OffsetDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION);
@@ -149,11 +205,15 @@ public class DriveServiceImpl implements DriveService {
         channel = new Channel()
                 .setExpiration(odt.toInstant().toEpochMilli())
                 .setType("web_hook")
-                .setAddress(notifyHostUrl + notifyPath)
+                .setAddress(appHost + notifyPath)
                 .setId(currentChannelId);
 
-        lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
-        responseChannel = drive.changes().watch(lastPageToken, channel).execute();
+        try {
+            lastPageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
+            responseChannel = drive.changes().watch(lastPageToken, channel).execute();
+        } catch (IOException e) {
+            LOG.error("Failed to create watch channel", e);
+        }
 
         resourceId = responseChannel.getResourceId();
 
@@ -162,8 +222,8 @@ public class DriveServiceImpl implements DriveService {
 
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
 
-
-        ScheduledFuture<?> future = taskScheduler.schedule(new WatchExpirationRunnableTask(ctx), ZonedDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION - RENEW_OFFSET).toInstant());
+        //todo future
+        ScheduledFuture<?> future = taskScheduler.schedule(new RefreshWatchTask(ctx), ZonedDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION).toInstant());
 
     }
 
@@ -176,14 +236,22 @@ public class DriveServiceImpl implements DriveService {
         this.watch();
     }
 
-    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
-    private long flushDelay = 12;
+    public List<String> getWaitList() {
+        return mapScheduled.entrySet().stream()
+                .map(e->{
+                    return new StringBuilder().append(e.getKey()).append(" : ").append(e.getValue()).toString();
+                })
+                .collect(Collectors.toList());
+    }
 
     public void getChanges(String channelId) {
         //not from current channel watch
         if(channelId.equals(currentChannelId) == false) {
+            LOG.info("Rejected notified changes channel {}", channelId);
             return;
         }
+        LOG.info("Changes notified channel {}", channelId);
+
 
         ChangeList changes = null;
         try {
@@ -200,15 +268,16 @@ public class DriveServiceImpl implements DriveService {
                 String fileId = change.getFileId();
 
                 if(change.getFile() != null) {
-                    LOG.info(" > change fileId {} name {}", fileId, change.getFile().getName());
+                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
 
                     if(checkInboundFile(fileId)) {
                         if(mapScheduled.containsKey(fileId)) {
                             LOG.info("already got a change for file {}", fileId);
                             mapScheduled.get(fileId).getFuture().cancel(true);
                         }
-                        LOG.info("accept file change {}", fileId);
-                        ScheduledFuture<?> future = taskScheduler.schedule(new ServiceRunnableTask(ctx), ZonedDateTime.now().plusSeconds(flushDelay).toInstant());
+                        LOG.info(" > accept file change {}", fileId);
+                        //todo refresh is deactivated inside task
+                        ScheduledFuture<?> future = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(FLUSH_INTERVAL).toInstant());
                         changedFile.setFuture(future);
                         mapScheduled.put(fileId, changedFile);
 
@@ -222,22 +291,26 @@ public class DriveServiceImpl implements DriveService {
         }
     }
 
+    //todo have to fix concurrent flush
     public void flushChanges() {
-
         long now = System.currentTimeMillis();
         Set<String> setDone = mapScheduled.entrySet().stream()
-                .filter(e->now - e.getValue().getTimestamp() > (flushDelay - 1))
+                //filter changes by time passed since map insertion
+                .filter(e -> now - e.getValue().getTimestamp() > (FLUSH_INTERVAL - 1))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
+
+        //init processing list
+        List<File2Process> list2Process = new ArrayList<>();
 
         setDone.forEach(fileId -> {
             Change change = mapScheduled.get(fileId).getChange();
             String filename = change.getFile().getName();
             LOG.info("Flushing fileid {} name {}", fileId, filename);
 
+            //create a temp folder folder if needed / remove existing
             Path destPath = Paths.get("/tmp", fileId);
             Path destFile = Paths.get(destPath.toString(), filename);
-
             if(destPath.toFile().exists()) {
                 LOG.info("folder {} already exists", fileId);
                 if(destFile.toFile().exists()) {
@@ -254,22 +327,53 @@ public class DriveServiceImpl implements DriveService {
                     LOG.error("failed to create directory {}", destPath.toFile().getAbsolutePath());
                 }
             }
-
+            
+            //Download file from g drive
             try {
                 LOG.info("download file id {} from gdrive", fileId);
                 downloadFile(fileId, destFile);
                 LOG.info("Downloaded name {} to {}", filename, destPath);
-
-                LOG.info("async process file id {}", fileId);
-                processFile.asyncProcessFile(monitoringService.getCurrentMonitoringData(), fileId, destPath, destFile.toFile());
-
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            
+            //Create file object
+            File2Process f2p = new File2Process(fileId, destPath, destFile.toFile());
 
-
+            //complete file object with md5
+            try {
+                
+                f2p.setMd5(md5(destFile));
+            } catch (ServiceException e) {
+                throw new RuntimeException(e);
+            }
+            //Add each file to processing list
+            list2Process.add(f2p);
+            //remove change
             mapScheduled.remove(fileId);
         });
+
+        //Filter files using md5 / keep only one of each
+        List<File2Process> files = list2Process.stream()
+            .collect(Collectors.groupingBy(File2Process::getMd5))
+            .entrySet().stream().
+                map(e -> e.getValue().get(0))
+                .toList();
+
+        //Request async file list processing
+        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+
+    }
+
+    private String md5(Path path) throws ServiceException {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(Files.readAllBytes(path));
+            return String.format("%032x", new BigInteger(1, md.digest())); // hex, padded to 32 chars
+        } catch (NoSuchAlgorithmException | IOException e) {
+            LOG.error("MD5 failed", e);
+            throw new ServiceException(e);
+        }
     }
 
     @Override

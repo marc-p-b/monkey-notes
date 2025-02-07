@@ -1,5 +1,6 @@
 package net.kprod.dsb.service.impl;
 
+import net.kprod.dsb.File2Process;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
@@ -13,8 +14,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +34,9 @@ public class ProcessFileImpl implements ProcessFile {
     @Value("${app.pdf2ppm}")
     private String pathPdf2ppm;
 
+    @Value("${app.dry-run:false}")
+    private boolean dryRun;
+
     private final MonitoringService monitoringService;
     private Logger LOG = LoggerFactory.getLogger(ProcessFileImpl.class);
 
@@ -38,24 +46,36 @@ public class ProcessFileImpl implements ProcessFile {
 
     @Async
     @Override
-    public CompletableFuture<AsyncResult> asyncProcessFile(MonitoringData monitoringData, String fileId, Path workingDir, File file) {
-
+    public CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list) {
         SupplyAsync sa = null;
+
         try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> runAsyncProcess(fileId, workingDir, file));
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> runListAsyncProcess(list));
         } catch (ServiceException e) {
             throw new RuntimeException(e);
         }
-        return CompletableFuture.supplyAsync(sa);
 
+        return CompletableFuture.supplyAsync(sa);
     }
 
-    private void runAsyncProcess(String fileId, Path workingDir, File file) {
+    private void runListAsyncProcess(List<File2Process> list) {
+        LOG.info("(Async) Processing {} files", list.size());
 
-    //public void asyncProcessFile(String fileId, Path workingDir, File file) {
+        for (File2Process f : list) {
+            processFile(f.getFileId(), f.getWorkingDir(), f.getFile());
+        }
+    }
+
+    private void processFile(String fileId, Path workingDir, File file) {
         //sudo apt install poppler-utils
         //https://stackoverflow.com/questions/77410607/zorin-os-python-installation-error-with-pyenv-for-no-module-named-ssl
         //pdftoppm doc1.pdf doc -png
+        LOG.info("Processing file {} name {}", fileId, file.getName());
+
+        if(dryRun) {
+            LOG.warn("Dry run - no processing");
+            return;
+        }
 
         String workPath = "\"" + workingDir.toString() + "\"";
         String filePath = "\"" + file.getAbsolutePath() + "\"";

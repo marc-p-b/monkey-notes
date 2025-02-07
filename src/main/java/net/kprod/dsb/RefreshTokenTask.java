@@ -6,10 +6,10 @@ import org.springframework.context.ApplicationContext;
 
 import java.io.IOException;
 
-public class WatchExpirationRunnableTask implements Runnable{
+public class RefreshTokenTask implements Runnable{
 	private ApplicationContext ctx;
 
-	public WatchExpirationRunnableTask(ApplicationContext ctx){
+	public RefreshTokenTask(ApplicationContext ctx){
 		this.ctx = ctx;
 
 	}
@@ -19,14 +19,11 @@ public class WatchExpirationRunnableTask implements Runnable{
 		DriveService service = ctx.getBean(DriveService.class);
 
 		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
-		monitoringService.start("WatchExpirationRunnableTask", "run");
+		monitoringService.start("RefreshTokenTask", "run");
 
 		long startTime = System.currentTimeMillis();
-		try {
-            service.renewWatch();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+		service.refreshToken();
+
 		monitoringService.end(System.currentTimeMillis() - startTime);
 
 

@@ -292,7 +292,7 @@ public class DriveServiceImpl implements DriveService {
     }
 
     //todo have to fix concurrent flush
-    public synchronized void flushChanges() {
+    public void flushChanges() {
         long now = System.currentTimeMillis();
         Set<String> setDone = mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion

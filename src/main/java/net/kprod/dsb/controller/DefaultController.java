@@ -38,6 +38,8 @@ public class DefaultController {
     @Value("${app.email.recipient}")
     private String emailRecipient;
 
+
+
     @GetMapping("/grant-callback")
     public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");

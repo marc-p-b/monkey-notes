@@ -34,6 +34,8 @@ public class MailServiceImpl implements MailService {
 
     private MailjetClient mailjetClient;
 
+    @Value("${app.email.sender}")
+    private String emailSender;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initMailjetClient() {
@@ -69,7 +71,7 @@ public class MailServiceImpl implements MailService {
 
         TransactionalEmail message = TransactionalEmail
                 .builder()
-                .from(new SendContact("noreply@monkeynotes.fr", "dsb"))
+                .from(new SendContact(emailSender, "Monkey notify"))
                 .to(listTo)
                 .htmlPart(body)
                 .subject(subject)

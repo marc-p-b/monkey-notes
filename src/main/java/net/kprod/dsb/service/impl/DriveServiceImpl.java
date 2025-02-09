@@ -171,7 +171,10 @@ public class DriveServiceImpl implements DriveService {
 
         //todo future
         ScheduledFuture<?> future = taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
-        this.watch();
+
+        list(inboundFolderId, "", 4);
+
+        //this.watch();
     }
 
     public void refreshToken()  {
@@ -468,29 +471,39 @@ public class DriveServiceImpl implements DriveService {
 
     }
 
-//    public void list() {
-//
-//        String query = "'" + inboundFolderId + "' in parents and trashed = false";
-//
-//        FileList result = null;
-//        try {
-//             result = drive.files().list()
-//                    .setQ(query)
-//                    .setFields("files(id, name)")
-//                    .execute();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//        List<com.google.api.services.drive.model.File> files = result.getFiles();
-//        if (files == null || files.isEmpty()) {
-//            System.out.println("No files found.");
-//        } else {
-//            LOG.info("Files:");
-//            for (com.google.api.services.drive.model.File file : files) {
-//                LOG.info("filename {} id {}", file.getName(), file.getId());
-//            }
-//        }
-//    }
+    public void list(String folderId, String offset, int max_depth) {
+
+        String query = "'" + folderId + "' in parents and trashed = false";
+
+        FileList result = null;
+        try {
+             result = drive.files().list()
+                    .setQ(query)
+                    .setFields("files(id, mimeType, md5Checksum, name)")
+                    .execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<com.google.api.services.drive.model.File> files = result.getFiles();
+        if (files == null || files.isEmpty()) {
+            //System.out.println("No files found.");
+        } else {
+
+            for (com.google.api.services.drive.model.File file : files) {
+                //LOG.info("filename {} id {}", file.getName(), file.getId());
+
+                if(file.getMimeType() != null && file.getMimeType().equals(GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
+                    LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
+                    list(file.getId(), offset + " ", max_depth - 1);
+
+                } else {
+                    LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
+                }
+
+
+            }
+        }
+    }
 
     public List<String> getDriveParents(String fileId) {
         try {

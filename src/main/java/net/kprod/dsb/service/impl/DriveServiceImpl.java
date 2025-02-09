@@ -292,7 +292,7 @@ public class DriveServiceImpl implements DriveService {
     }
 
     //todo have to fix concurrent flush
-    public void flushChanges() {
+    public synchronized void flushChanges() {
         long now = System.currentTimeMillis();
         Set<String> setDone = mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion
@@ -467,6 +467,30 @@ public class DriveServiceImpl implements DriveService {
         return recursCheck(checkedId);
 
     }
+
+//    public void list() {
+//
+//        String query = "'" + inboundFolderId + "' in parents and trashed = false";
+//
+//        FileList result = null;
+//        try {
+//             result = drive.files().list()
+//                    .setQ(query)
+//                    .setFields("files(id, name)")
+//                    .execute();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        List<com.google.api.services.drive.model.File> files = result.getFiles();
+//        if (files == null || files.isEmpty()) {
+//            System.out.println("No files found.");
+//        } else {
+//            LOG.info("Files:");
+//            for (com.google.api.services.drive.model.File file : files) {
+//                LOG.info("filename {} id {}", file.getName(), file.getId());
+//            }
+//        }
+//    }
 
     public List<String> getDriveParents(String fileId) {
         try {

@@ -13,10 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,8 +35,6 @@ public class DefaultController {
     @Value("${app.email.recipient}")
     private String emailRecipient;
 
-
-
     @GetMapping("/grant-callback")
     public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
@@ -59,13 +54,15 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-        @GetMapping("/stop")
-    public ResponseEntity<String> stop() {
-        try {
-            driveService.watchStop();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    @GetMapping("/update/all")
+    public ResponseEntity<String> updateAll() {
+        driveService.updateAll();
+        return ResponseEntity.ok().body("OK");
+    }
+
+    @GetMapping("/update/folder/{folderId}")
+    public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
+        driveService.updateFolder(folderId);
         return ResponseEntity.ok().body("OK");
     }
 
@@ -84,13 +81,13 @@ public class DefaultController {
             driveService.deleteSimilarNameFromTranscripts(transciptFileName);
 
             File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
-            driveService.upload(transciptFileName, pdfTranscriptFile);
+            driveService.processTranscript(transciptFileName, fileId, pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         try {
             String[] recipient = {emailRecipient};
-            String emailBody = "New transcript available : " + (transcript.length() > 40 ? transcript.substring(0, 40) : transcript);
+            String emailBody = "New transcript available : " + (transcript.length() > 200 ? transcript.substring(0, 200) : transcript);
             emailBody += "...";
             mailService.sendSimpleMessage(
                     recipient,
@@ -101,22 +98,9 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-
     @PostMapping("/notify")
-    public ResponseEntity<String> notifyChange(
-            //@RequestHeader(value = "X-Goog-Resource-State", required = false) String resourceState,
-            //@RequestHeader(value = "X-Goog-Message-Number", required = false) String messageNumber,
-            //@RequestHeader(value = "X-Goog-Resource-URI", required = false) String resourceURI,
-            @RequestHeader(value = "X-Goog-Channel-Id", required = false) String channelId
-            ) {
-
-        //LOG.info("Received notify: channel {}", channelId);
-        //LOG.info("Received Drive Notification, message number {}, state {}", messageNumber, resourceState);
-        //LOG.info("Message Number: " + messageNumber);
-        //LOG.info("resourceURI: " + resourceURI);
-
+    public ResponseEntity<String> notifyChange(@RequestHeader(value = "X-Goog-Channel-Id", required = false) String channelId) {
         driveService.getChanges(channelId);
-
         return new ResponseEntity<>("Notification received", HttpStatus.OK);
     }
 }

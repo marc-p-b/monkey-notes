@@ -13,9 +13,12 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.*;
 import net.kprod.dsb.*;
+import net.kprod.dsb.data.entity.Doc;
+import net.kprod.dsb.data.repository.DocRepo;
 import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ProcessFile;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +32,9 @@ import org.springframework.stereotype.Service;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -113,6 +112,8 @@ public class DriveServiceImpl implements DriveService {
     @Autowired
     private ProcessFileImpl processFileImpl;
 
+    @Autowired
+    private DocRepo docRepo;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initAuth() {
@@ -171,10 +172,61 @@ public class DriveServiceImpl implements DriveService {
 
         //todo future
         ScheduledFuture<?> future = taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
+        this.watch();
+    }
 
-        list(inboundFolderId, "", 4);
+    public void updateAll() {
+        //refreshFolder(inboundFolderId, "", 4, "");
+        updateFolder(inboundFolderId);
 
-        //this.watch();
+    }
+
+    public void updateFolder(String folderId) {
+
+        File gFolder = null;
+        try {
+            gFolder = drive.files().get(folderId).setFields("name").execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //update db
+        refreshFolder(folderId, "", 4, "", gFolder.getName());
+
+        //download files if needed
+        docRepo.findAll().stream()
+                .filter(d->folderId.equals(d.getParentFolderId()))
+                .forEach(d-> {
+                    File file = null;
+                    try {
+                        file = drive.files().get(d.getFileId()).setFields("id, name, mimeType, md5Checksum").execute();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    if(file != null && file.getMd5Checksum() != d.getMd5()) {
+
+                        Path destPath = Paths.get("/tmp", d.getFileId());
+                        Path destFile = Paths.get(destPath.toString(), d.getFileName());
+                        downloadFileFromDrive(file.getId(), destPath, destFile, file.getName());
+
+                    }
+
+                });
+
+
+        System.out.println();
+//                docRepo.findAll().stream()
+//                    .filter(Doc::isMarkForUpdate)
+//                    .map(d -> {
+//                        File2Process f2p = new File2Process(
+//                                d.getFileId(),
+//
+//
+//                    })
+//
+//        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+
     }
 
     public void refreshToken()  {
@@ -311,45 +363,24 @@ public class DriveServiceImpl implements DriveService {
             String filename = change.getFile().getName();
             LOG.info("Flushing fileid {} name {}", fileId, filename);
 
+
+
+
             //create a temp folder folder if needed / remove existing
             Path destPath = Paths.get("/tmp", fileId);
             Path destFile = Paths.get(destPath.toString(), filename);
-            if(destPath.toFile().exists()) {
-                LOG.info("folder {} already exists", fileId);
-                if(destFile.toFile().exists()) {
-                    if(destPath.toFile().delete()) {
-                        LOG.info("deleted folder {}", fileId);
-                    } else {
-                        LOG.info("failed to delete folder {}", fileId);
-                    }
-                }
-            } else {
-                if(destPath.toFile().mkdir()) {
-                    LOG.info("created folder {}", fileId);
-                } else {
-                    LOG.error("failed to create directory {}", destPath.toFile().getAbsolutePath());
-                }
-            }
-            
-            //Download file from g drive
-            try {
-                LOG.info("download file id {} from gdrive", fileId);
-                downloadFile(fileId, destFile);
-                LOG.info("Downloaded name {} to {}", filename, destPath);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            
-            //Create file object
-            File2Process f2p = new File2Process(fileId, destPath, destFile.toFile());
+            File file2Download = downloadFileFromDrive(fileId, destPath, destFile, filename);
 
+
+            //Create file object
+            File2Process f2p = new File2Process(fileId, Paths.get("/tmp", fileId), destFile.toFile());
+            f2p.setMd5(file2Download.getMd5Checksum());
             //complete file object with md5
-            try {
-                
-                f2p.setMd5(md5(destFile));
-            } catch (ServiceException e) {
-                throw new RuntimeException(e);
-            }
+//            try {
+//                f2p.setMd5(md5(destFile));
+//            } catch (ServiceException e) {
+//                LOG.error("Failed to create md5 for file {}", fileId, e);
+//            }
             //Add each file to processing list
             list2Process.add(f2p);
             //remove change
@@ -363,25 +394,87 @@ public class DriveServiceImpl implements DriveService {
                 map(e -> e.getValue().get(0))
                 .toList();
 
+        List<Doc> docs = files.stream()
+                .map(f2p -> {
+                    return new Doc(f2p.getFileId(), f2p.getFile().getName(), "UNKNOWN", f2p.getMd5()).setMarkForUpdate(true);
+                })
+                .toList();
+
+        docRepo.saveAll(docs);
+
+
         //Request async file list processing
         processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
 
     }
 
-    private String md5(Path path) throws ServiceException {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(Files.readAllBytes(path));
-            return String.format("%032x", new BigInteger(1, md.digest())); // hex, padded to 32 chars
-        } catch (NoSuchAlgorithmException | IOException e) {
-            LOG.error("MD5 failed", e);
-            throw new ServiceException(e);
+    @Nullable
+    private File downloadFileFromDrive(String fileId, Path destPath, Path destFile, String filename) {
+        if(destPath.toFile().exists()) {
+            LOG.info("folder {} already exists", fileId);
+            if(destFile.toFile().exists()) {
+                if(destPath.toFile().delete()) {
+                    LOG.info("deleted folder {}", fileId);
+                } else {
+                    LOG.info("failed to delete folder {}", fileId);
+                }
+            }
+        } else {
+            if(destPath.toFile().mkdir()) {
+                LOG.info("created folder {}", fileId);
+            } else {
+                LOG.error("failed to create directory {}", destPath.toFile().getAbsolutePath());
+            }
         }
+
+        File file2Download = null;
+        //Download file from g drive
+        try {
+            LOG.info("download file id {} from gdrive", fileId);
+
+            File file = drive.files().get(fileId).setFields("id, mimeType, md5Checksum").execute();
+
+            if (file.getMimeType().equals(GOOGLE_APP_DOC_MIME_TYPE) ||
+                    file.getMimeType().equals(GOOGLE_APP_SPREADSHEET_MIME_TYPE) ||
+                    file.getMimeType().equals(GOOGLE_APP_PREZ_MIME_TYPE)) {
+                throw new IOException("Google App document cannot be downloaded");
+            }
+
+            try (OutputStream outputStream = new FileOutputStream(destFile.toFile())) {
+                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
+            }
+            file2Download = file;
+            LOG.info("Downloaded name {} to {}", filename, destPath);
+        } catch (IOException e) {
+            LOG.error("Failed to download file {}", fileId, e);
+        }
+        return file2Download;
     }
 
+//    private String md5(Path path) throws ServiceException {
+//        try {
+//            MessageDigest md = MessageDigest.getInstance("MD5");
+//            md.update(Files.readAllBytes(path));
+//            return String.format("%032x", new BigInteger(1, md.digest())); // hex, padded to 32 chars
+//        } catch (NoSuchAlgorithmException | IOException e) {
+//            LOG.error("MD5 failed", e);
+//            throw new ServiceException(e);
+//        }
+//    }
+
     @Override
-    public File upload(String name, java.io.File file) {
+    public File processTranscript(String name, String fileId, java.io.File file) {
         LOG.info("upload file {}", name);
+
+        Optional<Doc> optDoc = docRepo.findById(fileId);
+        if(!optDoc.isPresent()) {
+            Doc doc = optDoc.get();
+            doc.setTranscripted_at(OffsetDateTime.now());
+            doc.setMarkForUpdate(false);
+            docRepo.save(doc);
+        } else {
+            LOG.error("doc not found {}", fileId);
+        }
 
         File fileMetadata = new File();
         fileMetadata.setName(name);
@@ -471,7 +564,10 @@ public class DriveServiceImpl implements DriveService {
 
     }
 
-    public void list(String folderId, String offset, int max_depth) {
+
+    private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName) {
+
+
 
         String query = "'" + folderId + "' in parents and trashed = false";
 
@@ -494,13 +590,28 @@ public class DriveServiceImpl implements DriveService {
 
                 if(file.getMimeType() != null && file.getMimeType().equals(GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
                     LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                    list(file.getId(), offset + " ", max_depth - 1);
+                    refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName());
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
+
+                    Optional<Doc> optDoc = docRepo.findById(file.getId());
+                    Doc doc = null;
+                    if(optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) {
+                        //doc has to be updated
+                        doc = optDoc.get();
+                        doc
+                            .setMarkForUpdate(true);
+
+
+                    } else {
+                        //create doc
+                        doc = new Doc(file.getId(), file.getName(), folder, file.getMd5Checksum())
+                                .setParentFolderId(folderId)
+                                .setParentFolderName(currentFolderName);;
+                    }
+                    docRepo.save(doc);
                 }
-
-
             }
         }
     }
@@ -520,20 +631,6 @@ public class DriveServiceImpl implements DriveService {
                 .findFirst();
     }
 
-
-    public void downloadFile(String fileId, Path destinationPath) throws IOException {
-        File file = drive.files().get(fileId).setFields("name, mimeType").execute();
-
-        if (file.getMimeType().equals(GOOGLE_APP_DOC_MIME_TYPE) ||
-                file.getMimeType().equals(GOOGLE_APP_SPREADSHEET_MIME_TYPE) ||
-                file.getMimeType().equals(GOOGLE_APP_PREZ_MIME_TYPE)) {
-            throw new IOException("Google App document cannot be downloaded");
-        }
-
-        try (OutputStream outputStream = new FileOutputStream(destinationPath.toFile())) {
-            drive.files().get(fileId).executeMediaAndDownloadTo(outputStream);
-        }
-    }
 
     public List<File> listFileByName(String name, String folderId) throws IOException {
         String query = "'" + folderId + "' in parents and name='" + name + "'and trashed = false";

@@ -34,6 +34,7 @@ public class Doc {
         this.remoteFolder = remoteFolder;
         this.md5 = md5;
         this.markForUpdate = true;
+        this.discovered_at = OffsetDateTime.now();
     }
 
     public String getFileId() {

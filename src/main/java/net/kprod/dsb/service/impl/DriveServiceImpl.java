@@ -191,41 +191,41 @@ public class DriveServiceImpl implements DriveService {
         }
 
         //update db
-        refreshFolder(folderId, "", 4, "", gFolder.getName());
+        List<Doc> updatedDocs = new ArrayList<>();
+        refreshFolder(folderId, "", 4, "", gFolder.getName(), updatedDocs);
 
         //download files if needed
-        docRepo.findAll().stream()
-                .filter(d->folderId.equals(d.getParentFolderId()))
+
+        updatedDocs.stream()
+                .filter(Doc::isMarkForUpdate)
                 .forEach(d-> {
-                    File file = null;
-                    try {
-                        file = drive.files().get(d.getFileId()).setFields("id, name, mimeType, md5Checksum").execute();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    if(file != null && file.getMd5Checksum() != d.getMd5()) {
-
+//                    File file = null;
+//                    try {
+//                        file = drive.files().get(d.getFileId()).setFields("id, name, mimeType, md5Checksum").execute();
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
                         Path destPath = Paths.get("/tmp", d.getFileId());
                         Path destFile = Paths.get(destPath.toString(), d.getFileName());
-                        downloadFileFromDrive(file.getId(), destPath, destFile, file.getName());
-
-                    }
+                        downloadFileFromDrive(d.getFileId(), destPath, destFile, d.getFileName());
+                        d.setLocalFolder(destPath.toString());
+                        d.setMarkForUpdate(false);
 
                 });
 
+        docRepo.saveAll(updatedDocs);
 
-        System.out.println();
-//                docRepo.findAll().stream()
-//                    .filter(Doc::isMarkForUpdate)
-//                    .map(d -> {
-//                        File2Process f2p = new File2Process(
-//                                d.getFileId(),
-//
-//
-//                    })
-//
-//        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+        LOG.info("Downloaded files");
+
+        List<File2Process> files2Process = updatedDocs.stream()
+            .map(d->{
+                Path path2File = Paths.get(d.getLocalFolder(), d.getFileName());
+                return new File2Process(d.getFileId(), Paths.get(d.getLocalFolder()), path2File.toFile());
+            })
+            .toList();
+
+
+        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
 
     }
 
@@ -565,7 +565,7 @@ public class DriveServiceImpl implements DriveService {
     }
 
 
-    private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName) {
+    private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<Doc> updatedDocs) {
 
 
 
@@ -590,7 +590,7 @@ public class DriveServiceImpl implements DriveService {
 
                 if(file.getMimeType() != null && file.getMimeType().equals(GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
                     LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                    refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName());
+                    refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName(), updatedDocs);
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
@@ -600,17 +600,17 @@ public class DriveServiceImpl implements DriveService {
                     if(optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) {
                         //doc has to be updated
                         doc = optDoc.get();
-                        doc
-                            .setMarkForUpdate(true);
+                        doc.setMarkForUpdate(true);
 
-
-                    } else {
-                        //create doc
+                    } else if (optDoc.isPresent() == false) {
+                        //new file : create doc
                         doc = new Doc(file.getId(), file.getName(), folder, file.getMd5Checksum())
                                 .setParentFolderId(folderId)
-                                .setParentFolderName(currentFolderName);;
+                                .setParentFolderName(currentFolderName)
+                                .setMarkForUpdate(true);
                     }
                     docRepo.save(doc);
+                    updatedDocs.add(doc);
                 }
             }
         }

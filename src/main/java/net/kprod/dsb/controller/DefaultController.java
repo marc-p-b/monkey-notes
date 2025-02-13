@@ -3,9 +3,7 @@ package net.kprod.dsb.controller;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.HttpServletRequest;
-import net.kprod.dsb.service.DriveService;
-import net.kprod.dsb.service.MailService;
-import net.kprod.dsb.service.PdfService;
+import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +25,12 @@ public class DefaultController {
     private DriveService driveService;
 
     @Autowired
+    private DriveUtilsService driveUtilsService;
+
+    @Autowired
+    private DriveChangeManagerService driveChMgmtService;
+
+    @Autowired
     private PdfService pdfService;
 
     @Autowired
@@ -39,30 +43,31 @@ public class DefaultController {
     public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
         driveService.grantCallback(code);
+        //todo a callback to driveChMgmtService when init auth ?
+        driveChMgmtService.watch();
         return ResponseEntity.ok().body("OK");
     }
 
-
     @GetMapping("/info")
     public ResponseEntity<List<String>> info() {
-        return ResponseEntity.ok().body(driveService.getWaitList());
+        return ResponseEntity.ok().body(driveChMgmtService.getWaitList());
     }
 
     @GetMapping("/flush")
     public ResponseEntity<String> flush() {
-        driveService.flushChanges();
+        driveChMgmtService.flushChanges();
         return ResponseEntity.ok().body("OK");
     }
 
     @GetMapping("/update/all")
     public ResponseEntity<String> updateAll() {
-        driveService.updateAll();
+        driveChMgmtService.updateAll();
         return ResponseEntity.ok().body("OK");
     }
 
     @GetMapping("/update/folder/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
-        driveService.updateFolder(folderId);
+        driveChMgmtService.updateFolder(folderId);
         return ResponseEntity.ok().body("OK");
     }
 
@@ -78,10 +83,11 @@ public class DefaultController {
         String transciptFileName = fileName + "-transcript.pdf";
         try {
             //a trick to force android / autosync app on boox to download file
-            driveService.deleteSimilarNameFromTranscripts(transciptFileName);
+            //todo ?
+            driveUtilsService.deleteSimilarNameFromTranscripts(transciptFileName);
 
             File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
-            driveService.processTranscript(transciptFileName, fileId, pdfTranscriptFile);
+            driveChMgmtService.processTranscript(transciptFileName, fileId, pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -100,7 +106,7 @@ public class DefaultController {
 
     @PostMapping("/notify")
     public ResponseEntity<String> notifyChange(@RequestHeader(value = "X-Goog-Channel-Id", required = false) String channelId) {
-        driveService.getChanges(channelId);
+        driveChMgmtService.getChanges(channelId);
         return new ResponseEntity<>("Notification received", HttpStatus.OK);
     }
 }

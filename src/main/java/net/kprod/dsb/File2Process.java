@@ -9,7 +9,10 @@ public class File2Process {
         private File file;
         private String md5;
 
-        public File2Process(String fileId, Path workingDir, File file) {
+    public File2Process() {
+    }
+
+    public File2Process(String fileId, Path workingDir, File file) {
             this.fileId = fileId;
             this.workingDir = workingDir;
             this.file = file;
@@ -26,6 +29,21 @@ public class File2Process {
         public File getFile() {
             return file;
         }
+
+    public File2Process setFileId(String fileId) {
+        this.fileId = fileId;
+        return this;
+    }
+
+    public File2Process setWorkingDir(Path workingDir) {
+        this.workingDir = workingDir;
+        return this;
+    }
+
+    public File2Process setFile(File file) {
+        this.file = file;
+        return this;
+    }
 
     public String getMd5() {
         return md5;

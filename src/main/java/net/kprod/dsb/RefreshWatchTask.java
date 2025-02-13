@@ -1,7 +1,7 @@
 package net.kprod.dsb;
 
 import net.kprod.dsb.monitoring.MonitoringService;
-import net.kprod.dsb.service.DriveService;
+import net.kprod.dsb.service.DriveChangeManagerService;
 import org.springframework.context.ApplicationContext;
 
 import java.io.IOException;
@@ -11,12 +11,11 @@ public class RefreshWatchTask implements Runnable{
 
 	public RefreshWatchTask(ApplicationContext ctx){
 		this.ctx = ctx;
-
 	}
 
 	@Override
 	public void run() {
-		DriveService service = ctx.getBean(DriveService.class);
+		DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
 
 		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
 		monitoringService.start("RefreshWatchTask", "run");
@@ -28,7 +27,5 @@ public class RefreshWatchTask implements Runnable{
             throw new RuntimeException(e);
         }
 		monitoringService.end(System.currentTimeMillis() - startTime);
-
-
     }
 }

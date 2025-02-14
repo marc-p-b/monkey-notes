@@ -36,6 +36,9 @@ public class DefaultController {
     @Autowired
     private MailService mailService;
 
+    @Value("${app.drive.folders.out}")
+    String outFolderId;
+
     @Value("${app.email.recipient}")
     private String emailRecipient;
 
@@ -84,7 +87,7 @@ public class DefaultController {
         try {
             //a trick to force android / autosync app on boox to download file
             //todo ?
-            driveUtilsService.deleteSimilarNameFromTranscripts(transciptFileName);
+            driveUtilsService.deleteSimilarNameFromTranscripts(transciptFileName, outFolderId);
 
             File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
             driveChMgmtService.processTranscript(transciptFileName, fileId, pdfTranscriptFile);

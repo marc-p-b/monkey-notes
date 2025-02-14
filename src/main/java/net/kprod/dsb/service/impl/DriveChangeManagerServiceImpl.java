@@ -204,7 +204,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 if(change.getFile() != null) {
                     LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
 
-                    if(driveUtilsService.checkInboundFile(fileId)) {
+                    if(driveUtilsService.checkInboundFile(fileId, inboundFolderId)) {
                         if(mapScheduled.containsKey(fileId)) {
                             LOG.info("already got a change for file {}", fileId);
                             mapScheduled.get(fileId).getFuture().cancel(true);

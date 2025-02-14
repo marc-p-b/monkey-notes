@@ -22,16 +22,6 @@ import java.util.Optional;
 @Service
 public class DriveServiceUtilsImpl implements DriveUtilsService {
     private Logger LOG = LoggerFactory.getLogger(DriveServiceUtilsImpl.class);
-//    public static final String GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
-//    public static final String GOOGLE_APP_DOC_MIME_TYPE = "application/vnd.google-apps.document";
-//    public static final String GOOGLE_APP_SPREADSHEET_MIME_TYPE = "application/vnd.google-apps.spreadsheet";
-//    public static final String GOOGLE_APP_PREZ_MIME_TYPE = "application/vnd.google-apps.presentation";
-
-    @Value("${app.drive.folders.in}")
-    String inboundFolderId;
-
-    @Value("${app.drive.folders.out}")
-    String outFolderId;
 
     @Autowired
     DriveService driveService;
@@ -157,9 +147,9 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     }
 
     //todo folder param
-    public Optional<String> checkDriveParents(List<String> parents) {
+    public Optional<String> checkDriveParents(List<String> parents, String parentFileId) {
        return parents.stream()
-                .filter(id -> inboundFolderId.equals(id))
+                .filter(id -> parentFileId.equals(id))
                 .findFirst();
     }
 
@@ -176,10 +166,10 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
 
     //todo folder id as param
     @Override
-    public void deleteSimilarNameFromTranscripts(String name) {
+    public void deleteSimilarNameFromTranscripts(String name, String folderId) {
         LOG.info("delete previous files {}", name);
         try {
-            List<File> list = listFileByName(name, outFolderId);
+            List<File> list = listFileByName(name, folderId);
             for(File file : list) {
                 LOG.info("deleted file {} id {}", file.getName(), file.getId());
                 delete(file.getId());

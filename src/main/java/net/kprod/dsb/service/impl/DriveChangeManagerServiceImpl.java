@@ -14,7 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -66,9 +68,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
 
-//    @Autowired
-//    private ProcessFileImpl processFileImpl;
-
     @Autowired
     private DocRepo docRepo;
 
@@ -77,6 +76,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private DriveUtilsService driveUtilsService;
+
+    @Value("${app.erase-db:false}")
+    private boolean eraseDb;
+
+    @EventListener(ApplicationReadyEvent.class)
+    void startup() {
+        LOG.info("Starting up");
+        if(eraseDb) {
+            LOG.warn(">>> ERASE DB ON STARTUP");
+            docRepo.deleteAll();
+        }
+    }
 
     public void updateAll() {
         updateFolder(inboundFolderId);
@@ -306,10 +317,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public File processTranscript(String name, String fileId, java.io.File file) {
-        LOG.info("upload file {}", name);
+        LOG.info("upload file id {} name {}", fileId, name);
 
         Optional<Doc> optDoc = docRepo.findById(fileId);
-        if(!optDoc.isPresent()) {
+        if(optDoc.isPresent()) {
             Doc doc = optDoc.get();
             doc.setTranscripted_at(OffsetDateTime.now());
             doc.setMarkForUpdate(false);

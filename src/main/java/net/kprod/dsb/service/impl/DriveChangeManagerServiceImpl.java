@@ -204,7 +204,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 if(change.getFile() != null) {
                     LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
 
-                    if(driveUtilsService.checkInboundFile(fileId, inboundFolderId)) {
+                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
                         if(mapScheduled.containsKey(fileId)) {
                             LOG.info("already got a change for file {}", fileId);
                             mapScheduled.get(fileId).getFuture().cancel(true);
@@ -316,13 +316,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public File processTranscript(String name, String fileId, java.io.File file) {
+    public File processTranscript(String name, String fileId, String transcript, java.io.File file) {
         LOG.info("upload file id {} name {}", fileId, name);
 
         Optional<Doc> optDoc = docRepo.findById(fileId);
         if(optDoc.isPresent()) {
             Doc doc = optDoc.get();
             doc.setTranscripted_at(OffsetDateTime.now());
+            doc.setTranscript(transcript);
             doc.setMarkForUpdate(false);
             docRepo.save(doc);
         } else {
@@ -342,7 +343,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.info("uploaded to drive as fileId {}", driveFile.getId());
             return driveFile;
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("error uploading file {}", fileId, e);
         }
 
         return null;

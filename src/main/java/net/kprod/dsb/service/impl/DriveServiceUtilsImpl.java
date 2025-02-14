@@ -8,7 +8,6 @@ import net.kprod.dsb.service.DriveUtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
@@ -82,12 +81,14 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         }
     }
 
+    @Override
     public String getFileName(String fileId) throws IOException {
         File file = driveService.getDrive().files().get(fileId).setFields("name").execute();
         return file.getName();
     }
 
-    public boolean checkInboundFile(String fileId) {
+    @Override
+    public boolean fileHasSpecifiedParents(String fileId, String parentFileId) {
         File file = null;
         try {
             file = driveService.getDrive().files().get(fileId).setFields("parents, mimeType, md5Checksum").execute();
@@ -101,13 +102,13 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         }
 
         //level 1
-        Optional<String> level1FolderId = checkDriveParents(file.getParents());
+        Optional<String> level1FolderId = checkDriveParents(file.getParents(), parentFileId);
         if(level1FolderId.isPresent()) {
-            //cache this value
+            //todo cache this value
             //LOG.info("parent {} is ok", level1FolderId.get());
             return true;
         } else {
-            Optional<String> folderId = recursCheck(file.getParents());
+            Optional<String> folderId = fileHasSpecifiedParentsRecurs(file.getParents(), parentFileId);
             return folderId.isPresent();
             //LOG.info("parent {} is ok", folderId.orElse("nope !"));
         }
@@ -115,7 +116,7 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         //return false;
     }
 
-    public Optional<String> recursCheck(List<String> fileIds) {
+    private Optional<String> fileHasSpecifiedParentsRecurs(List<String> fileIds, String parentFileId) {
 
         List<String> checkedId = new ArrayList<>();
 
@@ -126,17 +127,18 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
                 return Optional.empty();
             }
             checkedId.addAll(lvlParents);
-            Optional<String> lvlFolderId = checkDriveParents(lvlParents);
+            Optional<String> lvlFolderId = checkDriveParents(lvlParents, parentFileId);
             if(lvlFolderId.isPresent()) {
-                //cache this
+                //todo cache this
                 LOG.info("parent {} is ok", lvlFolderId.get());
                 return lvlFolderId;
             }
         }
         LOG.info("go recursCheck with ids {}", checkedId);
-        return recursCheck(checkedId);
+        return fileHasSpecifiedParentsRecurs(checkedId, parentFileId);
     }
 
+    @Override
     public List<String> getDriveParents(String fileId) {
         try {
             File dFile = driveService.getDrive().files().get(fileId).setFields("parents").execute();
@@ -147,13 +149,14 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     }
 
     //todo folder param
-    public Optional<String> checkDriveParents(List<String> parents, String parentFileId) {
+    private Optional<String> checkDriveParents(List<String> parents, String parentFileId) {
        return parents.stream()
                 .filter(id -> parentFileId.equals(id))
                 .findFirst();
     }
 
 
+    @Override
     public List<File> listFileByName(String name, String folderId) throws IOException {
         String query = "'" + folderId + "' in parents and name='" + name + "'and trashed = false";
         FileList result = driveService.getDrive().files().list()

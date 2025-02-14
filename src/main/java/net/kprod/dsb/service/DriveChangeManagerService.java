@@ -15,6 +15,6 @@ public interface DriveChangeManagerService {
     List<String> getWaitList();
     void getChanges(String channelId);
     void flushChanges();
-    File processTranscript(String name, String fileId, java.io.File file);
+    File processTranscript(String name, String fileId, String transcript, java.io.File file);
     void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<Doc> updatedDocs);
 }

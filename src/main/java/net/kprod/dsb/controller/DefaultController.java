@@ -90,7 +90,7 @@ public class DefaultController {
             driveUtilsService.deleteSimilarNameFromTranscripts(transciptFileName, outFolderId);
 
             File pdfTranscriptFile = pdfService.createTranscriptPdf(fileId, transcript);
-            driveChMgmtService.processTranscript(transciptFileName, fileId, pdfTranscriptFile);
+            driveChMgmtService.processTranscript(transciptFileName, fileId, transcript, pdfTranscriptFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

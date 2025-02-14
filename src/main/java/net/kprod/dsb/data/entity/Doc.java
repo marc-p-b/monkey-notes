@@ -3,6 +3,7 @@ package net.kprod.dsb.data.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 
 import java.time.OffsetDateTime;
 
@@ -21,7 +22,8 @@ public class Doc {
     private OffsetDateTime discovered_at;
     private OffsetDateTime transcripted_at;
     private boolean markForUpdate;
-
+    @Lob
+    private String transcript;
     private String parentFolderName;
     private String parentFolderId;
 
@@ -124,6 +126,15 @@ public class Doc {
 
     public Doc setParentFolderId(String parentFolderId) {
         this.parentFolderId = parentFolderId;
+        return this;
+    }
+
+    public String getTranscript() {
+        return transcript;
+    }
+
+    public Doc setTranscript(String text) {
+        this.transcript = text;
         return this;
     }
 }

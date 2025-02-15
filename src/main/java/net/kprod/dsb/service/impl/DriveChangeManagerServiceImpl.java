@@ -27,6 +27,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +44,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private String currentChannelId;
 
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
+    private ScheduledFuture<?> futureFlush;
+    private boolean watchChanges = false;
 
     @Autowired
     private MonitoringService monitoringService;
@@ -98,7 +101,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         try {
             gFolder = driveService.getDrive().files().get(folderId).setFields("name").execute();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("Error getting folder name {}", folderId, e);
+            return;
         }
 
         //update db
@@ -113,6 +117,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         Path destFile = Paths.get(destPath.toString(), d.getFileName());
                         driveUtilsService.downloadFileFromDrive(d.getFileId(), destPath, destFile, d.getFileName());
                         d.setLocalFolder(destPath.toString());
+                        //mark 4 update usage is not consistent
                         d.setMarkForUpdate(false);
                 });
         docRepo.saveAll(updatedDocs);
@@ -131,6 +136,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
         driveService.getDrive().channels().stop(responseChannel);
+        watchChanges = false;
     }
 
     public void watch() {
@@ -159,6 +165,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
 
         taskScheduler.schedule(new RefreshWatchTask(ctx), ZonedDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION).toInstant());
+        watchChanges = true;
     }
 
     public void renewWatch() throws IOException {
@@ -170,12 +177,44 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         this.watch();
     }
 
-    public List<String> getWaitList() {
-        return mapScheduled.entrySet().stream()
+    @Override
+    public Map<String, Object> getStatus() {
+        List<String> listScheduled = mapScheduled.entrySet().stream()
                 .map(e->{
                     return new StringBuilder().append(e.getKey()).append(" : ").append(e.getValue()).toString();
                 })
                 .collect(Collectors.toList());
+
+        long delayToFlush = futureFlush != null ? futureFlush.getDelay(TimeUnit.SECONDS) : -1;
+
+        Map<String, Object> info = new HashMap<>();
+        info.put("Watch changes", watchChanges ? "enabled" : "disabled");
+        info.put("Next flush", delayToFlush + "s");
+        info.put("Scheduled count", "" + listScheduled.size());
+        info.put("Scheduled", listScheduled);
+        return info;
+    }
+
+    @Override
+    public List<String> listAvailableTranscripts() {
+        return docRepo.findAll().stream() //optimize request
+                .filter(d -> d.getTranscripted_at() != null)
+                .map(d -> {
+                    return new StringBuilder()
+                            .append(d.getFileId()).append(" - ").append(d.getFileName())
+                            .toString();
+                })
+                .toList();
+    }
+
+    @Override
+    public String getTranscript(String fileId) {
+        Optional<Doc> optDoc = docRepo.findById(fileId);
+        if (optDoc.isPresent()) {
+            Doc doc = optDoc.get();
+            return doc.getTranscript();
+        }
+        return "no transcript found for " + fileId;
     }
 
     public void getChanges(String channelId) {
@@ -211,8 +250,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         }
                         LOG.info(" > accept file change {}", fileId);
                         //todo refresh is deactivated inside task
-                        ScheduledFuture<?> future = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(FLUSH_INTERVAL).toInstant());
-                        changedFile.setFuture(future);
+                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(FLUSH_INTERVAL).toInstant());
+                        changedFile.setFuture(futureFlush);
                         mapScheduled.put(fileId, changedFile);
 
                     } else {

@@ -2,6 +2,8 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.model.*;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.*;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.DocRepo;
@@ -10,6 +12,12 @@ import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.DriveUtilsService;
 import net.kprod.dsb.service.ProcessFile;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +25,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.*;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.WritableRaster;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -28,6 +46,8 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -90,7 +110,127 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.warn(">>> ERASE DB ON STARTUP");
             docRepo.deleteAll();
         }
+        //analyzeImage("/image/toto.png","");
     }
+
+    @Override
+    public byte[] getImage(String fileId, String imagename) {
+        // open image
+        LOG.info("Qwen request fileId {} image {}", fileId, imagename);
+
+        try {
+
+            return Files.readAllBytes(Paths.get("/tmp/", fileId, imagename));
+        } catch (IOException e) {
+            LOG.error(e.getMessage());
+        }
+        return null;
+    }
+
+    private static final String QWEN_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
+    private static final String QWEN_API_KEY = "sk-2f128fcd413245e2a1e4c9f11b437620";
+
+    private String analyzeImage(Path imagePath, String fileId, String imageName) {
+
+        LOG.info("Qwen request analyse image {}", imagePath);
+
+        try {
+            JSONObject content1_url = new JSONObject();
+
+            //content1_url.put("url", URLEncoder.encode(appHost + "/image/" + fileId + "/" + imageName, StandardCharsets.UTF_8.toString()));
+            content1_url.put("url", appHost + "/image/" + fileId + "/" + imageName);
+
+            JSONObject content1 = new JSONObject();
+            content1.put("type", "image_url");
+            content1.put("image_url", content1_url);
+
+
+            JSONObject content2 = new JSONObject();
+            content2.put("type", "text");
+            content2.put("text", "this is a handwritten french extract text place result between brackets");
+
+            JSONObject messages = new JSONObject();
+            messages.put("role", "user");
+            messages.put("content", Arrays.asList(content1, content2));
+
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("model", "qwen2.5-vl-72b-instruct"); //qwen2.5-vl-72b-instruct //qwen-vl-max
+            requestBody.put("messages", Arrays.asList(messages));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + QWEN_API_KEY);
+
+            LOG.info("debug json {}", requestBody.toString());
+
+            HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
+
+            // Send POST request
+            ResponseEntity<String> response = new RestTemplate().exchange(QWEN_URL, HttpMethod.POST, requestEntity, String.class);
+
+            String respBody = response.getBody();//"{\"choices\":[{\"message\":{\"content\":\"[Depuis le 1er juin 2015, un ordinateur équipé d'eye tracking a été prêté par la société Tobii Dynavox au CHU de Tours (Hôpital Bretonneau, service réanimation) pour être testé auprès d'une dizaine de patients. Les membres du personnel soignant et l'équipe paramédicale ont trouvé le système très utile, explique le Dr Bodet-Contentin.]\",\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0,\"logprobs\":null}],\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":410,\"completion_tokens\":97,\"total_tokens\":507},\"created\":1739738723,\"system_fingerprint\":null,\"model\":\"qwen2.5-vl-72b-instruct\",\"id\":\"chatcmpl-0bbcad38-9e01-90ea-b30d-1edd8a48021a\"}";
+            DocumentContext context = JsonPath.parse(respBody);
+
+            String content = context.read("$.choices[0].message.content");
+            Pattern p = Pattern.compile("^\\[(.*)]$");
+            Matcher m = p.matcher(content);
+            if (m.find()) {
+                content = m.group(1);
+            }
+
+            LOG.info("Qwen response: {}", content);
+
+            return content;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+
+    }
+
+
+    //private List<Path> pdf2Images(String sourcePath, String targetDir) {
+
+    private List<Path> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
+        LOG.info("Converting {} to images", sourceFile);
+        List<Path> listImages = null;
+        try {
+            //java.io.File sourceFile = new java.io.File(sourcePath);
+            listImages = new ArrayList<>();
+
+            if (sourceFile.exists()) {
+                PDDocument document = Loader.loadPDF(sourceFile);
+                PDFRenderer pdfRenderer = new PDFRenderer(document);
+
+                int pageCount = document.getNumberOfPages();
+                //System.out.println("Total pages to be converted -> " + pageCount);
+
+                //String fileName = fileId;//sourceFile.getName().replace(".pdf", "");
+                for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
+                    String filename = fileId + "_" + (pageNumber + 1) + ".png";
+                    BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, 150, ImageType.GRAY);
+                    Path pathPage = Paths.get(targetDir.toString(), filename);
+                    java.io.File outputFile = pathPage.toFile();
+
+                    //System.out.println("Image Created -> " + outputFile.getName());
+                    ImageIO.write(image, "png", outputFile);
+                    listImages.add(pathPage);
+                    LOG.info("Page {} converted as {}", pageNumber, filename);
+                }
+
+                document.close();
+            } else {
+                LOG.error("PDF not found: {}", sourceFile);
+            }
+            return listImages;
+
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+        }
+        return null;
+    }
+
 
     public void updateAll() {
         updateFolder(inboundFolderId);
@@ -130,7 +270,24 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 return new File2Process(d.getFileId(), Paths.get(d.getLocalFolder()), path2File.toFile());
             })
             .toList();
-        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+
+
+        //TODO test
+        //processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+
+        files2Process.forEach(f->{
+            List<Path> listImages =  pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
+
+            LOG.info("PDF fileId {} name {} image list {}", f.getFileId(), f.getFile().getName(), listImages.size());
+            listImages.forEach(d->{
+
+                String transcript = analyzeImage(d, f.getFileId(), d.getFileName().toString());
+                LOG.info("FileId {} Image {} transcript {}", f.getFileId(), d.getFileName(), transcript);
+
+            });
+
+        });
+
     }
 
     public void watchStop() throws IOException {

@@ -26,6 +26,9 @@ public class Doc {
     private String transcript;
     private String parentFolderName;
     private String parentFolderId;
+    private long transcriptTook;
+    private long tokensPrompt;
+    private long tokensResponse;
 
     public Doc() {
     }

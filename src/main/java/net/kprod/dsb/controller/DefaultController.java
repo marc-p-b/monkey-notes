@@ -37,12 +37,12 @@ public class DefaultController {
         return ResponseEntity.ok().body(driveChMgmtService.getStatus());
     }
 
-    @GetMapping("/transcipt/list")
+    @GetMapping("/transcript/list")
     public ResponseEntity<List<String>> listTranscipt() throws IOException {
         return ResponseEntity.ok().body(driveChMgmtService.listAvailableTranscripts());
     }
 
-    @GetMapping("/transcipt/{fileId}")
+    @GetMapping("/transcript/{fileId}")
     public ResponseEntity<String> getTranscript(@PathVariable String fileId) throws IOException {
         return ResponseEntity.ok().body(driveChMgmtService.getTranscript(fileId));
     }

@@ -41,7 +41,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,8 +49,38 @@ import java.util.stream.Collectors;
 public class DriveChangeManagerServiceImpl implements DriveChangeManagerService {
     private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerServiceImpl.class);
 
-    private static final long CHANGES_WATCH_EXPIRATION = 3000;
-    private static final long FLUSH_INTERVAL = 15;
+    @Value("${app.url.self}")
+    private String appHost;
+
+    @Value("${app.notify.path}")
+    private String notifyPath;
+
+    @Value("${app.drive.folders.in}")
+    private String inboundFolderId;
+
+    @Value("${app.drive.folders.out}")
+    private String outFolderId;
+
+    @Value("${app.erase-db:false}")
+    private boolean eraseDb;
+
+    @Value("${app.qwen.url}")
+    private String qwenApiUrl;
+
+    @Value("${app.qwen.key}")
+    private String qwenApiKey;
+
+    @Value("${app.qwen.model}")
+    private String qwenModel;
+
+    @Value("${app.qwen.prompt}")
+    private String qwenPrompt;
+
+    @Value("${app.changes.expiration}")
+    private long changesWatchExpiration;
+
+    @Value("${app.changes.flush}")
+    private long flushInterval;
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -69,17 +98,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private ProcessFile processFile;
 
-    @Value("${app.url.self}")
-    String appHost;
-
-    @Value("${app.notify.path}")
-    String notifyPath;
-
-    @Value("${app.drive.folders.in}")
-    String inboundFolderId;
-
-    @Value("${app.drive.folders.out}")
-    String outFolderId;
 
     @Autowired
     private ApplicationContext ctx;
@@ -96,8 +114,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private DriveUtilsService driveUtilsService;
 
-    @Value("${app.erase-db:false}")
-    private boolean eraseDb;
 
     @EventListener(ApplicationReadyEvent.class)
     void startup() {
@@ -106,7 +122,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.warn(">>> ERASE DB ON STARTUP");
             docRepo.deleteAll();
         }
-        //analyzeImage("/image/toto.png","");
     }
 
     @Override
@@ -123,8 +138,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return null;
     }
 
-    private static final String QWEN_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
-    private static final String QWEN_API_KEY = "sk-2f128fcd413245e2a1e4c9f11b437620";
 
     private CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName) {
 
@@ -141,25 +154,25 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             JSONObject content2 = new JSONObject();
             content2.put("type", "text");
-            content2.put("text", "this is a handwritten french extract text place result between brackets");
+            content2.put("text", qwenPrompt);
 
             JSONObject messages = new JSONObject();
             messages.put("role", "user");
             messages.put("content", Arrays.asList(content1, content2));
 
             JSONObject requestBody = new JSONObject();
-            requestBody.put("model", "qwen2.5-vl-72b-instruct"); //qwen2.5-vl-72b-instruct //qwen-vl-max
+            requestBody.put("model", qwenModel); //qwen2.5-vl-72b-instruct //qwen-vl-max
             requestBody.put("messages", Arrays.asList(messages));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + QWEN_API_KEY);
+            headers.set("Authorization", "Bearer " + qwenApiKey);
 
             //LOG.info("debug json {}", requestBody.toString());
 
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
             long start = System.currentTimeMillis();
-            ResponseEntity<String> response = new RestTemplate().exchange(QWEN_URL, HttpMethod.POST, requestEntity, String.class);
+            ResponseEntity<String> response = new RestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
             long took = System.currentTimeMillis() - start;
 
             String respBody = response.getBody();
@@ -336,7 +349,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     public void watch() {
         currentChannelId = UUID.randomUUID().toString();
 
-        OffsetDateTime odt = OffsetDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION);
+        OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
 
         channel = new Channel()
                 .setExpiration(odt.toInstant().toEpochMilli())
@@ -358,7 +371,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
 
-        taskScheduler.schedule(new RefreshWatchTask(ctx), ZonedDateTime.now().plusSeconds(CHANGES_WATCH_EXPIRATION).toInstant());
+        taskScheduler.schedule(new RefreshWatchTask(ctx), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant());
         watchChanges = true;
     }
 
@@ -444,7 +457,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         }
                         LOG.info(" > accept file change {}", fileId);
                         //todo refresh is deactivated inside task
-                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(FLUSH_INTERVAL).toInstant());
+                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
                         changedFile.setFuture(futureFlush);
                         mapScheduled.put(fileId, changedFile);
 
@@ -464,7 +477,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         long now = System.currentTimeMillis();
         Set<String> setDone = mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion
-                .filter(e -> now - e.getValue().getTimestamp() > (FLUSH_INTERVAL - 1))
+                .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 

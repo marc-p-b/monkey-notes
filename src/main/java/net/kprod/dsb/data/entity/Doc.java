@@ -27,8 +27,10 @@ public class Doc {
     private String parentFolderName;
     private String parentFolderId;
     private long transcriptTook;
-    private long tokensPrompt;
-    private long tokensResponse;
+    private String aiModel;
+    private int tokensPrompt;
+    private int tokensResponse;
+    private int pagerCount;
 
     public Doc() {
     }
@@ -138,6 +140,51 @@ public class Doc {
 
     public Doc setTranscript(String text) {
         this.transcript = text;
+        return this;
+    }
+
+    public long getTranscriptTook() {
+        return transcriptTook;
+    }
+
+    public Doc setTranscriptTook(long transcriptTook) {
+        this.transcriptTook = transcriptTook;
+        return this;
+    }
+
+    public String getAiModel() {
+        return aiModel;
+    }
+
+    public Doc setAiModel(String aiModel) {
+        this.aiModel = aiModel;
+        return this;
+    }
+
+    public long getTokensPrompt() {
+        return tokensPrompt;
+    }
+
+    public Doc setTokensPrompt(int tokensPrompt) {
+        this.tokensPrompt = tokensPrompt;
+        return this;
+    }
+
+    public long getTokensResponse() {
+        return tokensResponse;
+    }
+
+    public Doc setTokensResponse(int tokensResponse) {
+        this.tokensResponse = tokensResponse;
+        return this;
+    }
+
+    public int getPagerCount() {
+        return pagerCount;
+    }
+
+    public Doc setPagerCount(int pagerCount) {
+        this.pagerCount = pagerCount;
         return this;
     }
 }

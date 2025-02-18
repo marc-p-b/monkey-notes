@@ -5,6 +5,7 @@ import com.google.api.services.drive.model.*;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.*;
+import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.DocRepo;
 import net.kprod.dsb.monitoring.MonitoringService;
@@ -14,7 +15,6 @@ import net.kprod.dsb.service.DriveUtilsService;
 import net.kprod.dsb.service.ProcessFile;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.json.JSONObject;
@@ -32,12 +32,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.WritableRaster;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +41,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -130,20 +126,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private static final String QWEN_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
     private static final String QWEN_API_KEY = "sk-2f128fcd413245e2a1e4c9f11b437620";
 
-    private String analyzeImage(Path imagePath, String fileId, String imageName) {
+    private CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName) {
 
         LOG.info("Qwen request analyse image {}", imagePath);
 
         try {
             JSONObject content1_url = new JSONObject();
 
-            //content1_url.put("url", URLEncoder.encode(appHost + "/image/" + fileId + "/" + imageName, StandardCharsets.UTF_8.toString()));
             content1_url.put("url", appHost + "/image/" + fileId + "/" + imageName);
 
             JSONObject content1 = new JSONObject();
             content1.put("type", "image_url");
             content1.put("image_url", content1_url);
-
 
             JSONObject content2 = new JSONObject();
             content2.put("type", "text");
@@ -153,7 +147,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             messages.put("role", "user");
             messages.put("content", Arrays.asList(content1, content2));
 
-
             JSONObject requestBody = new JSONObject();
             requestBody.put("model", "qwen2.5-vl-72b-instruct"); //qwen2.5-vl-72b-instruct //qwen-vl-max
             requestBody.put("messages", Arrays.asList(messages));
@@ -162,29 +155,33 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + QWEN_API_KEY);
 
-            LOG.info("debug json {}", requestBody.toString());
+            //LOG.info("debug json {}", requestBody.toString());
 
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
-
-            // Send POST request
+            long start = System.currentTimeMillis();
             ResponseEntity<String> response = new RestTemplate().exchange(QWEN_URL, HttpMethod.POST, requestEntity, String.class);
+            long took = System.currentTimeMillis() - start;
 
-            String respBody = response.getBody();//"{\"choices\":[{\"message\":{\"content\":\"[Depuis le 1er juin 2015, un ordinateur équipé d'eye tracking a été prêté par la société Tobii Dynavox au CHU de Tours (Hôpital Bretonneau, service réanimation) pour être testé auprès d'une dizaine de patients. Les membres du personnel soignant et l'équipe paramédicale ont trouvé le système très utile, explique le Dr Bodet-Contentin.]\",\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0,\"logprobs\":null}],\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":410,\"completion_tokens\":97,\"total_tokens\":507},\"created\":1739738723,\"system_fingerprint\":null,\"model\":\"qwen2.5-vl-72b-instruct\",\"id\":\"chatcmpl-0bbcad38-9e01-90ea-b30d-1edd8a48021a\"}";
+            String respBody = response.getBody();
             DocumentContext context = JsonPath.parse(respBody);
 
             String content = context.read("$.choices[0].message.content");
-            Pattern p = Pattern.compile("^\\[(.*)]$");
+            String model = context.read("$.model");
+            int completion_tokens = context.read("$.usage.completion_tokens");
+            int prompt_tokens = context.read("$.usage.prompt_tokens");
+
+            Pattern p = Pattern.compile("\\[(.*?)]", Pattern.DOTALL| Pattern.MULTILINE);
             Matcher m = p.matcher(content);
             if (m.find()) {
                 content = m.group(1);
             }
 
-            LOG.info("Qwen response: {}", content);
-
-            return content;
+            CompletionResponse completionResponse = new CompletionResponse(fileId, took, model, prompt_tokens, completion_tokens, content);
+            //LOG.info("Qwen response: {}", content);
+            return completionResponse;
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
+            LOG.error("Failed request model", e);
+            return null;
         }
 
     }
@@ -275,18 +272,58 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         //TODO test
         //processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
 
-        files2Process.forEach(f->{
-            List<Path> listImages =  pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
+        //files2Process.forEach(f->{
+        Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
+            .flatMap(f-> {
+                List<Path> listImages =  pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
 
-            LOG.info("PDF fileId {} name {} image list {}", f.getFileId(), f.getFile().getName(), listImages.size());
-            listImages.forEach(d->{
+                LOG.info("PDF fileId {} name {} image list {}", f.getFileId(), f.getFile().getName(), listImages.size());
+                return listImages.stream()
+                    .map(d->{
+                        CompletionResponse completionResponse = analyzeImage(d, f.getFileId(), d.getFileName().toString());
+                        LOG.info("FileId {} Image {} transcript {}", f.getFileId(), d.getFileName(), completionResponse.getTranscript());
+                        return completionResponse;
+                });
+            })
+            .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
-                String transcript = analyzeImage(d, f.getFileId(), d.getFileName().toString());
-                LOG.info("FileId {} Image {} transcript {}", f.getFileId(), d.getFileName(), transcript);
+        mapCompleted.entrySet().stream()
+                .forEach(e -> {
+                    String fileId = e.getKey();
 
-            });
+                    Optional<Doc> optDoc = docRepo.findById(fileId);
+                    if(optDoc.isPresent()) {
+                        Doc doc = optDoc.get();
 
-        });
+                    long took = e.getValue().stream().map(CompletionResponse::getTranscriptTook).reduce(0l, Long::sum);
+                    int tokensPrompt = e.getValue().stream().map(CompletionResponse::getTokensPrompt).reduce(0, Integer::sum);
+                    int tokensCompletion = e.getValue().stream().map(CompletionResponse::getTokensCompletion).reduce(0, Integer::sum);
+                    List<String> transcripts = e.getValue().stream()
+                            .map(CompletionResponse::getTranscript)
+                            .collect(Collectors.toList());
+
+                    //move this to image analysis ?
+                    int page = 1;
+                    StringBuilder sbTranscripts = new StringBuilder();
+                    for(String transcript : transcripts) {
+
+                        sbTranscripts
+                                .append(page == 1 ? "" : "\n\n")
+                                .append("## Page ").append(page++).append("\n\n").append(transcript);
+                    }
+                        doc.setAiModel(e.getValue().get(0).getAiModel())
+                        .setTranscripted_at(OffsetDateTime.now())
+                        .setPagerCount(e.getValue().size())
+                        .setTokensPrompt(tokensPrompt)
+                        .setTokensResponse(tokensCompletion)
+                        .setTranscriptTook(took)
+                        .setTranscript(sbTranscripts.toString());
+                        docRepo.save(doc);
+                    }
+
+                });
+
+
 
     }
 

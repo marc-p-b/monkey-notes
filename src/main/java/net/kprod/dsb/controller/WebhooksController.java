@@ -36,6 +36,9 @@ public class WebhooksController {
     private PdfService pdfService;
 
     @Autowired
+    private ImageService imageService;
+
+    @Autowired
     private MailService mailService;
 
     @Value("${app.drive.folders.out}")
@@ -99,6 +102,6 @@ public class WebhooksController {
 
     @GetMapping(value = "/image/{fileId}/{imageId}",produces = MediaType.IMAGE_JPEG_VALUE)
     public @ResponseBody byte[] getImageWithMediaType(@PathVariable String fileId, @PathVariable String imageId) throws IOException {
-        return driveChMgmtService.getImage(fileId, imageId);
+        return imageService.getImage(fileId, imageId);
     }
 }

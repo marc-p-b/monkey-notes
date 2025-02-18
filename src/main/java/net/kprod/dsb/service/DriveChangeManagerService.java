@@ -21,5 +21,5 @@ public interface DriveChangeManagerService {
     Map<String, Object> getStatus();
     List<String> listAvailableTranscripts();
     String getTranscript(String fileId);
-    byte[] getImage(String fileId, String ImageName);
+    //byte[] getImage(String fileId, String ImageName);
 }

@@ -75,7 +75,7 @@ public class LegacyProcessFileImpl implements LegacyProcessFile {
         String workPath = "\"" + workingDir.toString() + "\"";
         String filePath = "\"" + file.getAbsolutePath() + "\"";
         String name = "\"" + file.getName() + "\"";
-        
+
         try {
             String[] cmd = {"/bin/sh", "-c", "cd " + workPath + " && " + pathPdf2ppm + " " + filePath + " " + name + " -png"};
             LOG.info("Executing command: {}", String.join(" ", cmd));

@@ -2,22 +2,12 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.model.*;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.*;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.DocRepo;
 import net.kprod.dsb.monitoring.MonitoringService;
-import net.kprod.dsb.service.DriveChangeManagerService;
-import net.kprod.dsb.service.DriveService;
-import net.kprod.dsb.service.DriveUtilsService;
-import net.kprod.dsb.service.LegacyProcessFile;
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
-import org.apache.pdfbox.rendering.PDFRenderer;
-import org.json.JSONObject;
+import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,15 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.*;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -41,8 +26,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,18 +47,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.erase-db:false}")
     private boolean eraseDb;
 
-    @Value("${app.qwen.url}")
-    private String qwenApiUrl;
-
-    @Value("${app.qwen.key}")
-    private String qwenApiKey;
-
-    @Value("${app.qwen.model}")
-    private String qwenModel;
-
-    @Value("${app.qwen.prompt}")
-    private String qwenPrompt;
-
     @Value("${app.changes.expiration}")
     private long changesWatchExpiration;
 
@@ -95,9 +66,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private MonitoringService monitoringService;
 
-    @Autowired
-    private LegacyProcessFile legacyProcessFile;
-
+//    @Autowired
+//    private LegacyProcessFile legacyProcessFile;
 
     @Autowired
     private ApplicationContext ctx;
@@ -114,6 +84,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private DriveUtilsService driveUtilsService;
 
+    @Autowired
+    private ImageService imageService;
+
+    @Autowired
+    private QwenService qwenService;
 
     @EventListener(ApplicationReadyEvent.class)
     void startup() {
@@ -123,124 +98,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             docRepo.deleteAll();
         }
     }
-
-    @Override
-    public byte[] getImage(String fileId, String imagename) {
-        // open image
-        LOG.info("Qwen request fileId {} image {}", fileId, imagename);
-
-        try {
-
-            return Files.readAllBytes(Paths.get("/tmp/", fileId, imagename));
-        } catch (IOException e) {
-            LOG.error(e.getMessage());
-        }
-        return null;
-    }
-
-
-    private CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName) {
-
-        LOG.info("Qwen request analyse image {}", imagePath);
-
-        try {
-            JSONObject content1_url = new JSONObject();
-
-            content1_url.put("url", appHost + "/image/" + fileId + "/" + imageName);
-
-            JSONObject content1 = new JSONObject();
-            content1.put("type", "image_url");
-            content1.put("image_url", content1_url);
-
-            JSONObject content2 = new JSONObject();
-            content2.put("type", "text");
-            content2.put("text", qwenPrompt);
-
-            JSONObject messages = new JSONObject();
-            messages.put("role", "user");
-            messages.put("content", Arrays.asList(content1, content2));
-
-            JSONObject requestBody = new JSONObject();
-            requestBody.put("model", qwenModel); //qwen2.5-vl-72b-instruct //qwen-vl-max
-            requestBody.put("messages", Arrays.asList(messages));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + qwenApiKey);
-
-            //LOG.info("debug json {}", requestBody.toString());
-
-            HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
-            long start = System.currentTimeMillis();
-            ResponseEntity<String> response = new RestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
-            long took = System.currentTimeMillis() - start;
-
-            String respBody = response.getBody();
-            DocumentContext context = JsonPath.parse(respBody);
-
-            String content = context.read("$.choices[0].message.content");
-            String model = context.read("$.model");
-            int completion_tokens = context.read("$.usage.completion_tokens");
-            int prompt_tokens = context.read("$.usage.prompt_tokens");
-
-            Pattern p = Pattern.compile("\\[(.*?)]", Pattern.DOTALL| Pattern.MULTILINE);
-            Matcher m = p.matcher(content);
-            if (m.find()) {
-                content = m.group(1);
-            }
-
-            CompletionResponse completionResponse = new CompletionResponse(fileId, took, model, prompt_tokens, completion_tokens, content);
-            //LOG.info("Qwen response: {}", content);
-            return completionResponse;
-        } catch (Exception e) {
-            LOG.error("Failed request model", e);
-            return null;
-        }
-
-    }
-
-
-    //private List<Path> pdf2Images(String sourcePath, String targetDir) {
-
-    private List<Path> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
-        LOG.info("Converting {} to images", sourceFile);
-        List<Path> listImages = null;
-        try {
-            //java.io.File sourceFile = new java.io.File(sourcePath);
-            listImages = new ArrayList<>();
-
-            if (sourceFile.exists()) {
-                PDDocument document = Loader.loadPDF(sourceFile);
-                PDFRenderer pdfRenderer = new PDFRenderer(document);
-
-                int pageCount = document.getNumberOfPages();
-                //System.out.println("Total pages to be converted -> " + pageCount);
-
-                //String fileName = fileId;//sourceFile.getName().replace(".pdf", "");
-                for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
-                    String filename = fileId + "_" + (pageNumber + 1) + ".png";
-                    BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, 150, ImageType.GRAY);
-                    Path pathPage = Paths.get(targetDir.toString(), filename);
-                    java.io.File outputFile = pathPage.toFile();
-
-                    //System.out.println("Image Created -> " + outputFile.getName());
-                    ImageIO.write(image, "png", outputFile);
-                    listImages.add(pathPage);
-                    LOG.info("Page {} converted as {}", pageNumber, filename);
-                }
-
-                document.close();
-            } else {
-                LOG.error("PDF not found: {}", sourceFile);
-            }
-            return listImages;
-
-        } catch (Exception e) {
-            LOG.error(e.getMessage());
-        }
-        return null;
-    }
-
 
     public void updateAll() {
         updateFolder(inboundFolderId);
@@ -282,18 +139,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             .toList();
 
 
-        //TODO test
-        legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        //Legacy processing using shell and python
+        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
 
-        //files2Process.forEach(f->{
+        //TODO refactor
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
             .flatMap(f-> {
-                List<Path> listImages =  pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
+                List<Path> listImages =  imageService.pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
 
                 LOG.info("PDF fileId {} name {} image list {}", f.getFileId(), f.getFile().getName(), listImages.size());
                 return listImages.stream()
                     .map(d->{
-                        CompletionResponse completionResponse = analyzeImage(d, f.getFileId(), d.getFileName().toString());
+                        CompletionResponse completionResponse = qwenService.analyzeImage(d, f.getFileId(), d.getFileName().toString());
                         LOG.info("FileId {} Image {} transcript {}", f.getFileId(), d.getFileName(), completionResponse.getTranscript());
                         return completionResponse;
                 });
@@ -557,7 +414,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
 
         //Request async file list processing
-        legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+        //TODO replace me with new processing
 
     }
 

@@ -1,5 +1,9 @@
 package net.kprod.dsb.service;
 
+import net.kprod.dsb.data.CompletionResponse;
+
+import java.nio.file.Path;
+
 public interface QwenService {
-    String analyzeImage(String imagePath, String prompt);
+    CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName);
 }

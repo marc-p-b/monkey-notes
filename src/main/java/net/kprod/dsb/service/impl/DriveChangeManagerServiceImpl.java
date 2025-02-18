@@ -6,7 +6,6 @@ import net.kprod.dsb.*;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.DocRepo;
-import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,13 +61,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private ScheduledFuture<?> futureFlush;
     private boolean watchChanges = false;
-
-    @Autowired
-    private MonitoringService monitoringService;
-
-//    @Autowired
-//    private LegacyProcessFile legacyProcessFile;
-
+    
     @Autowired
     private ApplicationContext ctx;
 
@@ -85,7 +78,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private DriveUtilsService driveUtilsService;
 
     @Autowired
-    private ImageService imageService;
+    private PdfService pdfService;
 
     @Autowired
     private QwenService qwenService;
@@ -145,7 +138,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         //TODO refactor
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
             .flatMap(f-> {
-                List<Path> listImages =  imageService.pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
+                List<Path> listImages = pdfService.pdf2Images(f.getFileId(), f.getFile(), f.getWorkingDir());
 
                 LOG.info("PDF fileId {} name {} image list {}", f.getFileId(), f.getFile().getName(), listImages.size());
                 return listImages.stream()

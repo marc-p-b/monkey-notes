@@ -12,7 +12,7 @@ import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.DriveUtilsService;
-import net.kprod.dsb.service.ProcessFile;
+import net.kprod.dsb.service.LegacyProcessFile;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
@@ -96,7 +96,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private MonitoringService monitoringService;
 
     @Autowired
-    private ProcessFile processFile;
+    private LegacyProcessFile legacyProcessFile;
 
 
     @Autowired
@@ -283,7 +283,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
 
         //TODO test
-        //processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
 
         //files2Process.forEach(f->{
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
@@ -557,7 +557,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
 
         //Request async file list processing
-        processFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+        legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
 
     }
 

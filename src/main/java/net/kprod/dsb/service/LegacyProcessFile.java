@@ -7,6 +7,6 @@ import net.kprod.dsb.monitoring.MonitoringData;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public interface ProcessFile {
+public interface LegacyProcessFile {
     CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
 }

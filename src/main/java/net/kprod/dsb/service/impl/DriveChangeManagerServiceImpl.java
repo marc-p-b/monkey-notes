@@ -2,10 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.*;
 import net.kprod.dsb.*;
-import net.kprod.dsb.data.ChangedFile;
-import net.kprod.dsb.data.CompletionResponse;
-import net.kprod.dsb.data.DriveFileTypes;
-import net.kprod.dsb.data.File2Process;
+import net.kprod.dsb.data.*;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.RepoDoc;
 import net.kprod.dsb.service.*;
@@ -131,6 +128,66 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
 
+
+
+    //@Override
+    private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<RemoteFile> remoteFiles) {
+
+
+        //
+
+        String query = "'" + folderId + "' in parents and trashed = false";
+
+        FileList result = null;
+        try {
+            result = driveService.getDrive().files().list()
+                    .setQ(query)
+                    .setFields("files(id, mimeType, md5Checksum, name)")
+                    .execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<File> files = result.getFiles();
+        if (files == null || files.isEmpty()) {
+            //System.out.println("No files found.");
+            //TODO
+        } else {
+            files.stream()
+                .forEach(file -> {
+                    if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
+                        LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
+                        refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName(), remoteFiles);
+
+                    } else {
+                        LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
+                        Optional<Doc> optDoc = repoDoc.findById(file.getId());
+                        if ((optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
+                                optDoc.isPresent() == false) {
+                            //new or updated file
+
+                            //todo use the same object until the end of stream ? and save all...
+                            RemoteFile rf = new RemoteFile()
+                                    .setFileId(file.getId())
+                                    .setFileName(file.getName())
+                                    .setMd5(file.getMd5Checksum());
+                            remoteFiles.add(rf);
+
+                            Doc doc = optDoc.orElse(new Doc());
+                                doc
+                                    .setFileId(file.getId())
+                                    .setFileName(file.getName())
+                                    .setMd5(file.getMd5Checksum())
+                                    .setRemoteFolder(folder)
+                                    .setParentFolderId(folderId)
+                                    .setParentFolderName(currentFolderName);
+                                repoDoc.save(doc);
+                        }
+                    }
+                });
+        }
+    }
+
+    @Override
     public void updateFolder(String folderId) {
         File gFolder = null;
         try {
@@ -141,35 +198,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
 
         //update db
-        List<Doc> updatedDocs = new ArrayList<>();
-        refreshFolder(folderId, "", 4, "", gFolder.getName(), updatedDocs);
+        List<RemoteFile> remoteFiles = new ArrayList<>();
+        refreshFolder(folderId, "", 4, "", gFolder.getName(), remoteFiles);
 
         //download files if needed
-        List<File2Process> files2Process = updatedDocs.stream()
-                // .filter(Doc::isMarkForUpdate)
+        List<File2Process> files2Process = remoteFiles.stream()
                 .map(d-> {
                         Path targetFolder = fileWorkingDir(d.getFileId());
-
                         Path downloadFilePath = driveUtilsService.downloadFileFromDrive(d.getFileId(), d.getFileName(), targetFolder);
-
-
                         return new File2Process(d.getFileId(), downloadFilePath);
-                        //d.setMarkForUpdate(false);
                 })
-                //.map()
                 .toList();
-        //repoDoc.saveAll(updatedDocs);
 
         LOG.info("Downloaded files");
-
-//        List<File2Process> files2Process = updatedDocs.stream()
-//                .map(d -> new File2Process(d.getFileId()))
-////            .map(d->{
-////                Path path2File = Paths.get(d.getLocalFolder(), d.getFileName());
-////                return new File2Process(d.getFileId(), Paths.get(d.getLocalFolder()), path2File.toFile());
-////            })
-//            .toList();
-
 
         //Legacy processing using shell and python
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
@@ -192,13 +233,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             })
             .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
-        mapCompleted.entrySet().stream()
-                .forEach(e -> {
+        List<Doc> list = mapCompleted.entrySet().stream()
+                .map(e -> {
+
                     String fileId = e.getKey();
 
                     Optional<Doc> optDoc = repoDoc.findById(fileId);
+                    //todo here doc should not be null !
+                    Doc doc = null;
                     if(optDoc.isPresent()) {
-                        Doc doc = optDoc.get();
+                        doc = optDoc.get();
+                    } else {
+                        doc = new Doc();
+                    }
 
                     long took = e.getValue().stream().map(CompletionResponse::getTranscriptTook).reduce(0l, Long::sum);
                     int tokensPrompt = e.getValue().stream().map(CompletionResponse::getTokensPrompt).reduce(0, Integer::sum);
@@ -216,19 +263,23 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                 .append(page == 1 ? "" : "\n\n")
                                 .append("## Page ").append(page++).append("\n\n").append(transcript);
                     }
-                        doc.setAiModel(e.getValue().get(0).getAiModel())
+
+                    doc
+                        .setFileId(fileId)
+                        .setAiModel(e.getValue().get(0).getAiModel())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setPageCount(e.getValue().size())
                         .setTokensPrompt(tokensPrompt)
                         .setTokensResponse(tokensCompletion)
                         .setTranscriptTook(took)
                         .setTranscript(sbTranscripts.toString());
-                        repoDoc.save(doc);
-                    }
-
-                });
 
 
+                    return doc;
+                })
+                .toList();
+
+        repoDoc.saveAll(list);
 
     }
 
@@ -489,54 +540,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 //        return null;
 //    }
 
-    @Override
-    public void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<Doc> updatedDocs) {
-        String query = "'" + folderId + "' in parents and trashed = false";
 
-        FileList result = null;
-        try {
-             result = driveService.getDrive().files().list()
-                    .setQ(query)
-                    .setFields("files(id, mimeType, md5Checksum, name)")
-                    .execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        List<File> files = result.getFiles();
-        if (files == null || files.isEmpty()) {
-            //System.out.println("No files found.");
-        } else {
-
-            for (File file : files) {
-                //LOG.info("filename {} id {}", file.getName(), file.getId());
-
-                if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
-                    LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                    refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName(), updatedDocs);
-
-                } else {
-                    LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
-
-                    Optional<Doc> optDoc = repoDoc.findById(file.getId());
-                    Doc doc = null;
-                    if(optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) {
-                        //doc has to be updated
-                        doc = optDoc.get();
-                        //doc.setMarkForUpdate(true);
-
-                    } else if (optDoc.isPresent() == false) {
-                        //new file : create doc
-                        doc = new Doc(file.getId(), file.getName(), folder, file.getMd5Checksum())
-                                .setParentFolderId(folderId)
-                                .setParentFolderName(currentFolderName);
-                                //.setMarkForUpdate(true);
-                    }
-                    repoDoc.save(doc);
-                    updatedDocs.add(doc);
-                }
-            }
-        }
-    }
 
 
 }

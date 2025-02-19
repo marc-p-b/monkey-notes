@@ -7,7 +7,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface DriveUtilsService {
-    File downloadFileFromDrive(String fileId, Path destPath, Path destFile, String filename);
+
+    Path downloadFileFromDrive(String fileId, String filename, Path targetFolder);
     void delete(String fileId);
     String getFileName(String fileId) throws IOException;
     boolean fileHasSpecifiedParents(String fileId, String parentFileId);

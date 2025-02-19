@@ -2,18 +2,20 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
-import net.kprod.dsb.DriveFileTypes;
+import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.DriveUtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -25,47 +27,45 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     @Autowired
     DriveService driveService;
 
-    @Override
-    public File downloadFileFromDrive(String fileId, Path destPath, Path destFile, String filename) {
-        if(destPath.toFile().exists()) {
-            LOG.info("folder {} already exists", fileId);
-            if(destFile.toFile().exists()) {
-                if(destPath.toFile().delete()) {
-                    LOG.info("deleted folder {}", fileId);
-                } else {
-                    LOG.info("failed to delete folder {}", fileId);
-                }
-            }
-        } else {
-            if(destPath.toFile().mkdir()) {
-                LOG.info("created folder {}", fileId);
-            } else {
-                LOG.error("failed to create directory {}", destPath.toFile().getAbsolutePath());
-            }
-        }
 
-        File file2Download = null;
+    @Override
+    //public File downloadFileFromDrive(String fileId, Path destPath, Path destFile, String filename) {
+    public Path downloadFileFromDrive(String fileId, String filename, Path targetFolder) {
+
+//        Path destFolderPath = Paths.get(downloadFolder, fileId);
+//        Path destFilePath = Paths.get(downloadFolder, fileId);
+
+
+        Path targetFile = null;
+                //File file2Download = null;
         //Download file from g drive
         try {
             LOG.info("download file id {} from gdrive", fileId);
 
-            File file = driveService.getDrive().files().get(fileId).setFields("id, mimeType, md5Checksum").execute();
+            File file2Download = driveService.getDrive().files().get(fileId).setFields("id, mimeType, md5Checksum, fileExtension").execute();
 
-            if (file.getMimeType().equals(DriveFileTypes.GOOGLE_APP_DOC_MIME_TYPE) ||
-                    file.getMimeType().equals(DriveFileTypes.GOOGLE_APP_SPREADSHEET_MIME_TYPE) ||
-                    file.getMimeType().equals(DriveFileTypes.GOOGLE_APP_PREZ_MIME_TYPE)) {
+            if (file2Download.getMimeType().equals(DriveFileTypes.GOOGLE_APP_DOC_MIME_TYPE) ||
+                    file2Download.getMimeType().equals(DriveFileTypes.GOOGLE_APP_SPREADSHEET_MIME_TYPE) ||
+                    file2Download.getMimeType().equals(DriveFileTypes.GOOGLE_APP_PREZ_MIME_TYPE)) {
                 throw new IOException("Google App document cannot be downloaded");
             }
+            targetFile = Paths.get(targetFolder.toString(), fileId + "." + file2Download.getFileExtension());
+            //removeFileIfExists(downloadFilePath);
 
-            try (OutputStream outputStream = new FileOutputStream(destFile.toFile())) {
+            try (OutputStream outputStream = new FileOutputStream(targetFile.toFile())) {
                 driveService.getDrive().files().get(fileId).executeMediaAndDownloadTo(outputStream);
             }
-            file2Download = file;
-            LOG.info("Downloaded name {} to {}", filename, destPath);
+            //file2Download = file;
+            LOG.info("Downloaded name {} to {}", filename, targetFolder);
         } catch (IOException e) {
             LOG.error("Failed to download file {}", fileId, e);
         }
-        return file2Download;
+
+        //file2Download.getFileExtension();
+        //java.io.File file = new java.io.File(targetFolder.toString(), );
+        //Path downloadFilePath = Paths.get(targetFolder.toString(), fileId + "." + file2Download.getFileExtension());
+
+        return targetFile;
     }
 
     @Override

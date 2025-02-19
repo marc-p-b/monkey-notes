@@ -18,10 +18,10 @@ public class Doc {
     @Column(length = 32)
     private String md5;
     @Column(length = 1024)
-    private String localFolder;
+    //private String localFolder;
     private OffsetDateTime discovered_at;
     private OffsetDateTime transcripted_at;
-    private boolean markForUpdate;
+    //private boolean markForUpdate;
     @Lob
     private String transcript;
     private String parentFolderName;
@@ -30,7 +30,7 @@ public class Doc {
     private String aiModel;
     private int tokensPrompt;
     private int tokensResponse;
-    private int pagerCount;
+    private int pageCount;
 
     public Doc() {
     }
@@ -40,7 +40,6 @@ public class Doc {
         this.fileName = fileName;
         this.remoteFolder = remoteFolder;
         this.md5 = md5;
-        this.markForUpdate = true;
         this.discovered_at = OffsetDateTime.now();
     }
 
@@ -95,24 +94,6 @@ public class Doc {
 
     public Doc setTranscripted_at(OffsetDateTime transcripted_at) {
         this.transcripted_at = transcripted_at;
-        return this;
-    }
-
-    public boolean isMarkForUpdate() {
-        return markForUpdate;
-    }
-
-    public Doc setMarkForUpdate(boolean markForUpdate) {
-        this.markForUpdate = markForUpdate;
-        return this;
-    }
-
-    public String getLocalFolder() {
-        return localFolder;
-    }
-
-    public Doc setLocalFolder(String localFolder) {
-        this.localFolder = localFolder;
         return this;
     }
 
@@ -179,12 +160,12 @@ public class Doc {
         return this;
     }
 
-    public int getPagerCount() {
-        return pagerCount;
+    public int getPageCount() {
+        return pageCount;
     }
 
-    public Doc setPagerCount(int pagerCount) {
-        this.pagerCount = pagerCount;
+    public Doc setPageCount(int pagerCount) {
+        this.pageCount = pagerCount;
         return this;
     }
 }

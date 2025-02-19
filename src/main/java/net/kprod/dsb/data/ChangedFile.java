@@ -1,9 +1,7 @@
-package net.kprod.dsb;
+package net.kprod.dsb.data;
 
 import com.google.api.services.drive.model.Change;
 
-import java.time.OffsetDateTime;
-import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 
 public class ChangedFile {

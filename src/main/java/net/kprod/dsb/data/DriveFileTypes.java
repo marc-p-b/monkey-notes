@@ -1,4 +1,4 @@
-package net.kprod.dsb;
+package net.kprod.dsb.data;
 
 public class DriveFileTypes {
     public static final String GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";

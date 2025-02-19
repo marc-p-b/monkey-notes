@@ -1,6 +1,6 @@
 package net.kprod.dsb.service.impl;
 
-import net.kprod.dsb.File2Process;
+import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
@@ -56,9 +56,10 @@ public class LegacyProcessFileImpl implements LegacyProcessFile {
     private void runListAsyncProcess(List<File2Process> list) {
         LOG.info("(Async) Processing {} files", list.size());
 
-        for (File2Process f : list) {
-            processFile(f.getFileId(), f.getWorkingDir(), f.getFile());
-        }
+        //TODO
+//        for (File2Process f : list) {
+//            processFile(f.getFileId(), f.getWorkingDir(), f.getFilePath());
+//        }
     }
 
     private void processFile(String fileId, Path workingDir, File file) {

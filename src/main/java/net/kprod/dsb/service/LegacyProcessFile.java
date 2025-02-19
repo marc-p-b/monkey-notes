@@ -1,6 +1,6 @@
 package net.kprod.dsb.service;
 
-import net.kprod.dsb.File2Process;
+import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
 

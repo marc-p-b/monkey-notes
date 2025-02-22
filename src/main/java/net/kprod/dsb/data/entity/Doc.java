@@ -11,17 +11,18 @@ import java.time.OffsetDateTime;
 public class Doc {
     @Id
     private String fileId;
+
     @Column(length = 1024)
     private String fileName;
+
     @Column(length = 1024)
     private String remoteFolder;
+
     @Column(length = 32)
     private String md5;
-    @Column(length = 1024)
-    //private String localFolder;
     private OffsetDateTime discovered_at;
     private OffsetDateTime transcripted_at;
-    //private boolean markForUpdate;
+
     @Lob
     private String transcript;
     private String parentFolderName;
@@ -31,16 +32,11 @@ public class Doc {
     private int tokensPrompt;
     private int tokensResponse;
     private int pageCount;
+    private int version;
 
     public Doc() {
-    }
-
-    public Doc(String fileId, String fileName, String remoteFolder, String md5) {
-        this.fileId = fileId;
-        this.fileName = fileName;
-        this.remoteFolder = remoteFolder;
-        this.md5 = md5;
         this.discovered_at = OffsetDateTime.now();
+        this.version = 1;
     }
 
     public String getFileId() {
@@ -166,6 +162,15 @@ public class Doc {
 
     public Doc setPageCount(int pagerCount) {
         this.pageCount = pagerCount;
+        return this;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public Doc setVersion(int version) {
+        this.version = version;
         return this;
     }
 }

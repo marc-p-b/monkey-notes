@@ -1,8 +1,13 @@
 package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.*;
-import net.kprod.dsb.*;
-import net.kprod.dsb.data.*;
+import net.kprod.dsb.FlushTask;
+import net.kprod.dsb.RefreshWatchTask;
+import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.data.ChangedFile;
+import net.kprod.dsb.data.CompletionResponse;
+import net.kprod.dsb.data.DriveFileTypes;
+import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.RepoDoc;
 import net.kprod.dsb.service.*;
@@ -128,52 +133,54 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return pathDownloadFolder;
     }
 
-    private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<RemoteFile> remoteFiles) {
+    private List<File2Process> refreshFolder(String currentFolderId, String offset, int max_depth, String currentFolderPath, String currentFolderName, List<File2Process> remoteFiles) {
+
+        if (remoteFiles == null) {
+            remoteFiles = new ArrayList<>();
+        }
+
         List<File> files = null;
         try {
-            files = listDriveFilesPropertiesFromFolder(folderId).getFiles();
+            files = listDriveFilesPropertiesFromFolder(currentFolderId).getFiles();
         } catch (ServiceException e) {
-            LOG.error("failed to list files in folder {}", folderId);
-            return;
+            LOG.error("failed to list files in folder {}", currentFolderId);
+            return Collections.emptyList();
         }
 
         if (files == null || files.isEmpty()) {
-            LOG.error("empty folder {}", folderId);
-            return;
+            LOG.error("empty folder {}", currentFolderId);
+            return Collections.emptyList();
         } else {
-            files.stream()
-                .forEach(file -> {
-                    if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
-                        LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                        refreshFolder(file.getId(), offset + " ", max_depth - 1, folder + "/" + file.getName(), file.getName(), remoteFiles);
+            for(File file : files) {
+                if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
+                    LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
+                    refreshFolder(file.getId(), offset + " ", max_depth - 1, currentFolderPath + "/" + file.getName(), file.getName(), remoteFiles);
 
+                } else {
+                    LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
+                    Optional<Doc> optDoc = repoDoc.findById(file.getId());
+                    if (file.getTrashed() == true) {
+                        LOG.info("File is trashed {} {}", file.getId(), file.getName());
+                    } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
+                        LOG.info("file {} has no changes", file.getId());
+                    } else if (
+                            (optDoc.isPresent() && optDoc.get().getMd5() == null) ||
+                            (optDoc.isPresent() && optDoc.get().getMd5() != null  && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
+                            optDoc.isPresent() == false) {
+                        //new or updated file
+                        remoteFiles.add(new File2Process(file.getId())
+                                .setFileName(file.getName())
+                                .setMd5(file.getMd5Checksum())
+                                .setDriveFullFolderPath(currentFolderPath) //TODO maybe relative / fix this ?
+                                .setParentFolderId(currentFolderId)
+                                .setParentFolderName(currentFolderName));
                     } else {
-                        LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
-                        Optional<Doc> optDoc = repoDoc.findById(file.getId());
-                        if ((optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
-                                optDoc.isPresent() == false) {
-                            //new or updated file
-
-                            //todo use the same object until the end of stream ? and save all...
-                            RemoteFile rf = new RemoteFile()
-                                    .setFileId(file.getId())
-                                    .setFileName(file.getName())
-                                    .setMd5(file.getMd5Checksum());
-                            remoteFiles.add(rf);
-
-                            Doc doc = optDoc.orElse(new Doc());
-                                doc
-                                    .setFileId(file.getId())
-                                    .setFileName(file.getName())
-                                    .setMd5(file.getMd5Checksum())
-                                    .setRemoteFolder(folder)
-                                    .setParentFolderId(folderId)
-                                    .setParentFolderName(currentFolderName);
-                                repoDoc.save(doc);
-                        }
+                        LOG.warn("Nothing to do with file {} {}", file.getId(), file.getName());
                     }
-                });
+                }
+            }
         }
+        return remoteFiles;
     }
 
     //TODO utils
@@ -183,7 +190,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         try {
             result = driveService.getDrive().files().list()
                     .setQ(query)
-                    .setFields("files(id, mimeType, md5Checksum, name)")
+                    .setFields("files(id, mimeType, md5Checksum, name, parents, trashed)")
                     .execute();
         } catch (IOException e) {
             throw new ServiceException("Failed listing drive folder", e);
@@ -196,7 +203,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         File gFolder;
         try {
             //todo more fields
-            gFolder = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum").execute();
+            gFolder = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum, parents, trashed").execute();
         } catch (IOException e) {
             throw new ServiceException("Failed getting file properties", e);
         }
@@ -213,27 +220,20 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.error("failed to get drive folder", e);
             return;
         }
-        //if (gFolder == null) return;
+        List<File2Process> remoteFiles = refreshFolder(folderId, "", 4, "", gFolder.getName(), null);
 
-        //update db
-        List<RemoteFile> remoteFiles = new ArrayList<>();
-        refreshFolder(folderId, "", 4, "", gFolder.getName(), remoteFiles);
-
-        //download files if needed
         List<File2Process> files2Process = remoteFiles.stream()
-                .map(d-> {
-                        Path targetFolder = fileWorkingDir(d.getFileId());
-                        Path downloadFilePath = driveUtilsService.downloadFileFromDrive(d.getFileId(), d.getFileName(), targetFolder);
-                        return new File2Process(d.getFileId(), downloadFilePath);
+                .map(file2Process-> {
+                        Path targetFolder = fileWorkingDir(file2Process.getFileId());
+                        Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
+                        file2Process.setFilePath(downloadFilePath);
+                        return file2Process;
                 })
                 .toList();
-
-        //LOG.info("Downloaded files");
 
         //Legacy processing using shell and python
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
         asyncProcessFiles(files2Process);
-
     }
 
     @Async
@@ -252,8 +252,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                 CompletionResponse completionResponse = qwenService.analyzeImage(
                                         imagePath,
                                         file2Process.getFileId(),
-                                        imagePath.getFileName().toString())
-                                    .setFile2Process(file2Process);
+                                        imagePath.getFileName().toString());
+                                completionResponse.setFile2Process(file2Process);
                                 LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath.getFileName(), completionResponse.getTranscript().length());
                                 return completionResponse;
                             });
@@ -268,6 +268,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     Doc doc = null;
                     if(optDoc.isPresent()) {
                         doc = optDoc.get();
+                        doc.setVersion(doc.getVersion() + 1);
                     } else {
                         doc = new Doc();
                     }
@@ -297,9 +298,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                     doc
                         .setFileId(fileId)
+                        .setTranscripted_at(OffsetDateTime.now())
+                        .setFileName(f2p.getFileName())
+                        .setRemoteFolder(f2p.getDriveFullFolderPath())
+                        .setParentFolderId(f2p.getParentFolderId())
+                        .setParentFolderName(f2p.getParentFolderName())
                         .setMd5(f2p.getMd5())
                         .setAiModel(listCompletionResponse.get(0).getAiModel())
-                        .setTranscripted_at(OffsetDateTime.now())
                         .setPageCount(listCompletionResponse.size())
                         .setTokensPrompt(tokensPrompt)
                         .setTokensResponse(tokensCompletion)
@@ -323,9 +328,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        //init processing list
-        //List<Optional<File2Process>> list2Process = new ArrayList<>();
-
         List<File2Process> list2Process = setFlushedFileId.stream()
                 .map(fileId -> {
                     Change change = mapScheduled.get(fileId).getChange();
@@ -343,24 +345,42 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         LOG.error("Error getting file details for {}", fileId, e);
                     }
 
+                    //TODO here we assume that only 1 parent per file is possible...
+                    File parentFolder = null;
+                    if (file.getParents().size() > 0) {
+                        try {
+                            parentFolder = getDriveFileDetails(file.getParents().get(0));
+                        } catch (ServiceException e) {
+                            LOG.error("Error getting file details for {}", fileId, e);
+                        }
+                    }
+
+
                     Optional<File2Process> returnObject = Optional.empty();
                     //File2Process file2Process = null;
-                    if((optDoc.isPresent() && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) ||
-                            optDoc.isPresent() == false) {
+                    if (file.getTrashed() == true) {
+                        LOG.info("File is trashed {} {}", filename, fileId);
+                    } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
+                        LOG.info("File {} {} has no changes", file.getId(), filename);
+                    } else if (
+                        (optDoc.isPresent() && optDoc.get().getMd5() == null) ||
+                        (optDoc.isPresent() && optDoc.get().getMd5() != null && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) ||
+                        optDoc.isPresent() == false) {
                         LOG.info("create or update file {} {}", fileId, file.getName());
 
                         Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
 
-                        File2Process file2Process = new File2Process(fileId, downloadFileFromDrive)
+                        File2Process file2Process = new File2Process(fileId)
+                                .setFileName(file.getName())
+                                .setFilePath(downloadFileFromDrive)
+                                .setParentFolderId(parentFolder.getId())
+                                .setParentFolderName(parentFolder.getName())
                                 .setMd5(file.getMd5Checksum());
 
                         //list2Process.add(file2Process);
                         returnObject = Optional.of(file2Process);
-
                     }  else {
-                        LOG.info("do nothing file {} {}", fileId, file.getName());
-                        //TODO EMPTY FILETOPROCESS
-                        //return Optional.empty();
+                        LOG.warn("Nothing to do with file {} {}", file.getId(), file.getName());
                     }
                     //remove change
                     mapScheduled.remove(fileId);
@@ -369,8 +389,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .toList();
-
-        //LOG.info("TEST");
 
         //Filter files using md5 / keep only one of each
         list2Process = list2Process.stream()
@@ -382,25 +400,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         asyncProcessFiles(list2Process);
 
-//        List<Doc> docs = files.stream()
-//                .map(f2p -> {
-//                    return new Doc(f2p.getFileId(), f2p.getFilePath().getName(), "UNKNOWN", f2p.getMd5());
-//                            //.setMarkForUpdate(true);
-//                })
-//                .toList();
-//
-//        repoDoc.saveAll(docs);
-
-
         //Request async file list processing
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
-        //TODO replace me with new processing
-
     }
-
-
-
-
 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
@@ -489,7 +491,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     public void getChanges(String channelId) {
         //not from current channel watch
         if(channelId.equals(currentChannelId) == false) {
-            LOG.info("Rejected notified changes channel {}", channelId);
+            LOG.debug("Rejected notified changes channel {}", channelId);
             return;
         }
         LOG.info("Changes notified channel {}", channelId);
@@ -534,40 +536,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
 
-
-//    @Override
-//    public File processTranscript(String name, String fileId, String transcript, java.io.File file) {
-//        LOG.info("upload file id {} name {}", fileId, name);
-//
-//        Optional<Doc> optDoc = repoDoc.findById(fileId);
-//        if(optDoc.isPresent()) {
-//            Doc doc = optDoc.get();
-//            doc.setTranscripted_at(OffsetDateTime.now());
-//            doc.setTranscript(transcript);
-//            //doc.setMarkForUpdate(false);
-//            repoDoc.save(doc);
-//        } else {
-//            LOG.error("doc not found {}", fileId);
-//        }
-//
-//        File fileMetadata = new File();
-//        fileMetadata.setName(name);
-//        fileMetadata.setParents(Collections.singletonList(outFolderId));
-//
-//        FileContent mediaContent = new FileContent("application/pdf", file);
-//        try {
-//            File driveFile = driveService.getDrive().files().create(fileMetadata, mediaContent)
-//                    .setFields("id, parents")
-//                    .execute();
-//            System.out.println("File ID: " + driveFile.getId());
-//            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
-//            return driveFile;
-//        } catch (IOException e) {
-//            LOG.error("error uploading file {}", fileId, e);
-//        }
-//
-//        return null;
-//    }
 
 
 

@@ -53,6 +53,42 @@ public class LegacyProcessFileImpl implements LegacyProcessFile {
         return CompletableFuture.supplyAsync(sa);
     }
 
+    //Used witch legacy
+//    @Override
+//    public File processTranscript(String name, String fileId, String transcript, java.io.File file) {
+//        LOG.info("upload file id {} name {}", fileId, name);
+//
+//        Optional<Doc> optDoc = repoDoc.findById(fileId);
+//        if(optDoc.isPresent()) {
+//            Doc doc = optDoc.get();
+//            doc.setTranscripted_at(OffsetDateTime.now());
+//            doc.setTranscript(transcript);
+//            //doc.setMarkForUpdate(false);
+//            repoDoc.save(doc);
+//        } else {
+//            LOG.error("doc not found {}", fileId);
+//        }
+//
+//        File fileMetadata = new File();
+//        fileMetadata.setName(name);
+//        fileMetadata.setParents(Collections.singletonList(outFolderId));
+//
+//        FileContent mediaContent = new FileContent("application/pdf", file);
+//        try {
+//            File driveFile = driveService.getDrive().files().create(fileMetadata, mediaContent)
+//                    .setFields("id, parents")
+//                    .execute();
+//            System.out.println("File ID: " + driveFile.getId());
+//            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
+//            return driveFile;
+//        } catch (IOException e) {
+//            LOG.error("error uploading file {}", fileId, e);
+//        }
+//
+//        return null;
+//    }
+
+
     private void runListAsyncProcess(List<File2Process> list) {
         LOG.info("(Async) Processing {} files", list.size());
 

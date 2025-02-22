@@ -10,6 +10,10 @@ import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.repository.RepoDoc;
+import net.kprod.dsb.monitoring.AsyncResult;
+import net.kprod.dsb.monitoring.MonitoringData;
+import net.kprod.dsb.monitoring.MonitoringService;
+import net.kprod.dsb.monitoring.SupplyAsync;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +32,7 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -69,6 +74,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private ApplicationContext ctx;
+
+    @Autowired
+    private MonitoringService monitoringService;
 
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
@@ -233,11 +241,24 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         //Legacy processing using shell and python
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
-        asyncProcessFiles(files2Process);
+        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
     }
 
     @Async
-    public void asyncProcessFiles(List<File2Process> files2Process) {
+    @Override
+    public CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list) {
+        SupplyAsync sa = null;
+
+        try {
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> runListAsyncProcess(list));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+
+        return CompletableFuture.supplyAsync(sa);
+    }
+
+    public void runListAsyncProcess(List<File2Process> files2Process) {
         //Map fileId -> CompletionResponse
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
                 .flatMap(file2Process-> {
@@ -328,7 +349,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        List<File2Process> list2Process = setFlushedFileId.stream()
+        List<File2Process> files2Process = setFlushedFileId.stream()
                 .map(fileId -> {
                     Change change = mapScheduled.get(fileId).getChange();
                     String filename = change.getFile().getName();
@@ -391,14 +412,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
 
         //Filter files using md5 / keep only one of each
-        list2Process = list2Process.stream()
+        files2Process = files2Process.stream()
             .collect(Collectors.groupingBy(File2Process::getMd5))
             .entrySet().stream().
                 map(e -> e.getValue().get(0))
                 .toList();
 
 
-        asyncProcessFiles(list2Process);
+        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
 
         //Request async file list processing
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
@@ -534,10 +555,5 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             }
         }
     }
-
-
-
-
-
 
 }

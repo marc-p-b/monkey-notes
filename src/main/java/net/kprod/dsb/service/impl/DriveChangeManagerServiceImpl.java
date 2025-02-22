@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -127,30 +128,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return pathDownloadFolder;
     }
 
-
-
-
-    //@Override
     private void refreshFolder(String folderId, String offset, int max_depth, String folder, String currentFolderName, List<RemoteFile> remoteFiles) {
-
-
-        //
-
-        String query = "'" + folderId + "' in parents and trashed = false";
-
-        FileList result = null;
+        List<File> files = null;
         try {
-            result = driveService.getDrive().files().list()
-                    .setQ(query)
-                    .setFields("files(id, mimeType, md5Checksum, name)")
-                    .execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            files = listDriveFilesPropertiesFromFolder(folderId).getFiles();
+        } catch (ServiceException e) {
+            LOG.error("failed to list files in folder {}", folderId);
+            return;
         }
-        List<File> files = result.getFiles();
+
         if (files == null || files.isEmpty()) {
-            //System.out.println("No files found.");
-            //TODO
+            LOG.error("empty folder {}", folderId);
+            return;
         } else {
             files.stream()
                 .forEach(file -> {
@@ -187,15 +176,44 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
+    //TODO utils
+    private FileList listDriveFilesPropertiesFromFolder(String folderId) throws ServiceException {
+        String query = "'" + folderId + "' in parents and trashed = false";
+        FileList result = null;
+        try {
+            result = driveService.getDrive().files().list()
+                    .setQ(query)
+                    .setFields("files(id, mimeType, md5Checksum, name)")
+                    .execute();
+        } catch (IOException e) {
+            throw new ServiceException("Failed listing drive folder", e);
+        }
+        return result;
+    }
+
+    //todo utils
+    private File getDriveFileDetails(String fileId) throws ServiceException {
+        File gFolder;
+        try {
+            //todo more fields
+            gFolder = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum").execute();
+        } catch (IOException e) {
+            throw new ServiceException("Failed getting file properties", e);
+        }
+        return gFolder;
+    }
+
     @Override
     public void updateFolder(String folderId) {
         File gFolder = null;
         try {
-            gFolder = driveService.getDrive().files().get(folderId).setFields("name").execute();
-        } catch (IOException e) {
-            LOG.error("Error getting folder name {}", folderId, e);
+            //check this is a folder
+            gFolder = getDriveFileDetails(folderId);
+        } catch (ServiceException e) {
+            LOG.error("failed to get drive folder", e);
             return;
         }
+        //if (gFolder == null) return;
 
         //update db
         List<RemoteFile> remoteFiles = new ArrayList<>();
@@ -210,78 +228,179 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .toList();
 
-        LOG.info("Downloaded files");
+        //LOG.info("Downloaded files");
 
         //Legacy processing using shell and python
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        asyncProcessFiles(files2Process);
 
-        //TODO refactor
+    }
+
+    @Async
+    public void asyncProcessFiles(List<File2Process> files2Process) {
+        //Map fileId -> CompletionResponse
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
-            .flatMap(f-> {
-
-                Path workingDir = fileWorkingDir(f.getFileId());
-
-                List<Path> listImages = pdfService.pdf2Images(f.getFileId(), f.getFilePath().toFile(), workingDir);
-
-                LOG.info("PDF fileId {} file {} image list {}", f.getFileId(), f.getFilePath(), listImages.size());
-                return listImages.stream()
-                    .map(d->{
-                        CompletionResponse completionResponse = qwenService.analyzeImage(d, f.getFileId(), d.getFileName().toString());
-                        LOG.info("FileId {} Image {} transcript {}", f.getFileId(), d.getFileName(), completionResponse.getTranscript());
-                        return completionResponse;
-                });
-            })
-            .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+                .flatMap(file2Process-> {
+                    Path workingDir = fileWorkingDir(file2Process.getFileId());
+                    List<Path> listImages = pdfService.pdf2Images(
+                            file2Process.getFileId(),
+                            file2Process.getFilePath().toFile(),
+                            workingDir);
+                    LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
+                    return listImages.stream()
+                            .map(imagePath->{
+                                CompletionResponse completionResponse = qwenService.analyzeImage(
+                                        imagePath,
+                                        file2Process.getFileId(),
+                                        imagePath.getFileName().toString())
+                                    .setFile2Process(file2Process);
+                                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath.getFileName(), completionResponse.getTranscript().length());
+                                return completionResponse;
+                            });
+                })
+                .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
         List<Doc> list = mapCompleted.entrySet().stream()
-                .map(e -> {
-
-                    String fileId = e.getKey();
+                .map(entry -> {
+                    String fileId = entry.getKey();
 
                     Optional<Doc> optDoc = repoDoc.findById(fileId);
-                    //todo here doc should not be null !
                     Doc doc = null;
                     if(optDoc.isPresent()) {
                         doc = optDoc.get();
                     } else {
                         doc = new Doc();
                     }
+                    List<CompletionResponse> listCompletionResponse = entry.getValue();
 
-                    long took = e.getValue().stream().map(CompletionResponse::getTranscriptTook).reduce(0l, Long::sum);
-                    int tokensPrompt = e.getValue().stream().map(CompletionResponse::getTokensPrompt).reduce(0, Integer::sum);
-                    int tokensCompletion = e.getValue().stream().map(CompletionResponse::getTokensCompletion).reduce(0, Integer::sum);
-                    List<String> transcripts = e.getValue().stream()
+                    long took = listCompletionResponse.stream()
+                            .map(CompletionResponse::getTranscriptTook).reduce(0l, Long::sum);
+                    int tokensPrompt = listCompletionResponse.stream()
+                            .map(CompletionResponse::getTokensPrompt).reduce(0, Integer::sum);
+                    int tokensCompletion = listCompletionResponse.stream()
+                            .map(CompletionResponse::getTokensCompletion).reduce(0, Integer::sum);
+
+                    File2Process f2p = listCompletionResponse.get(0).getFile2Process();
+
+                    List<String> transcripts = listCompletionResponse.stream()
                             .map(CompletionResponse::getTranscript)
-                            .collect(Collectors.toList());
+                            .toList();
 
-                    //move this to image analysis ?
+                    //move page numbering to image analysis ?
                     int page = 1;
                     StringBuilder sbTranscripts = new StringBuilder();
                     for(String transcript : transcripts) {
-
                         sbTranscripts
-                                .append(page == 1 ? "" : "\n\n")
-                                .append("## Page ").append(page++).append("\n\n").append(transcript);
+                            .append(page == 1 ? "" : "\n\n")
+                            .append("## Page ").append(page++).append("\n\n").append(transcript);
                     }
 
                     doc
                         .setFileId(fileId)
-                        .setAiModel(e.getValue().get(0).getAiModel())
+                        .setMd5(f2p.getMd5())
+                        .setAiModel(listCompletionResponse.get(0).getAiModel())
                         .setTranscripted_at(OffsetDateTime.now())
-                        .setPageCount(e.getValue().size())
+                        .setPageCount(listCompletionResponse.size())
                         .setTokensPrompt(tokensPrompt)
                         .setTokensResponse(tokensCompletion)
                         .setTranscriptTook(took)
                         .setTranscript(sbTranscripts.toString());
-
-
                     return doc;
                 })
                 .toList();
 
+        //error here / Entity must not be null
         repoDoc.saveAll(list);
+    }
+
+
+    @Override
+    public synchronized void flushChanges() {
+        long now = System.currentTimeMillis();
+        Set<String> setFlushedFileId = mapScheduled.entrySet().stream()
+                //filter changes by time passed since map insertion
+                .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        //init processing list
+        //List<Optional<File2Process>> list2Process = new ArrayList<>();
+
+        List<File2Process> list2Process = setFlushedFileId.stream()
+                .map(fileId -> {
+                    Change change = mapScheduled.get(fileId).getChange();
+                    String filename = change.getFile().getName();
+                    LOG.info("Flushing fileid {} name {}", fileId, filename);
+
+
+                    Optional<Doc> optDoc = repoDoc.findById(fileId);
+
+
+                    File file = null;
+                    try {
+                        file = getDriveFileDetails(fileId);
+                    } catch (ServiceException e) {
+                        LOG.error("Error getting file details for {}", fileId, e);
+                    }
+
+                    Optional<File2Process> returnObject = Optional.empty();
+                    //File2Process file2Process = null;
+                    if((optDoc.isPresent() && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) ||
+                            optDoc.isPresent() == false) {
+                        LOG.info("create or update file {} {}", fileId, file.getName());
+
+                        Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
+
+                        File2Process file2Process = new File2Process(fileId, downloadFileFromDrive)
+                                .setMd5(file.getMd5Checksum());
+
+                        //list2Process.add(file2Process);
+                        returnObject = Optional.of(file2Process);
+
+                    }  else {
+                        LOG.info("do nothing file {} {}", fileId, file.getName());
+                        //TODO EMPTY FILETOPROCESS
+                        //return Optional.empty();
+                    }
+                    //remove change
+                    mapScheduled.remove(fileId);
+                    return returnObject;
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
+
+        //LOG.info("TEST");
+
+        //Filter files using md5 / keep only one of each
+        list2Process = list2Process.stream()
+            .collect(Collectors.groupingBy(File2Process::getMd5))
+            .entrySet().stream().
+                map(e -> e.getValue().get(0))
+                .toList();
+
+
+        asyncProcessFiles(list2Process);
+
+//        List<Doc> docs = files.stream()
+//                .map(f2p -> {
+//                    return new Doc(f2p.getFileId(), f2p.getFilePath().getName(), "UNKNOWN", f2p.getMd5());
+//                            //.setMarkForUpdate(true);
+//                })
+//                .toList();
+//
+//        repoDoc.saveAll(docs);
+
+
+        //Request async file list processing
+        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
+        //TODO replace me with new processing
 
     }
+
+
+
+
 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
@@ -414,97 +533,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    //todo have to fix concurrent flush
-    @Override
-    public synchronized void flushChanges() {
-//        long now = System.currentTimeMillis();
-//        Set<String> setDone = mapScheduled.entrySet().stream()
-//                //filter changes by time passed since map insertion
-//                .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
-//                .map(Map.Entry::getKey)
-//                .collect(Collectors.toSet());
-//
-//        //init processing list
-//        List<File2Process> list2Process = new ArrayList<>();
-//
-//        setDone.forEach(fileId -> {
-//            Change change = mapScheduled.get(fileId).getChange();
-//            String filename = change.getFile().getName();
-//            LOG.info("Flushing fileid {} name {}", fileId, filename);
-//
-//
-//            Optional<Doc> optDoc = repoDoc.findById(fileId);
-//
-//            File file;
-//            try {
-//                file = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum").execute();
-//            } catch (IOException e) {
-//                //todo
-//                throw new RuntimeException(e);
-//            }
-//
-//            File2Process file2Process = null;
-//            if(optDoc.isPresent() && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) {
-//                //update
-//                file2Process = new File2Process()
-//                        .setFileId(fileId)
-//                        .setMd5(file.getMd5Checksum());
-//                LOG.info("update file {} {}", fileId, file.getName());
-//
-//            } else if (optDoc.isPresent() == false) {
-//                //create
-//                file2Process = new File2Process()
-//                        .setFileId(fileId)
-//                        .setMd5(file.getMd5Checksum());
-//                LOG.info("create file {} {}", fileId, file.getName());
-//            } else {
-//                LOG.info("do nothing file {} {}", fileId, file.getName());
-//
-//            }
-//
-//            if(file2Process != null) {
-//                //create a temp folder folder if needed / remove existing
-//                Path destPath = Paths.get("/tmp", fileId);
-//                Path destFile = Paths.get(destPath.toString(), filename);
-//                File file2Download = driveUtilsService.downloadFileFromDrive(fileId, destPath, destFile, filename);
-//
-//
-//                //Create file object
-//                //File2Process f2p = new File2Process(fileId, Paths.get("/tmp", fileId), destFile.toFile());
-//                //f2p.setMd5(file2Download.getMd5Checksum());
-//                file2Process
-//                    .setWorkingDir(destPath)
-//                    .setFile(destFile.toFile());
-//
-//                //Add each file to processing list
-//                list2Process.add(file2Process);
-//            }
-//            //remove change
-//            mapScheduled.remove(fileId);
-//        });
-//
-//        //Filter files using md5 / keep only one of each
-//        List<File2Process> files = list2Process.stream()
-//            .collect(Collectors.groupingBy(File2Process::getMd5))
-//            .entrySet().stream().
-//                map(e -> e.getValue().get(0))
-//                .toList();
-//
-//        List<Doc> docs = files.stream()
-//                .map(f2p -> {
-//                    return new Doc(f2p.getFileId(), f2p.getFilePath().getName(), "UNKNOWN", f2p.getMd5());
-//                            //.setMarkForUpdate(true);
-//                })
-//                .toList();
-//
-//        repoDoc.saveAll(docs);
-//
-//
-//        //Request async file list processing
-//        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
-//        //TODO replace me with new processing
 
-    }
 
 //    @Override
 //    public File processTranscript(String name, String fileId, String transcript, java.io.File file) {

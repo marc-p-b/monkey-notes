@@ -54,7 +54,6 @@ public class DriveServiceImpl implements DriveService {
             DriveScopes.DRIVE_METADATA,
             DriveScopes.DRIVE_METADATA_READONLY);
 
-
     private Credential credential;
     private String refreshToken;
 

@@ -7,6 +7,7 @@ public class CompletionResponse {
     private int tokensPrompt;
     private int tokensCompletion;
     private String transcript;
+    private File2Process file2Process;
 
     public CompletionResponse(String fileId, long transcriptTook, String aiModel, int tokensPrompt, int tokensCompletion, String transcript) {
         this.fileId = fileId;
@@ -15,6 +16,15 @@ public class CompletionResponse {
         this.tokensPrompt = tokensPrompt;
         this.tokensCompletion = tokensCompletion;
         this.transcript = transcript;
+    }
+
+    public File2Process getFile2Process() {
+        return file2Process;
+    }
+
+    public CompletionResponse setFile2Process(File2Process file2Process) {
+        this.file2Process = file2Process;
+        return this;
     }
 
     public String getFileId() {

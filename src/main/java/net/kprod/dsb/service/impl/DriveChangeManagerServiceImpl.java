@@ -149,7 +149,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         List<File> files = null;
         try {
-            files = listDriveFilesPropertiesFromFolder(currentFolderId).getFiles();
+            files = driveUtilsService.listDriveFilesPropertiesFromFolder(currentFolderId).getFiles();
         } catch (ServiceException e) {
             LOG.error("failed to list files in folder {}", currentFolderId);
             return Collections.emptyList();
@@ -192,38 +192,17 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     //TODO utils
-    private FileList listDriveFilesPropertiesFromFolder(String folderId) throws ServiceException {
-        String query = "'" + folderId + "' in parents and trashed = false";
-        FileList result = null;
-        try {
-            result = driveService.getDrive().files().list()
-                    .setQ(query)
-                    .setFields("files(id, mimeType, md5Checksum, name, parents, trashed)")
-                    .execute();
-        } catch (IOException e) {
-            throw new ServiceException("Failed listing drive folder", e);
-        }
-        return result;
-    }
+
 
     //todo utils
-    private File getDriveFileDetails(String fileId) throws ServiceException {
-        File gFolder;
-        try {
-            //todo more fields
-            gFolder = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum, parents, trashed").execute();
-        } catch (IOException e) {
-            throw new ServiceException("Failed getting file properties", e);
-        }
-        return gFolder;
-    }
+
 
     @Override
     public void updateFolder(String folderId) {
         File gFolder = null;
         try {
             //check this is a folder
-            gFolder = getDriveFileDetails(folderId);
+            gFolder = driveUtilsService.getDriveFileDetails(folderId);
         } catch (ServiceException e) {
             LOG.error("failed to get drive folder", e);
             return;
@@ -361,7 +340,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                     File file = null;
                     try {
-                        file = getDriveFileDetails(fileId);
+                        file = driveUtilsService.getDriveFileDetails(fileId);
                     } catch (ServiceException e) {
                         LOG.error("Error getting file details for {}", fileId, e);
                     }
@@ -370,7 +349,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     File parentFolder = null;
                     if (file.getParents().size() > 0) {
                         try {
-                            parentFolder = getDriveFileDetails(file.getParents().get(0));
+                            parentFolder = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
                         } catch (ServiceException e) {
                             LOG.error("Error getting file details for {}", fileId, e);
                         }

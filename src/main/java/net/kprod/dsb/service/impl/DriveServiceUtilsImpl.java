@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.DriveUtilsService;
@@ -85,6 +86,33 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     public String getFileName(String fileId) throws IOException {
         File file = driveService.getDrive().files().get(fileId).setFields("name").execute();
         return file.getName();
+    }
+
+    @Override
+    public FileList listDriveFilesPropertiesFromFolder(String folderId) throws ServiceException {
+        String query = "'" + folderId + "' in parents and trashed = false";
+        FileList result = null;
+        try {
+            result = driveService.getDrive().files().list()
+                    .setQ(query)
+                    .setFields("files(id, mimeType, md5Checksum, name, parents, trashed)")
+                    .execute();
+        } catch (IOException e) {
+            throw new ServiceException("Failed listing drive folder", e);
+        }
+        return result;
+    }
+
+    @Override
+    public File getDriveFileDetails(String fileId) throws ServiceException {
+        File gFolder;
+        try {
+            //todo more fields
+            gFolder = driveService.getDrive().files().get(fileId).setFields("id, name, mimeType, md5Checksum, parents, trashed").execute();
+        } catch (IOException e) {
+            throw new ServiceException("Failed getting file properties", e);
+        }
+        return gFolder;
     }
 
     @Override

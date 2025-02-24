@@ -1,6 +1,8 @@
 package net.kprod.dsb.service;
 
 import com.google.api.services.drive.model.File;
+import com.google.api.services.drive.model.FileList;
+import net.kprod.dsb.ServiceException;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -12,9 +14,9 @@ public interface DriveUtilsService {
     void delete(String fileId);
     String getFileName(String fileId) throws IOException;
     boolean fileHasSpecifiedParents(String fileId, String parentFileId);
-    //Optional<String> recursCheck(List<String> fileIds);
     List<String> getDriveParents(String fileId);
-    //Optional<String> checkDriveParents(List<String> parents, String parentFileId);
     List<File> listFileByName(String name, String folderId) throws IOException;
     void deleteSimilarNameFromTranscripts(String name, String folderId);
+    FileList listDriveFilesPropertiesFromFolder(String folderId) throws ServiceException;
+    File getDriveFileDetails(String fileId) throws ServiceException;
 }

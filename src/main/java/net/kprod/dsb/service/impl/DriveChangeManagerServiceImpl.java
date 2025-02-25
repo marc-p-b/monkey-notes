@@ -113,9 +113,174 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         updateFolder(inboundFolderId);
     }
 
-    //TODO async !
+    @Override
+    public void getChanges(String channelId) {
+        //not from current channel watch
+        if(channelId.equals(currentChannelId) == false) {
+            LOG.debug("Rejected notified changes channel {}", channelId);
+            return;
+        }
+        LOG.info("Changes notified channel {}", channelId);
+
+
+        ChangeList changes = null;
+        try {
+            changes = driveService.getDrive().changes().list(lastPageToken).execute();
+            lastPageToken = changes.getNewStartPageToken();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if(!changes.isEmpty()) {
+            for (Change change : changes.getChanges()) {
+                ChangedFile changedFile = new ChangedFile(change);
+
+                String fileId = change.getFileId();
+
+                if(change.getFile() != null) {
+                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
+
+                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
+                        if(mapScheduled.containsKey(fileId)) {
+                            LOG.info("already got a change for file {}", fileId);
+                            mapScheduled.get(fileId).getFuture().cancel(true);
+                        }
+                        LOG.info(" > accept file change {}", fileId);
+                        //todo refresh is deactivated inside task
+                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
+                        changedFile.setFuture(futureFlush);
+                        mapScheduled.put(fileId, changedFile);
+
+                    } else {
+                        LOG.info("rejected file {}", fileId);
+                    }
+                } else {
+                    LOG.warn("No file with this id found {}", fileId);
+                }
+            }
+        }
+    }
+
+    @Override
+    public synchronized void flushChanges() {
+        long now = System.currentTimeMillis();
+        Set<String> setFlushedFileId = mapScheduled.entrySet().stream()
+                //filter changes by time passed since map insertion
+                .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        processFlushed(monitoringService.getCurrentMonitoringData(), setFlushedFileId);
+    }
+
+    //@Async
+    //@Override
+    public CompletableFuture<AsyncResult> processFlushed(MonitoringData monitoringData, Set<String> setFlushedFileId) {
+        SupplyAsync sa = null;
+
+        try {
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncProcessFlushed(setFlushedFileId));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+
+        return CompletableFuture.supplyAsync(sa);
+    }
+
+    public void asyncProcessFlushed(Set<String> setFlushedFileId) {
+
+        List<File2Process> files2Process = setFlushedFileId.stream()
+                .map(fileId -> {
+                    Change change = mapScheduled.get(fileId).getChange();
+                    String filename = change.getFile().getName();
+                    LOG.info("Flushing fileid {} name {}", fileId, filename);
+
+                    Optional<Doc> optDoc = repoDoc.findById(fileId);
+
+                    File file = null;
+                    try {
+                        file = driveUtilsService.getDriveFileDetails(fileId);
+                    } catch (ServiceException e) {
+                        LOG.error("Error getting file details for {}", fileId, e);
+                    }
+
+                    //TODO here we assume that only 1 parent per file is possible...
+                    File parentFolder = null;
+                    if (file.getParents().size() > 0) {
+                        try {
+                            parentFolder = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
+                        } catch (ServiceException e) {
+                            LOG.error("Error getting file details for {}", fileId, e);
+                        }
+                    }
+
+                    Optional<File2Process> returnObject = Optional.empty();
+                    //File2Process file2Process = null;
+                    if (file.getTrashed() == true) {
+                        LOG.info("File is trashed {} {}", filename, fileId);
+                    } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
+                        LOG.info("File {} {} has no changes", file.getId(), filename);
+                    } else if (
+                            (optDoc.isPresent() && optDoc.get().getMd5() == null) ||
+                                    (optDoc.isPresent() && optDoc.get().getMd5() != null && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) ||
+                                    optDoc.isPresent() == false) {
+                        LOG.info("create or update file {} {}", fileId, file.getName());
+
+                        Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
+
+                        File2Process file2Process = new File2Process(fileId)
+                                .setFileName(file.getName())
+                                .setFilePath(downloadFileFromDrive)
+                                .setParentFolderId(parentFolder.getId())
+                                .setParentFolderName(parentFolder.getName())
+                                .setMd5(file.getMd5Checksum());
+
+                        //list2Process.add(file2Process);
+                        returnObject = Optional.of(file2Process);
+                    }  else {
+                        LOG.warn("Nothing to do with file {} {}", file.getId(), file.getName());
+                    }
+                    //remove change
+                    mapScheduled.remove(fileId);
+                    return returnObject;
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
+
+        //Filter files using md5 / keep only one of each
+        files2Process = files2Process.stream()
+                .collect(Collectors.groupingBy(File2Process::getMd5))
+                .entrySet().stream().
+                map(e -> e.getValue().get(0))
+                .toList();
+
+
+        //this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        runListAsyncProcess(files2Process);
+    }
+
     @Override
     public void updateFolder(String folderId) {
+        updateFolder2(monitoringService.getCurrentMonitoringData(), folderId);
+    }
+
+    public CompletableFuture<AsyncResult> updateFolder2(MonitoringData monitoringData, String folderId) {
+        SupplyAsync sa = null;
+
+        try {
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncUpdateFolder(folderId));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+
+        return CompletableFuture.supplyAsync(sa);
+    }
+
+
+    //@Override
+    @Async
+    public void asyncUpdateFolder(String folderId) {
         File gFolder = null;
         try {
             //check this is a folder
@@ -135,9 +300,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .toList();
 
-        //Legacy processing using shell and python
-        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
-        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        //this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        runListAsyncProcess(files2Process);
     }
 
     private List<File2Process> recursRefreshFolder(String currentFolderId, String offset, int max_depth, String currentFolderPath, String currentFolderName, List<File2Process> remoteFiles) {
@@ -188,19 +352,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return remoteFiles;
     }
 
-    @Async
-    @Override
-    public CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list) {
-        SupplyAsync sa = null;
-
-        try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> runListAsyncProcess(list));
-        } catch (ServiceException e) {
-            throw new RuntimeException(e);
-        }
-
-        return CompletableFuture.supplyAsync(sa);
-    }
+//    //@Async
+//    @Override
+//    public CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list) {
+//        SupplyAsync sa = null;
+//
+//        try {
+//            sa = new SupplyAsync(monitoringService, monitoringData, () -> runListAsyncProcess(list));
+//        } catch (ServiceException e) {
+//            throw new RuntimeException(e);
+//        }
+//
+//        return CompletableFuture.supplyAsync(sa);
+//    }
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
         //Map fileId -> CompletionResponse
@@ -224,6 +388,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             });
                 })
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+
+        // TODO cut here
 
         List<Doc> list = mapCompleted.entrySet().stream()
                 .map(entry -> {
@@ -291,138 +457,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         repoDoc.saveAll(list);
     }
 
-    @Override
-    public void getChanges(String channelId) {
-        //not from current channel watch
-        if(channelId.equals(currentChannelId) == false) {
-            LOG.debug("Rejected notified changes channel {}", channelId);
-            return;
-        }
-        LOG.info("Changes notified channel {}", channelId);
-
-
-        ChangeList changes = null;
-        try {
-            changes = driveService.getDrive().changes().list(lastPageToken).execute();
-            lastPageToken = changes.getNewStartPageToken();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        if(!changes.isEmpty()) {
-            for (Change change : changes.getChanges()) {
-                ChangedFile changedFile = new ChangedFile(change);
-
-                String fileId = change.getFileId();
-
-                if(change.getFile() != null) {
-                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
-
-                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
-                        if(mapScheduled.containsKey(fileId)) {
-                            LOG.info("already got a change for file {}", fileId);
-                            mapScheduled.get(fileId).getFuture().cancel(true);
-                        }
-                        LOG.info(" > accept file change {}", fileId);
-                        //todo refresh is deactivated inside task
-                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
-                        changedFile.setFuture(futureFlush);
-                        mapScheduled.put(fileId, changedFile);
-
-                    } else {
-                        LOG.info("rejected file {}", fileId);
-                    }
-                } else {
-                    LOG.warn("No file with this id found {}", fileId);
-                }
-            }
-        }
-    }
-
-    @Override
-    public synchronized void flushChanges() {
-        long now = System.currentTimeMillis();
-        Set<String> setFlushedFileId = mapScheduled.entrySet().stream()
-                //filter changes by time passed since map insertion
-                .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-
-        List<File2Process> files2Process = setFlushedFileId.stream()
-                .map(fileId -> {
-                    Change change = mapScheduled.get(fileId).getChange();
-                    String filename = change.getFile().getName();
-                    LOG.info("Flushing fileid {} name {}", fileId, filename);
-
-
-                    Optional<Doc> optDoc = repoDoc.findById(fileId);
-
-
-                    File file = null;
-                    try {
-                        file = driveUtilsService.getDriveFileDetails(fileId);
-                    } catch (ServiceException e) {
-                        LOG.error("Error getting file details for {}", fileId, e);
-                    }
-
-                    //TODO here we assume that only 1 parent per file is possible...
-                    File parentFolder = null;
-                    if (file.getParents().size() > 0) {
-                        try {
-                            parentFolder = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
-                        } catch (ServiceException e) {
-                            LOG.error("Error getting file details for {}", fileId, e);
-                        }
-                    }
-
-
-                    Optional<File2Process> returnObject = Optional.empty();
-                    //File2Process file2Process = null;
-                    if (file.getTrashed() == true) {
-                        LOG.info("File is trashed {} {}", filename, fileId);
-                    } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
-                        LOG.info("File {} {} has no changes", file.getId(), filename);
-                    } else if (
-                        (optDoc.isPresent() && optDoc.get().getMd5() == null) ||
-                        (optDoc.isPresent() && optDoc.get().getMd5() != null && file.getMd5Checksum().equals(optDoc.get().getMd5()) == false) ||
-                        optDoc.isPresent() == false) {
-                        LOG.info("create or update file {} {}", fileId, file.getName());
-
-                        Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
-
-                        File2Process file2Process = new File2Process(fileId)
-                                .setFileName(file.getName())
-                                .setFilePath(downloadFileFromDrive)
-                                .setParentFolderId(parentFolder.getId())
-                                .setParentFolderName(parentFolder.getName())
-                                .setMd5(file.getMd5Checksum());
-
-                        //list2Process.add(file2Process);
-                        returnObject = Optional.of(file2Process);
-                    }  else {
-                        LOG.warn("Nothing to do with file {} {}", file.getId(), file.getName());
-                    }
-                    //remove change
-                    mapScheduled.remove(fileId);
-                    return returnObject;
-                })
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .toList();
-
-        //Filter files using md5 / keep only one of each
-        files2Process = files2Process.stream()
-            .collect(Collectors.groupingBy(File2Process::getMd5))
-            .entrySet().stream().
-                map(e -> e.getValue().get(0))
-                .toList();
-
-
-        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
-
-        //Request async file list processing
-        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
-    }
 
 
 

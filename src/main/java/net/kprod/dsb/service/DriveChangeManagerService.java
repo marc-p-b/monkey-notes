@@ -21,6 +21,6 @@ public interface DriveChangeManagerService {
     Map<String, Object> getStatus();
     List<String> listAvailableTranscripts();
     String getTranscript(String fileId);
-    CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
+    //CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
     String getAncestors(String fileId) throws ServiceException;
 }

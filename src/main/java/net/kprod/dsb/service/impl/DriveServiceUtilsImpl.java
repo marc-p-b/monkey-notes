@@ -167,6 +167,34 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     }
 
     @Override
+    public boolean isFolder(File file) {
+       return file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE);
+    }
+
+    @Override
+    public List<File> getAncestorsUntil(File file, String untilFolderId, int max_depth, List<File> ancestors) throws ServiceException {
+        if(max_depth == 0) {
+            return ancestors;
+        }
+        if(ancestors == null) {
+            ancestors = new ArrayList<>();
+        }
+        if(file.getParents() != null || file.getParents().isEmpty() == false) {
+            if(file.getParents().get(0).equals(untilFolderId)) {
+                return ancestors;
+            }
+            //get first parent file
+            File firstParentFile = getDriveFileDetails(file.getParents().get(0));
+            if(isFolder(firstParentFile)) {
+                ancestors.add(firstParentFile);
+                getAncestorsUntil(firstParentFile, untilFolderId, max_depth++, ancestors);
+            }
+        }
+        return ancestors;
+    }
+
+
+    @Override
     public List<String> getDriveParents(String fileId) {
         try {
             File dFile = driveService.getDrive().files().get(fileId).setFields("parents").execute();

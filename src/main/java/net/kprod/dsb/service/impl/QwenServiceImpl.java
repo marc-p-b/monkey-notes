@@ -38,10 +38,17 @@ public class QwenServiceImpl implements QwenService {
     @Value("${app.url.self}")
     private String appHost;
 
+    @Value("${app.dry-run:false}")
+    private boolean dryRun;
+
     @Override
     public CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName) {
         LOG.info("Qwen request analyse image {}", imagePath);
 
+        if(dryRun) {
+            LOG.warn("Qwen request dry run");
+            return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageName + "(dry-run)");
+        }
 
         try {
             JSONObject content1_url = new JSONObject();

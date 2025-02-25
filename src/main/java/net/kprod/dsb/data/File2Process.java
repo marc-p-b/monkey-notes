@@ -8,7 +8,7 @@ public class File2Process {
 
     private String fileName;
     private String md5;
-    private String driveFullFolderPath;
+    //private String driveFullFolderPath;
     private String parentFolderId;
     private String parentFolderName;
 
@@ -44,14 +44,14 @@ public class File2Process {
         return this;
     }
 
-    public String getDriveFullFolderPath() {
-        return driveFullFolderPath;
-    }
-
-    public File2Process setDriveFullFolderPath(String driveFullFolderPath) {
-        this.driveFullFolderPath = driveFullFolderPath;
-        return this;
-    }
+//    public String getDriveFullFolderPath() {
+//        return driveFullFolderPath;
+//    }
+//
+//    public File2Process setDriveFullFolderPath(String driveFullFolderPath) {
+//        this.driveFullFolderPath = driveFullFolderPath;
+//        return this;
+//    }
 
     public String getParentFolderId() {
         return parentFolderId;

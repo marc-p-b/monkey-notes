@@ -1,5 +1,6 @@
 package net.kprod.dsb.service;
 
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
@@ -21,4 +22,5 @@ public interface DriveChangeManagerService {
     List<String> listAvailableTranscripts();
     String getTranscript(String fileId);
     CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
+    String getAncestors(String fileId) throws ServiceException;
 }

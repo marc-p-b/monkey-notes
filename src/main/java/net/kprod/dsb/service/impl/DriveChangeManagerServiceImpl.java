@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DriveChangeManagerServiceImpl implements DriveChangeManagerService {
+    public static final int ANCESTORS_RETRIEVE_MAX_DEPTH = 4;
     private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerServiceImpl.class);
 
     @Value("${app.url.self}")
@@ -61,6 +62,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Value("${app.changes.flush}")
     private long flushInterval;
+
+    @Value("${app.paths.download}")
+    private String downloadPath;
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -109,44 +113,37 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         updateFolder(inboundFolderId);
     }
 
-
-    @Value("${app.paths.download}")
-    private String downloadPath;
-
-    public void removeFileIfExists(Path target) {
-        if(target.toFile().exists()) {
-            if(target.toFile().delete()) {
-                LOG.info("deleted file {}", target);
-            } else {
-                LOG.info("failed to delete folder {}", target);
-            }
+    //TODO async !
+    @Override
+    public void updateFolder(String folderId) {
+        File gFolder = null;
+        try {
+            //check this is a folder
+            gFolder = driveUtilsService.getDriveFileDetails(folderId);
+        } catch (ServiceException e) {
+            LOG.error("failed to get drive folder", e);
+            return;
         }
+        List<File2Process> remoteFiles = recursRefreshFolder(folderId, "", 4, "", gFolder.getName(), null);
+
+        List<File2Process> files2Process = remoteFiles.stream()
+                .map(file2Process-> {
+                        Path targetFolder = fileWorkingDir(file2Process.getFileId());
+                        Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
+                        file2Process.setFilePath(downloadFilePath);
+                        return file2Process;
+                })
+                .toList();
+
+        //Legacy processing using shell and python
+        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
+        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
     }
 
-    public Path fileWorkingDir(String fileId) {
-
-        Path pathDownloadFolder = Paths.get(downloadPath, fileId);
-
-        if(pathDownloadFolder.toFile().exists()) {
-            LOG.info("folder {} already exists", fileId);
-
-        } else {
-            if(pathDownloadFolder.toFile().mkdir()) {
-                LOG.info("created folder {}", fileId);
-            } else {
-                LOG.error("failed to create directory {}", pathDownloadFolder);
-            }
-        }
-
-        return pathDownloadFolder;
-    }
-
-    private List<File2Process> refreshFolder(String currentFolderId, String offset, int max_depth, String currentFolderPath, String currentFolderName, List<File2Process> remoteFiles) {
-
+    private List<File2Process> recursRefreshFolder(String currentFolderId, String offset, int max_depth, String currentFolderPath, String currentFolderName, List<File2Process> remoteFiles) {
         if (remoteFiles == null) {
             remoteFiles = new ArrayList<>();
         }
-
         List<File> files = null;
         try {
             files = driveUtilsService.listDriveFilesPropertiesFromFolder(currentFolderId).getFiles();
@@ -162,7 +159,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             for(File file : files) {
                 if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
                     LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                    refreshFolder(file.getId(), offset + " ", max_depth - 1, currentFolderPath + "/" + file.getName(), file.getName(), remoteFiles);
+                    recursRefreshFolder(file.getId(), offset + " ", max_depth - 1, currentFolderPath + "/" + file.getName(), file.getName(), remoteFiles);
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
@@ -173,13 +170,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         LOG.info("file {} has no changes", file.getId());
                     } else if (
                             (optDoc.isPresent() && optDoc.get().getMd5() == null) ||
-                            (optDoc.isPresent() && optDoc.get().getMd5() != null  && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
-                            optDoc.isPresent() == false) {
+                                    (optDoc.isPresent() && optDoc.get().getMd5() != null  && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
+                                    optDoc.isPresent() == false) {
                         //new or updated file
                         remoteFiles.add(new File2Process(file.getId())
                                 .setFileName(file.getName())
                                 .setMd5(file.getMd5Checksum())
-                                .setDriveFullFolderPath(currentFolderPath) //TODO maybe relative / fix this ?
+                                //.setDriveFullFolderPath(currentFolderPath) //TODO maybe relative / fix this ?
                                 .setParentFolderId(currentFolderId)
                                 .setParentFolderName(currentFolderName));
                     } else {
@@ -189,38 +186,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             }
         }
         return remoteFiles;
-    }
-
-    //TODO utils
-
-
-    //todo utils
-
-
-    @Override
-    public void updateFolder(String folderId) {
-        File gFolder = null;
-        try {
-            //check this is a folder
-            gFolder = driveUtilsService.getDriveFileDetails(folderId);
-        } catch (ServiceException e) {
-            LOG.error("failed to get drive folder", e);
-            return;
-        }
-        List<File2Process> remoteFiles = refreshFolder(folderId, "", 4, "", gFolder.getName(), null);
-
-        List<File2Process> files2Process = remoteFiles.stream()
-                .map(file2Process-> {
-                        Path targetFolder = fileWorkingDir(file2Process.getFileId());
-                        Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
-                        file2Process.setFilePath(downloadFilePath);
-                        return file2Process;
-                })
-                .toList();
-
-        //Legacy processing using shell and python
-        //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
-        this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
     }
 
     @Async
@@ -296,11 +261,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             .append("## Page ").append(page++).append("\n\n").append(transcript);
                     }
 
+                    //retrieve full path
+                    String fullFolderPath = null;
+                    try {
+                        fullFolderPath = getAncestors(fileId);
+                    } catch (ServiceException e) {
+                        throw new RuntimeException(e);
+                    }
+
                     doc
                         .setFileId(fileId)
                         .setTranscripted_at(OffsetDateTime.now())
                         .setFileName(f2p.getFileName())
-                        .setRemoteFolder(f2p.getDriveFullFolderPath())
+                        .setRemoteFolder(fullFolderPath)
                         .setParentFolderId(f2p.getParentFolderId())
                         .setParentFolderName(f2p.getParentFolderName())
                         .setMd5(f2p.getMd5())
@@ -318,6 +291,53 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         repoDoc.saveAll(list);
     }
 
+    @Override
+    public void getChanges(String channelId) {
+        //not from current channel watch
+        if(channelId.equals(currentChannelId) == false) {
+            LOG.debug("Rejected notified changes channel {}", channelId);
+            return;
+        }
+        LOG.info("Changes notified channel {}", channelId);
+
+
+        ChangeList changes = null;
+        try {
+            changes = driveService.getDrive().changes().list(lastPageToken).execute();
+            lastPageToken = changes.getNewStartPageToken();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if(!changes.isEmpty()) {
+            for (Change change : changes.getChanges()) {
+                ChangedFile changedFile = new ChangedFile(change);
+
+                String fileId = change.getFileId();
+
+                if(change.getFile() != null) {
+                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
+
+                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
+                        if(mapScheduled.containsKey(fileId)) {
+                            LOG.info("already got a change for file {}", fileId);
+                            mapScheduled.get(fileId).getFuture().cancel(true);
+                        }
+                        LOG.info(" > accept file change {}", fileId);
+                        //todo refresh is deactivated inside task
+                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
+                        changedFile.setFuture(futureFlush);
+                        mapScheduled.put(fileId, changedFile);
+
+                    } else {
+                        LOG.info("rejected file {}", fileId);
+                    }
+                } else {
+                    LOG.warn("No file with this id found {}", fileId);
+                }
+            }
+        }
+    }
 
     @Override
     public synchronized void flushChanges() {
@@ -404,6 +424,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         //legacyProcessFile.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files);
     }
 
+
+
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
         driveService.getDrive().channels().stop(responseChannel);
@@ -488,51 +510,45 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return "no transcript found for " + fileId;
     }
 
-    public void getChanges(String channelId) {
-        //not from current channel watch
-        if(channelId.equals(currentChannelId) == false) {
-            LOG.debug("Rejected notified changes channel {}", channelId);
-            return;
-        }
-        LOG.info("Changes notified channel {}", channelId);
+
+    @Override
+    public String getAncestors(String fileId) throws ServiceException {
+        File file = driveUtilsService.getDriveFileDetails(fileId);
+        List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
+
+        Collections.reverse(ancestors);
+
+        return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
+    }
 
 
-        ChangeList changes = null;
-        try {
-            changes = driveService.getDrive().changes().list(lastPageToken).execute();
-            lastPageToken = changes.getNewStartPageToken();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        if(!changes.isEmpty()) {
-            for (Change change : changes.getChanges()) {
-                ChangedFile changedFile = new ChangedFile(change);
-
-                String fileId = change.getFileId();
-
-                if(change.getFile() != null) {
-                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
-
-                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
-                        if(mapScheduled.containsKey(fileId)) {
-                            LOG.info("already got a change for file {}", fileId);
-                            mapScheduled.get(fileId).getFuture().cancel(true);
-                        }
-                        LOG.info(" > accept file change {}", fileId);
-                        //todo refresh is deactivated inside task
-                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
-                        changedFile.setFuture(futureFlush);
-                        mapScheduled.put(fileId, changedFile);
-
-                    } else {
-                        LOG.info("rejected file {}", fileId);
-                    }
-                } else {
-                    LOG.warn("No file with this id found {}", fileId);
-                }
+    private void removeFileIfExists(Path target) {
+        if(target.toFile().exists()) {
+            if(target.toFile().delete()) {
+                LOG.info("deleted file {}", target);
+            } else {
+                LOG.info("failed to delete folder {}", target);
             }
         }
     }
+
+    private Path fileWorkingDir(String fileId) {
+
+        Path pathDownloadFolder = Paths.get(downloadPath, fileId);
+
+        if(pathDownloadFolder.toFile().exists()) {
+            LOG.info("folder {} already exists", fileId);
+
+        } else {
+            if(pathDownloadFolder.toFile().mkdir()) {
+                LOG.info("created folder {}", fileId);
+            } else {
+                LOG.error("failed to create directory {}", pathDownloadFolder);
+            }
+        }
+
+        return pathDownloadFolder;
+    }
+
 
 }

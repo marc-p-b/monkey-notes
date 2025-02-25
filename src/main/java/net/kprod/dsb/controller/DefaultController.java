@@ -1,5 +1,6 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,4 +65,11 @@ public class DefaultController {
         driveChMgmtService.updateFolder(folderId);
         return ResponseEntity.ok().body("OK");
     }
+
+    @GetMapping("/ancestors/{fileId}")
+    public ResponseEntity<String> ancestors(@PathVariable String fileId) throws ServiceException {
+        String s= driveChMgmtService.getAncestors(fileId);
+        return ResponseEntity.ok().body(s);
+    }
+
 }

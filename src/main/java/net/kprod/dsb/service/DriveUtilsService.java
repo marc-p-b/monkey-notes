@@ -19,4 +19,6 @@ public interface DriveUtilsService {
     void deleteSimilarNameFromTranscripts(String name, String folderId);
     FileList listDriveFilesPropertiesFromFolder(String folderId) throws ServiceException;
     File getDriveFileDetails(String fileId) throws ServiceException;
+    boolean isFolder(File file);
+    List<File> getAncestorsUntil(File file, String untilFolderId, int max_depth, List<File> ancestors) throws ServiceException;
 }

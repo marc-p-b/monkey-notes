@@ -25,6 +25,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 @Service
 public class DriveChangeManagerServiceImpl implements DriveChangeManagerService {
     public static final int ANCESTORS_RETRIEVE_MAX_DEPTH = 4;
+    public static final String MIME_PDF = "application/pdf";
     private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerServiceImpl.class);
 
     @Value("${app.url.self}")
@@ -228,12 +230,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                         Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
 
-                        File2Process file2Process = new File2Process(fileId)
-                                .setFileName(file.getName())
+                        File2Process file2Process = new File2Process(file)
+                                //.setFileName(file.getName())
                                 .setFilePath(downloadFileFromDrive)
                                 .setParentFolderId(parentFolder.getId())
-                                .setParentFolderName(parentFolder.getName())
-                                .setMd5(file.getMd5Checksum());
+                                .setParentFolderName(parentFolder.getName());
+                                //.setMd5(file.getMd5Checksum());
 
                         //list2Process.add(file2Process);
                         returnObject = Optional.of(file2Process);
@@ -292,6 +294,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         List<File2Process> remoteFiles = recursRefreshFolder(folderId, "", 4, "", gFolder.getName(), null);
 
         List<File2Process> files2Process = remoteFiles.stream()
+                .filter(f2p -> {
+                    return f2p.getMimeType().equals(MIME_PDF);
+                })
                 .map(file2Process-> {
                         Path targetFolder = fileWorkingDir(file2Process.getFileId());
                         Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
@@ -337,10 +342,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                     (optDoc.isPresent() && optDoc.get().getMd5() != null  && optDoc.get().getMd5().equals(file.getMd5Checksum()) == false) ||
                                     optDoc.isPresent() == false) {
                         //new or updated file
-                        remoteFiles.add(new File2Process(file.getId())
-                                .setFileName(file.getName())
-                                .setMd5(file.getMd5Checksum())
-                                //.setDriveFullFolderPath(currentFolderPath) //TODO maybe relative / fix this ?
+                        remoteFiles.add(new File2Process(file)
+                                //.setFileName(file.getName())
+                                //.setMd5(file.getMd5Checksum())
                                 .setParentFolderId(currentFolderId)
                                 .setParentFolderName(currentFolderName));
                     } else {

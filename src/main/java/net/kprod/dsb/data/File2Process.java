@@ -1,5 +1,7 @@
 package net.kprod.dsb.data;
 
+import com.google.api.services.drive.model.File;
+
 import java.nio.file.Path;
 
 public class File2Process {
@@ -11,11 +13,22 @@ public class File2Process {
     //private String driveFullFolderPath;
     private String parentFolderId;
     private String parentFolderName;
+    private String mimeType;
 
-    public File2Process(String fileId) {//, Path file) {
-        this.fileId = fileId;
-        //this.filePath = file;
+
+//    public File2Process(String fileId) {//, Path file) {
+//        this.fileId = fileId;
+//        //this.filePath = file;
+//    }
+
+
+    public File2Process(File file) {
+        this.fileId = file.getId();
+        this.fileName = file.getName();
+        this.md5 = file.getMd5Checksum();
+        this.mimeType = file.getMimeType();
     }
+
 
     public String getFileId() {
         return fileId;
@@ -77,6 +90,15 @@ public class File2Process {
 
     public File2Process setFileName(String fileName) {
         this.fileName = fileName;
+        return this;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public File2Process setMimeType(String mimeType) {
+        this.mimeType = mimeType;
         return this;
     }
 }

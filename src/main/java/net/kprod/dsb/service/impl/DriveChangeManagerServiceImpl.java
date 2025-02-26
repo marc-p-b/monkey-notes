@@ -30,12 +30,18 @@ import org.springframework.util.MimeType;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -436,21 +442,38 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     try {
                         fullFolderPath = getAncestors(fileId);
                     } catch (ServiceException e) {
-                        throw new RuntimeException(e);
+                        // todo
                     }
 
-                    //TODO replace with as_doc
 
-                    doc
-                        .setFileId(fileId)
+                    //todo update patterns
+                    Pattern datePattern1 = Pattern.compile("(\\d{6})");
+                    Matcher m1 = datePattern1.matcher(f2p.getFileName());
+
+                    OffsetDateTime documentTitleDate = null;
+                    if (m1.find()) {
+                        try {
+                            LocalDate ld = LocalDate.parse(m1.group(), DateTimeFormatter.ofPattern("yyMMdd"));
+                            ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
+                            documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
+                        } catch (DateTimeParseException e) {
+                            // todo
+                            LOG.warn("Could not parse date {}", m1.group(1), e);
+                        }
+                    }
+
+
+
+                    doc = f2p.asDoc()
+                        //.setFileId(fileId)
+                        //.setFileName(f2p.getFileName())
+                        //.setParentFolderId(f2p.getParentFolderId())
+                        //.setParentFolderName(f2p.getParentFolderName())
+                        //.setMd5(f2p.getMd5())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setTranscript(sbTranscripts.toString())
-                        //.setDocumented_at(f2p.g)
-                        .setFileName(f2p.getFileName())
+                        .setDocumented_at(documentTitleDate)
                         .setRemoteFolder(fullFolderPath)
-                        .setParentFolderId(f2p.getParentFolderId())
-                        .setParentFolderName(f2p.getParentFolderName())
-                        .setMd5(f2p.getMd5())
                         .setAiModel(listCompletionResponse.get(0).getAiModel())
                         .setPageCount(listCompletionResponse.size())
                         .setTokensPrompt(tokensPrompt)

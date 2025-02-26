@@ -9,7 +9,6 @@ import net.kprod.dsb.service.DriveUtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
@@ -28,18 +27,9 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
     @Autowired
     DriveService driveService;
 
-
     @Override
-    //public File downloadFileFromDrive(String fileId, Path destPath, Path destFile, String filename) {
     public Path downloadFileFromDrive(String fileId, String filename, Path targetFolder) {
-
-//        Path destFolderPath = Paths.get(downloadFolder, fileId);
-//        Path destFilePath = Paths.get(downloadFolder, fileId);
-
-
         Path targetFile = null;
-                //File file2Download = null;
-        //Download file from g drive
         try {
             LOG.info("download file id {} from gdrive", fileId);
 
@@ -51,20 +41,14 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
                 throw new IOException("Google App document cannot be downloaded");
             }
             targetFile = Paths.get(targetFolder.toString(), fileId + "." + file2Download.getFileExtension());
-            //removeFileIfExists(downloadFilePath);
 
             try (OutputStream outputStream = new FileOutputStream(targetFile.toFile())) {
                 driveService.getDrive().files().get(fileId).executeMediaAndDownloadTo(outputStream);
             }
-            //file2Download = file;
             LOG.info("Downloaded name {} to {}", filename, targetFolder);
         } catch (IOException e) {
             LOG.error("Failed to download file {}", fileId, e);
         }
-
-        //file2Download.getFileExtension();
-        //java.io.File file = new java.io.File(targetFolder.toString(), );
-        //Path downloadFilePath = Paths.get(targetFolder.toString(), fileId + "." + file2Download.getFileExtension());
 
         return targetFile;
     }
@@ -133,15 +117,11 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         Optional<String> level1FolderId = checkDriveParents(file.getParents(), parentFileId);
         if(level1FolderId.isPresent()) {
             //todo cache this value
-            //LOG.info("parent {} is ok", level1FolderId.get());
             return true;
         } else {
             Optional<String> folderId = fileHasSpecifiedParentsRecurs(file.getParents(), parentFileId);
             return folderId.isPresent();
-            //LOG.info("parent {} is ok", folderId.orElse("nope !"));
         }
-
-        //return false;
     }
 
     private Optional<String> fileHasSpecifiedParentsRecurs(List<String> fileIds, String parentFileId) {

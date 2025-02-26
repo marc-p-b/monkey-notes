@@ -1,6 +1,9 @@
 package net.kprod.dsb.service.impl;
 
-import com.google.api.services.drive.model.*;
+import com.google.api.services.drive.model.Change;
+import com.google.api.services.drive.model.ChangeList;
+import com.google.api.services.drive.model.Channel;
+import com.google.api.services.drive.model.File;
 import net.kprod.dsb.FlushTask;
 import net.kprod.dsb.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
@@ -25,7 +28,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeType;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -181,8 +183,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         processFlushed(monitoringService.getCurrentMonitoringData(), setFlushedFileId);
     }
 
-    //@Async
-    //@Override
     public CompletableFuture<AsyncResult> processFlushed(MonitoringData monitoringData, Set<String> setFlushedFileId) {
         SupplyAsync sa = null;
 
@@ -263,8 +263,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 map(e -> e.getValue().get(0))
                 .toList();
 
-
-        //this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
         runListAsyncProcess(files2Process);
     }
 
@@ -273,6 +271,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         updateFolder2(monitoringService.getCurrentMonitoringData(), folderId);
     }
 
+    //todo fix naming
     public CompletableFuture<AsyncResult> updateFolder2(MonitoringData monitoringData, String folderId) {
         SupplyAsync sa = null;
 
@@ -285,8 +284,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return CompletableFuture.supplyAsync(sa);
     }
 
-
-    //@Override
     @Async
     public void asyncUpdateFolder(String folderId) {
         File gFolder = null;
@@ -362,20 +359,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return remoteFiles;
     }
 
-//    //@Async
-//    @Override
-//    public CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list) {
-//        SupplyAsync sa = null;
-//
-//        try {
-//            sa = new SupplyAsync(monitoringService, monitoringData, () -> runListAsyncProcess(list));
-//        } catch (ServiceException e) {
-//            throw new RuntimeException(e);
-//        }
-//
-//        return CompletableFuture.supplyAsync(sa);
-//    }
-
     public void runListAsyncProcess(List<File2Process> files2Process) {
         //Map fileId -> CompletionResponse
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
@@ -442,9 +425,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     try {
                         fullFolderPath = getAncestors(fileId);
                     } catch (ServiceException e) {
-                        // todo
+                        LOG.warn("Failed to get full folder path {}", fileId, e);
                     }
-
 
                     //todo update patterns
                     Pattern datePattern1 = Pattern.compile("(\\d{6})");
@@ -462,14 +444,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         }
                     }
 
-
-
                     doc = f2p.asDoc()
-                        //.setFileId(fileId)
-                        //.setFileName(f2p.getFileName())
-                        //.setParentFolderId(f2p.getParentFolderId())
-                        //.setParentFolderName(f2p.getParentFolderName())
-                        //.setMd5(f2p.getMd5())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setTranscript(sbTranscripts.toString())
                         .setDocumented_at(documentTitleDate)
@@ -483,7 +458,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .toList();
 
-        //error here / Entity must not be null
         repoDoc.saveAll(list);
     }
 
@@ -613,6 +587,4 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         return pathDownloadFolder;
     }
-
-
 }

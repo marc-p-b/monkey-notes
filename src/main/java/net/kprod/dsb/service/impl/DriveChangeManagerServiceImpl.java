@@ -439,9 +439,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         throw new RuntimeException(e);
                     }
 
+                    //TODO replace with as_doc
+
                     doc
                         .setFileId(fileId)
                         .setTranscripted_at(OffsetDateTime.now())
+                        .setTranscript(sbTranscripts.toString())
+                        //.setDocumented_at(f2p.g)
                         .setFileName(f2p.getFileName())
                         .setRemoteFolder(fullFolderPath)
                         .setParentFolderId(f2p.getParentFolderId())
@@ -451,8 +455,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         .setPageCount(listCompletionResponse.size())
                         .setTokensPrompt(tokensPrompt)
                         .setTokensResponse(tokensCompletion)
-                        .setTranscriptTook(took)
-                        .setTranscript(sbTranscripts.toString());
+                        .setTranscriptTook(took);
                     return doc;
                 })
                 .toList();

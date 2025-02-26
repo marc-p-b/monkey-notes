@@ -22,6 +22,7 @@ public class Doc {
     private String md5;
     private OffsetDateTime discovered_at;
     private OffsetDateTime transcripted_at;
+    private OffsetDateTime documented_at;
 
     @Lob
     private String transcript;
@@ -171,6 +172,15 @@ public class Doc {
 
     public Doc setVersion(int version) {
         this.version = version;
+        return this;
+    }
+
+    public OffsetDateTime getDocumented_at() {
+        return documented_at;
+    }
+
+    public Doc setDocumented_at(OffsetDateTime documented_at) {
+        this.documented_at = documented_at;
         return this;
     }
 }

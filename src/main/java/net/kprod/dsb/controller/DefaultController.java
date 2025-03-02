@@ -1,5 +1,6 @@
 package net.kprod.dsb.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,6 +72,16 @@ public class DefaultController {
     public ResponseEntity<String> ancestors(@PathVariable String fileId) throws ServiceException {
         String s= driveChMgmtService.getAncestors(fileId);
         return ResponseEntity.ok().body(s);
+    }
+
+
+    //avoid unifi reqs
+    @PostMapping("/inform")
+    public ResponseEntity<String> inform(HttpServletRequest request) {
+        //driveChMgmtService.updateAll();
+
+
+        return ResponseEntity.ok().body("OK");
     }
 
 }

@@ -8,6 +8,8 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.util.store.DataStore;
+import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import net.kprod.dsb.RefreshTokenTask;
@@ -22,6 +24,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.OffsetDateTime;
@@ -75,20 +78,31 @@ public class DriveServiceImpl implements DriveService {
 
         //request auth
 
-        //todo storage does not works this way (NPE here : createAndStoreCredential)
-        //.setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+        try {
+            authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
+                    .setDataStoreFactory(new FileDataStoreFactory(new File("/home/marc/Desktop/tk")))
+                    .setAccessType("offline")
+                    .setApprovalPrompt("force")
+                    .build();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
+        try {
+            credential = authFlow.loadCredential("marc");
+            LOG.info("Loaded credential");
+            getDriveConnection();
+        } catch (IOException e) {
+            String url = authFlow
+                    .newAuthorizationUrl()
+                    .setRedirectUri(appHost + oauthCallbackPath)
+                    .build();
 
-                .setAccessType("offline")
-                .setApprovalPrompt("force")
-                .build();
-        String url = authFlow
-                .newAuthorizationUrl()
-                .setRedirectUri(appHost + oauthCallbackPath)
-                .build();
+            LOG.info("Authorise your app through using your browser : {}", url);
+        }
 
-        LOG.info("Authorise your app through using your browser : {}", url);
+
+
     }
 
     public void grantCallback(String code) {
@@ -110,12 +124,17 @@ public class DriveServiceImpl implements DriveService {
 
         try {
             credential = authFlow
-                    .createAndStoreCredential(tokenResponse, null);
+                    .createAndStoreCredential(tokenResponse, "marc");
         } catch (IOException e) {
             LOG.error("Failed to create credential", e);
         }
 
         LOG.info("Credential created");
+
+        getDriveConnection();
+    }
+
+    private void getDriveConnection() {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         } catch (IOException | GeneralSecurityException e) {

@@ -124,6 +124,7 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         }
     }
 
+    //todo common with getAncestorsUntil ?
     private Optional<String> fileHasSpecifiedParentsRecurs(List<String> fileIds, String parentFileId) {
 
         List<String> checkedId = new ArrayList<>();

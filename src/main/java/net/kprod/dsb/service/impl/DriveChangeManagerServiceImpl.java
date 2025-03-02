@@ -12,7 +12,9 @@ import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.data.entity.Doc;
+import net.kprod.dsb.data.entity.Folder;
 import net.kprod.dsb.data.repository.RepoDoc;
+import net.kprod.dsb.data.repository.RepoFolder;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
 import net.kprod.dsb.monitoring.MonitoringService;
@@ -109,6 +111,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private QwenService qwenService;
+    @Autowired
+    private RepoFolder repoFolder;
 
     @EventListener(ApplicationReadyEvent.class)
     void startup() {
@@ -308,7 +312,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .toList();
 
-        //this.asyncProcessFiles(monitoringService.getCurrentMonitoringData(), files2Process);
         runListAsyncProcess(files2Process);
     }
 
@@ -459,10 +462,32 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
 
         repoDoc.saveAll(list);
+
+
+//        //todo udapte folder management
+//        List<Folder> folders = files2Process.stream()
+//                .map(f2p -> {
+//                    String folderId = f2p.getParentFolderId();
+//
+//                    Folder folder = new Folder()
+//                            .setFileId(folderId)
+//                            .setFileName(f2p.getParentFolderName());
+//
+//                    List<String> parents = driveUtilsService.getDriveParents(folderId);
+//                    if(!parents.isEmpty()) {
+//
+//                            folder.setParentFolderId(parents.get(0))
+//
+//
+//                    }
+//
+//
+//
+//                })
+//                .toList();
+//
+//        repoFolder.saveAll(folders);
     }
-
-
-
 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
@@ -555,6 +580,29 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
 
         Collections.reverse(ancestors);
+
+        List<Folder> folders = new ArrayList<>();
+        Folder rootFolder = repoFolder.findByName("/").orElse(new Folder().setName("/").setFileId(inboundFolderId));
+        folders.add(rootFolder);
+
+//        Map<String, Folder> folderMap = new HashMap<>();
+//        folderMap.put(inboundFolderId, rootFolder);
+
+        for(File folderFile : ancestors) {
+
+            Folder folder = new Folder()
+                    .setFileId(folderFile.getId())
+                    .setName(folderFile.getName());
+
+            if(!folderFile.getParents().isEmpty()) {
+                folder.setParentFolderId(folderFile.getParents().get(0));
+            }
+            folders.add(folder);
+            //folderMap.put(folderFile.getId(), folder);
+
+        }
+        repoFolder.saveAll(folders);
+
 
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }

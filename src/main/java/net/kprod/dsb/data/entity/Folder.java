@@ -1,9 +1,6 @@
 package net.kprod.dsb.data.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
+import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
@@ -12,8 +9,13 @@ public class Folder {
     @Id
     private String fileId;
 
+//    @ManyToOne
+//    private Folder parentFolderId;
+
+    private String parentFolderId;
+
     @Column(length = 1024)
-    private String fileName;
+    private String name;
 
     @Column(length = 1024)
     private String remoteFolder;
@@ -25,6 +27,24 @@ public class Folder {
     public Folder() {
     }
 
+    public String getParentFolderId() {
+        return parentFolderId;
+    }
+
+    public Folder setParentFolderId(String parentFolderId) {
+        this.parentFolderId = parentFolderId;
+        return this;
+    }
+
+    //    public Folder getParentFolderId() {
+//        return parentFolderId;
+//    }
+//
+//    public Folder setParentFolderId(Folder parentFolderId) {
+//        this.parentFolderId = parentFolderId;
+//        return this;
+//    }
+
     public String getFileId() {
         return fileId;
     }
@@ -34,12 +54,12 @@ public class Folder {
         return this;
     }
 
-    public String getFileName() {
-        return fileName;
+    public String getName() {
+        return name;
     }
 
-    public Folder setFileName(String fileName) {
-        this.fileName = fileName;
+    public Folder setName(String fileName) {
+        this.name = fileName;
         return this;
     }
 

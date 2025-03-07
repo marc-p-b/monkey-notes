@@ -6,14 +6,18 @@ import net.kprod.dsb.data.entity.Doc;
 import net.kprod.dsb.data.entity.Folder;
 import net.kprod.dsb.data.repository.RepoDoc;
 import net.kprod.dsb.data.repository.RepoFolder;
+import net.kprod.dsb.service.PdfService;
 import net.kprod.dsb.service.ViewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ViewServiceImpl implements ViewService {
@@ -78,6 +82,35 @@ public class ViewServiceImpl implements ViewService {
         return folders;
     }
 
+    private String  recursGetTranscriptsFromFolder(Folder folder, StringBuilder transcripts) {
+        if(transcripts == null) {
+            transcripts = new StringBuilder();;
+        }
+        List<Folder> l = repoFolder.findAllByParentFolderId(folder.getFileId());
+        for(Folder f : l) {
+
+            String ts = getTranscriptsFromFolder(f.getFileId()).stream()
+                    .map(t -> {
+
+                        return new StringBuilder()
+                                .append("Title ").append(t.getFileName()).append("\n\n")
+                                .append("Date ").append(t.getDocumented_at() != null ? "(d)" + t.getDocumented_at() : "(t)" + t.getTranscripted_at()).append("\n\n")
+                                .append(t.getTranscript())
+                                .append("\n\n-----\n\n");
+
+
+                    })
+                            .collect(Collectors.joining());
+
+            transcripts.append(ts);
+
+            recursGetTranscriptsFromFolder(f, transcripts);
+
+
+        }
+        return transcripts.toString();
+    }
+
     @Override
     public List<String> listFolders() {
 
@@ -98,7 +131,6 @@ public class ViewServiceImpl implements ViewService {
     private String selfUrl;
 
     @Override
-    //@Transactional
     public List<String> listTranscriptFromFolder(String folderId) {
 
         return repoDoc.findAllByParentFolderId(folderId).stream()
@@ -107,5 +139,32 @@ public class ViewServiceImpl implements ViewService {
                     return new StringBuilder().append(d.getFileName()).append(" - ").append(url).toString();
                 })
                 .toList();
+    }
+
+
+    private List<Doc> getTranscriptsFromFolder(String folderId) {
+
+        return repoDoc.findAllByParentFolderId(folderId).stream()
+
+                .toList();
+    }
+
+    @Autowired
+    private PdfService pdfService;
+
+    @Override
+    public File createTranscriptPdfFromFolder(String folderId) throws IOException {
+
+        Optional<Folder> f = repoFolder.findById(folderId);
+
+        if(!f.isPresent()) {
+            return pdfService.createTranscriptPdf(folderId, "ERROR");
+        }
+
+
+        String folderTranscripts = recursGetTranscriptsFromFolder(f.get(), null);
+
+        return pdfService.createTranscriptPdf(folderId, folderTranscripts);
+
     }
 }

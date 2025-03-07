@@ -1,7 +1,6 @@
 package net.kprod.dsb.service;
 
-import net.kprod.dsb.data.entity.Doc;
-
+import java.io.IOException;
 import java.util.List;
 
 public interface ViewService {
@@ -9,4 +8,5 @@ public interface ViewService {
     String getTranscript(String fileId);
     List<String> listFolders();
     List<String> listTranscriptFromFolder(String folderId);
+    java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;
 }

@@ -111,6 +111,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private QwenService qwenService;
+
     @Autowired
     private RepoFolder repoFolder;
 
@@ -551,27 +552,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return info;
     }
 
-    @Override
-    public List<String> listAvailableTranscripts() {
-        return repoDoc.findAll().stream() //optimize request
-                .filter(d -> d.getTranscripted_at() != null)
-                .map(d -> {
-                    return new StringBuilder()
-                            .append(d.getFileId()).append(" - ").append(d.getFileName())
-                            .toString();
-                })
-                .toList();
-    }
 
-    @Override
-    public String getTranscript(String fileId) {
-        Optional<Doc> optDoc = repoDoc.findById(fileId);
-        if (optDoc.isPresent()) {
-            Doc doc = optDoc.get();
-            return doc.getTranscript();
-        }
-        return "no transcript found for " + fileId;
-    }
 
 
     @Override

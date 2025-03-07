@@ -3,6 +3,7 @@ package net.kprod.dsb.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.service.DriveChangeManagerService;
+import net.kprod.dsb.service.ViewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class DefaultController {
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
 
+    @Autowired
+    private ViewService viewService;
+
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
         driveChMgmtService.watch();
@@ -42,12 +46,12 @@ public class DefaultController {
 
     @GetMapping("/transcript/list")
     public ResponseEntity<List<String>> listTranscipt() throws IOException {
-        return ResponseEntity.ok().body(driveChMgmtService.listAvailableTranscripts());
+        return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
     }
 
     @GetMapping("/transcript/{fileId}")
     public ResponseEntity<String> getTranscript(@PathVariable String fileId) throws IOException {
-        return ResponseEntity.ok().body(driveChMgmtService.getTranscript(fileId));
+        return ResponseEntity.ok().body(viewService.getTranscript(fileId));
     }
 
     @GetMapping("/flush")
@@ -68,14 +72,20 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-    @GetMapping("/ancestors/{fileId}")
-    public ResponseEntity<String> ancestors(@PathVariable String fileId) throws ServiceException {
-        String s= driveChMgmtService.getAncestors(fileId);
-        return ResponseEntity.ok().body(s);
+//    @GetMapping("/ancestors/{fileId}")
+//    public ResponseEntity<String> ancestors(@PathVariable String fileId) throws ServiceException {
+//        String s= driveChMgmtService.getAncestors(fileId);
+//        return ResponseEntity.ok().body(s);
+//    }
+
+
+    @GetMapping("/list/folders")
+    public ResponseEntity<List<String>> viewFolders() {
+        return ResponseEntity.ok().body(viewService.listFolders());
     }
 
 
-    //avoid unifi reqs
+    //TODO : remove / avoid unifi reqs
     @PostMapping("/inform")
     public ResponseEntity<String> inform(HttpServletRequest request) {
         //driveChMgmtService.updateAll();

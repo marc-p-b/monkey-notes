@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
+import org.hibernate.annotations.Type;
 
 import java.time.OffsetDateTime;
 
@@ -25,6 +26,7 @@ public class Doc {
     private OffsetDateTime documented_at;
 
     @Lob
+    //@Type(PostgreSQLCITextType.class)
     private String transcript;
     private String parentFolderName;
     private String parentFolderId;

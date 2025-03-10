@@ -26,7 +26,6 @@ public class Doc {
     private OffsetDateTime documented_at;
 
     @Lob
-    //@Type(PostgreSQLCITextType.class)
     private String transcript;
     private String parentFolderName;
     private String parentFolderId;

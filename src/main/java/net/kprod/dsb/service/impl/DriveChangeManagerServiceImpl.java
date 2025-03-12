@@ -11,10 +11,11 @@ import net.kprod.dsb.data.ChangedFile;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
-import net.kprod.dsb.data.entity.Doc;
-import net.kprod.dsb.data.entity.Folder;
-import net.kprod.dsb.data.repository.RepoDoc;
-import net.kprod.dsb.data.repository.RepoFolder;
+import net.kprod.dsb.data.entity.EntityFile;
+import net.kprod.dsb.data.entity.EntityTranscript;
+import net.kprod.dsb.data.enums.FileType;
+import net.kprod.dsb.data.repository.RepositoryFile;
+import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
 import net.kprod.dsb.monitoring.MonitoringService;
@@ -98,9 +99,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private ThreadPoolTaskScheduler taskScheduler;
 
     @Autowired
-    private RepoDoc repoDoc;
-
-    @Autowired
     private DriveService driveService;
 
     @Autowired
@@ -113,14 +111,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private QwenService qwenService;
 
     @Autowired
-    private RepoFolder repoFolder;
+    private RepositoryFile repositoryFile;
+    @Autowired
+    private RepositoryTranscript repositoryTranscript;
 
     @EventListener(ApplicationReadyEvent.class)
     void startup() {
         LOG.info("Starting up");
         if(eraseDb) {
             LOG.warn(">>> ERASE DB ON STARTUP");
-            repoDoc.deleteAll();
+            repositoryFile.deleteAll();
         }
     }
 
@@ -208,7 +208,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     String filename = change.getFile().getName();
                     LOG.info("Flushing fileid {} name {}", fileId, filename);
 
-                    Optional<Doc> optDoc = repoDoc.findById(fileId);
+                    Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
 
                     File file = null;
                     try {
@@ -339,7 +339,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
-                    Optional<Doc> optDoc = repoDoc.findById(file.getId());
+                    Optional<EntityFile> optDoc = repositoryFile.findById(file.getId());
                     if (file.getTrashed() == true) {
                         LOG.info("File is trashed {} {}", file.getId(), file.getName());
                     } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
@@ -388,17 +388,29 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         // TODO cut here
 
-        List<Doc> list = mapCompleted.entrySet().stream()
+        List<EntityFile> listDocs = mapCompleted.entrySet().stream()
+                .map(e -> {
+                    String fileId = e.getKey();
+
+                    return repositoryFile.findById(fileId);
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
+        repositoryFile.saveAll(listDocs);
+
+        List<EntityTranscript> listTranscript = mapCompleted.entrySet().stream()
                 .map(entry -> {
                     String fileId = entry.getKey();
 
-                    Optional<Doc> optDoc = repoDoc.findById(fileId);
-                    Doc doc = null;
+                    Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
+
+                    EntityTranscript doc = null;
                     if(optDoc.isPresent()) {
                         doc = optDoc.get();
                         doc.setVersion(doc.getVersion() + 1);
                     } else {
-                        doc = new Doc();
+                        doc = new EntityTranscript();
                     }
                     List<CompletionResponse> listCompletionResponse = entry.getValue();
 
@@ -443,16 +455,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
                             documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
                         } catch (DateTimeParseException e) {
-                            // todo
+                            //  todo
                             LOG.warn("Could not parse date {}", m1.group(1), e);
                         }
                     }
 
-                    doc = f2p.asDoc()
+                    doc = new EntityTranscript()
+                        .setFileId(fileId)
+                        .setName(f2p.getFileName())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setTranscript(sbTranscripts.toString())
                         .setDocumented_at(documentTitleDate)
-                        .setRemoteFolder(fullFolderPath)
+                        //.setRemoteFolder(fullFolderPath)
                         .setAiModel(listCompletionResponse.get(0).getAiModel())
                         .setPageCount(listCompletionResponse.size())
                         .setTokensPrompt(tokensPrompt)
@@ -462,32 +476,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .toList();
 
-        repoDoc.saveAll(list);
+        repositoryTranscript.saveAll(listTranscript);
 
 
-//        //todo udapte folder management
-//        List<Folder> folders = files2Process.stream()
-//                .map(f2p -> {
-//                    String folderId = f2p.getParentFolderId();
-//
-//                    Folder folder = new Folder()
-//                            .setFileId(folderId)
-//                            .setFileName(f2p.getParentFolderName());
-//
-//                    List<String> parents = driveUtilsService.getDriveParents(folderId);
-//                    if(!parents.isEmpty()) {
-//
-//                            folder.setParentFolderId(parents.get(0))
-//
-//
-//                    }
-//
-//
-//
-//                })
-//                .toList();
-//
-//        repoFolder.saveAll(folders);
+//        //todo udapte folder management ?
+
     }
 
     public void watchStop() throws IOException {
@@ -552,9 +545,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return info;
     }
 
-
-
-
     @Override
     public String getAncestors(String fileId) throws ServiceException {
         File file = driveUtilsService.getDriveFileDetails(fileId);
@@ -562,16 +552,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         Collections.reverse(ancestors);
 
-        List<Folder> folders = new ArrayList<>();
-        Folder rootFolder = repoFolder.findByName("/").orElse(new Folder().setName("/").setFileId(inboundFolderId));
+        List<EntityFile> folders = new ArrayList<>();
+        EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder).orElse(new EntityFile().setName("/").setFileId(inboundFolderId));
         folders.add(rootFolder);
-
-//        Map<String, Folder> folderMap = new HashMap<>();
-//        folderMap.put(inboundFolderId, rootFolder);
 
         for(File folderFile : ancestors) {
 
-            Folder folder = new Folder()
+            EntityFile folder = new EntityFile()
                     .setFileId(folderFile.getId())
                     .setName(folderFile.getName());
 
@@ -579,12 +566,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 folder.setParentFolderId(folderFile.getParents().get(0));
             }
             folders.add(folder);
-            //folderMap.put(folderFile.getId(), folder);
-
         }
-        repoFolder.saveAll(folders);
-
-
+        repositoryFile.saveAll(folders);
+        //todo return dto instead
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }
 

@@ -91,19 +91,31 @@ public class DriveServiceImpl implements DriveService {
         try {
             credential = authFlow.loadCredential("marc");
             LOG.info("Loaded credential");
-            getDriveConnection();
+            this.getDriveConnection();
         } catch (IOException e) {
-            String url = authFlow
-                    .newAuthorizationUrl()
-                    .setRedirectUri(appHost + oauthCallbackPath)
-                    .build();
+            LOG.error("Failed to load credential", e);
+        }
 
-            LOG.info("Authorise your app through using your browser : {}", url);
+        if (credential == null) {
+            LOG.warn("Loaded credential must be expired");
+            this.requiredNewAuth();
+
         }
 
 
 
     }
+
+    private void requiredNewAuth() {
+        String url = authFlow
+                .newAuthorizationUrl()
+                .setRedirectUri(appHost + oauthCallbackPath)
+                .build();
+
+        LOG.info("Authorise your app through using your browser : {}", url);
+    }
+
+
 
     public void grantCallback(String code) {
         LOG.info("Auth granted");

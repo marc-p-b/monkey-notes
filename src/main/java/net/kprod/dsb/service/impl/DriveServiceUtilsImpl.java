@@ -221,28 +221,45 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         }
     }
 
-//    @Override
-//    public File upload(String name, java.io.File file) {
-//        LOG.info("upload file {}", name);
-//
-//        File fileMetadata = new File();
-//        fileMetadata.setName(name);
-//        fileMetadata.setParents(Collections.singletonList(outFolderId));
-//
-//
-//        //java.io.File filePath = new java.io.File("files/photo.jpg");
-//        FileContent mediaContent = new FileContent("application/pdf", file);
-//        try {
-//            File driveFile = drive.files().create(fileMetadata, mediaContent)
-//                    .setFields("id, parents")
-//                    .execute();
-//            System.out.println("File ID: " + driveFile.getId());
-//            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
-//            return driveFile;
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        return null;
-//    }
+    @Override
+    public File upload(String name, String folderId, java.io.File file) {
+        LOG.info("upload file {}", name);
+
+        File fileMetadata = new File();
+        fileMetadata.setName(name);
+        fileMetadata.setParents(Collections.singletonList(folderId));
+
+        //java.io.File filePath = new java.io.File("files/photo.jpg");
+        FileContent mediaContent = new FileContent("application/pdf", file);
+        try {
+            File driveFile = driveService.getDrive().files().create(fileMetadata, mediaContent)
+                    .setFields("id, parents")
+                    .execute();
+            System.out.println("File ID: " + driveFile.getId());
+            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
+            return driveFile;
+        } catch (IOException e) {
+            LOG.error("error uploading file {}", name, e);
+        }
+
+        return null;
+    }
+
+    @Override
+    public File createFolder(String name, String parentFolderId) {
+        File fileMetadata = new File();
+        fileMetadata.setName(name);
+        fileMetadata.setParents(Collections.singletonList(parentFolderId));
+        fileMetadata.setMimeType(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE);
+
+        try {
+            File driveFile = driveService.getDrive().files().create(fileMetadata)
+                    .setFields("id, parents")
+                    .execute();
+            return driveFile;
+        } catch (IOException e) {
+            LOG.error("error creating folder {}", name, e);
+        }
+        return null;
+    }
 }

@@ -364,7 +364,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
-        //Map fileId -> CompletionResponse
+
+        //get completions from AI model
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
                 .flatMap(file2Process-> {
                     Path workingDir = fileWorkingDir(file2Process.getFileId());
@@ -386,7 +387,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 })
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
-        // TODO cut here
+        // create file objects
         List<EntityFile> listDocs = files2Process.stream()
                 .map(f2p -> {
                     String fileId = f2p.getFileId();
@@ -401,6 +402,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
         repositoryFile.saveAll(listDocs);
 
+        // create transcript objects
         List<EntityTranscript> listTranscript = mapCompleted.entrySet().stream()
                 .map(entry -> {
                     String fileId = entry.getKey();
@@ -411,7 +413,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     if(optDoc.isPresent()) {
                         doc = optDoc.get();
                         doc.setVersion(doc.getVersion() + 1);
-        //List<EntityFile> listDocs = mapCompleted.entrySet().stream()
                     } else {
                         doc = new EntityTranscript();
                     }
@@ -481,8 +482,20 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         repositoryTranscript.saveAll(listTranscript);
 
+//        List<java.io.File> listFiles = listTranscript.stream()
+//                .map(t -> {
+//                    Optional<java.io.File> file = Optional.empty();
+//                    try {
+//                        file = Optional.of(pdfService.createTranscriptPdf(t.getFileId(), t.getTranscript()));
+//                    } catch (IOException e) {
+//                        LOG.error("Failed to create pdf file {}", t.getFileId(), e);
+//                    }
+//                    return file;
+//                })
+//                .filter(Optional::isPresent)
+//                .map(Optional::get)
+//                .toList();
 
-//        //todo udapte folder management ?
 
     }
 

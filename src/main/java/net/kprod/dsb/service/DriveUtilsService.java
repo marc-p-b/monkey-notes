@@ -21,5 +21,6 @@ public interface DriveUtilsService {
     File getDriveFileDetails(String fileId) throws ServiceException;
     boolean isFolder(File file);
     List<File> getAncestorsUntil(File file, String untilFolderId, int max_depth, List<File> ancestors) throws ServiceException;
-    //File upload(String name, java.io.File file);
+    File createFolder(String name, String parentFolderId);
+    File upload(String name, String folderId, java.io.File file);
 }

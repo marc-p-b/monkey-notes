@@ -387,15 +387,17 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
         // TODO cut here
+        List<EntityFile> listDocs = files2Process.stream()
+                .map(f2p -> {
+                    String fileId = f2p.getFileId();
 
-        List<EntityFile> listDocs = mapCompleted.entrySet().stream()
-                .map(e -> {
-                    String fileId = e.getKey();
-
-                    return repositoryFile.findById(fileId);
+                    Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
+                    if (optDoc.isPresent()) {
+                        return optDoc.get();
+                    } else {
+                        return f2p.asDoc();
+                    }
                 })
-                .filter(Optional::isPresent)
-                .map(Optional::get)
                 .toList();
         repositoryFile.saveAll(listDocs);
 
@@ -409,6 +411,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     if(optDoc.isPresent()) {
                         doc = optDoc.get();
                         doc.setVersion(doc.getVersion() + 1);
+        //List<EntityFile> listDocs = mapCompleted.entrySet().stream()
                     } else {
                         doc = new EntityTranscript();
                     }
@@ -553,12 +556,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         Collections.reverse(ancestors);
 
         List<EntityFile> folders = new ArrayList<>();
-        EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder).orElse(new EntityFile().setName("/").setFileId(inboundFolderId));
+        EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder)
+                .orElse(new EntityFile()
+                        .setType(FileType.folder)
+                        .setName("/").setFileId(inboundFolderId));
         folders.add(rootFolder);
 
         for(File folderFile : ancestors) {
 
             EntityFile folder = new EntityFile()
+                    .setType(FileType.folder)
                     .setFileId(folderFile.getId())
                     .setName(folderFile.getName());
 

@@ -1,5 +1,6 @@
 package net.kprod.dsb.service.impl;
 
+import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import net.kprod.dsb.ServiceException;
@@ -17,6 +18,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -218,4 +220,29 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
             LOG.error("file does not exists with name {}", name, e);
         }
     }
+
+//    @Override
+//    public File upload(String name, java.io.File file) {
+//        LOG.info("upload file {}", name);
+//
+//        File fileMetadata = new File();
+//        fileMetadata.setName(name);
+//        fileMetadata.setParents(Collections.singletonList(outFolderId));
+//
+//
+//        //java.io.File filePath = new java.io.File("files/photo.jpg");
+//        FileContent mediaContent = new FileContent("application/pdf", file);
+//        try {
+//            File driveFile = drive.files().create(fileMetadata, mediaContent)
+//                    .setFields("id, parents")
+//                    .execute();
+//            System.out.println("File ID: " + driveFile.getId());
+//            LOG.info("uploaded to drive as fileId {}", driveFile.getId());
+//            return driveFile;
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        return null;
+//    }
 }

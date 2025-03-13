@@ -44,6 +44,9 @@ public class DriveServiceImpl implements DriveService {
     @Value("${app.drive.auth.client-secret}")
     private String CLIENT_SECRET;
 
+    @Value("${app.drive.auth.credentials.path}")
+    private String credentialsPath;
+
     @Value("${app.url.self}")
     String appHost;
 
@@ -80,7 +83,7 @@ public class DriveServiceImpl implements DriveService {
 
         try {
             authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
-                    .setDataStoreFactory(new FileDataStoreFactory(new File("/home/marc/Desktop/tk")))
+                    .setDataStoreFactory(new FileDataStoreFactory(new File(credentialsPath)))
                     .setAccessType("offline")
                     .setApprovalPrompt("force")
                     .build();
@@ -102,7 +105,11 @@ public class DriveServiceImpl implements DriveService {
 
         }
 
-
+        if(credential != null) {
+            LOG.info("Credentials ok");
+        } else {
+            LOG.error("Credentials failure");
+        }
 
     }
 

@@ -2,6 +2,7 @@ package net.kprod.dsb.data;
 
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.data.entity.EntityFile;
+import net.kprod.dsb.data.enums.FileType;
 
 import java.nio.file.Path;
 
@@ -30,6 +31,7 @@ public class File2Process {
     public EntityFile asDoc() {
 
         return new EntityFile()
+                .setType(FileType.pdf)
                 .setFileId(fileId)
                 .setName(fileName)
                 .setMd5(md5)

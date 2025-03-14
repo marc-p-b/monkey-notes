@@ -13,9 +13,46 @@ public class DtoFile {
     private OffsetDateTime discovered_at;
     private FileType type;
 
+    private int offset;
+
     private DtoFile() {
     }
 
+    public int getOffset() {
+        return offset;
+    }
+
+    public DtoFile setOffset(int offset) {
+        this.offset = offset;
+        return this;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getParentFolderId() {
+        return parentFolderId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getMd5() {
+        return md5;
+    }
+
+    public OffsetDateTime getDiscovered_at() {
+        return discovered_at;
+    }
+
+    public FileType getType() {
+        return type;
+    }
+
+
+    //TODO private setters
     public DtoFile setFileId(String fileId) {
         this.fileId = fileId;
         return this;

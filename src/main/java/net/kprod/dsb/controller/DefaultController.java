@@ -1,5 +1,6 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.data.dto.DtoFile;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.ViewService;
 import org.slf4j.Logger;
@@ -74,7 +75,7 @@ public class DefaultController {
     }
 
     @GetMapping("/folder/list")
-    public ResponseEntity<List<String>> viewFolders() {
+    public ResponseEntity<List<DtoFile>> viewFolders() {
         return ResponseEntity.ok().body(viewService.listFolders());
     }
 

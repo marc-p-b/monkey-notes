@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface RepositoryFile extends JpaRepository<EntityFile, String> {
     Optional<EntityFile> findByNameAndTypeIs(String name, FileType type);
     List<EntityFile> findAllByParentFolderIdAndTypeIs(String parentFolderId, FileType type);
+    List<EntityFile> findAllByParentFolderId(String parentFolderId);
 }

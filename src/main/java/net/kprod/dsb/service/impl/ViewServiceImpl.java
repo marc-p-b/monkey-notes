@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.DtoFile;
+import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
 import net.kprod.dsb.data.enums.FileType;
@@ -56,25 +57,28 @@ public class ViewServiceImpl implements ViewService {
         return "no transcript found for " + fileId;
     }
 
-    //todo Common ?
-    private List<DtoFile>  recursExploreFolders(EntityFile folder, List<DtoFile> folders, int offset) {
-        if(folders == null) {
-            folders = new ArrayList<>();
-        }
-        List<EntityFile> listEntityFileFolders = repositoryFile.findAllByParentFolderIdAndTypeIs(folder.getFileId(), FileType.folder);
+    private List<FileNode> listFilesRecursively(EntityFile dir) {
 
-        for(EntityFile childFolder : listEntityFileFolders) {
-            List<DtoFile> listDtoFiles = listTranscriptFromFolder(DtoFile.fromEntity(childFolder)).stream().map(f->f.setOffset(offset + 1)).toList();
+        DtoFile directory = DtoFile.fromEntity(dir);
 
-            folders.add(DtoFile.fromEntity(childFolder).setOffset(offset));
-            folders.addAll(listDtoFiles);
-
-            recursExploreFolders(childFolder, folders, offset + 1);
+        List<FileNode> fileNodes = new ArrayList<>();
 
 
-        }
-        return folders;
+
+
+        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
+
+
+            for (EntityFile child : childen) {
+                FileNode node = new FileNode(DtoFile.fromEntity(child));
+                if(child.getType() == FileType.folder) {
+                        node.setChildren(listFilesRecursively(child));
+                }
+                fileNodes.add(node);
+            }
+        return fileNodes;
     }
+
 
     //todo common ?
     private String  recursGetTranscriptsFromFolder(EntityFile folder, StringBuilder transcripts) {
@@ -102,14 +106,14 @@ public class ViewServiceImpl implements ViewService {
     }
 
     @Override
-    public List<DtoFile> listFolders() {
+    public List<FileNode> listFolders() {
 
-        List<DtoFile> folders = null;
+        List<FileNode> folders = null;
         try {
 
             EntityFile folder = repositoryFile.findById(inboundFolderId).orElseThrow(() -> new ServiceException("inbound folder not found"));
 
-            folders = recursExploreFolders(folder, null, 0);
+            folders = listFilesRecursively(folder);
 
         } catch (ServiceException e) {
             //todo log
@@ -128,17 +132,19 @@ public class ViewServiceImpl implements ViewService {
     @Override
     public List<DtoFile> listTranscriptFromFolder(DtoFile folder) {
 
-        int offset = 0;
-        return repositoryFile.findAllByParentFolderIdAndTypeIs(folder.getFileId(), FileType.pdf).stream()
+//        int offset = 0;
+//        return repositoryFile.findAllByParentFolderIdAndTypeIs(folder.getFileId(), FileType.pdf).stream()
+//
+//                .map(DtoFile::fromEntity)
+//                .map(f -> f.setOffset(offset))
+//
+////                .map(d -> {
+////                    String url = selfUrl + "/transcript/" + d.getFileId();
+////                    return new StringBuilder().append(d.getName()).append(" - ").append(url).toString();
+////                })
+//                .toList();
 
-                .map(DtoFile::fromEntity)
-                .map(f -> f.setOffset(offset))
-
-//                .map(d -> {
-//                    String url = selfUrl + "/transcript/" + d.getFileId();
-//                    return new StringBuilder().append(d.getName()).append(" - ").append(url).toString();
-//                })
-                .toList();
+        return null;
     }
 
 

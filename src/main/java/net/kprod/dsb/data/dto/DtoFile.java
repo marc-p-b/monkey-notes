@@ -13,19 +13,19 @@ public class DtoFile {
     private OffsetDateTime discovered_at;
     private FileType type;
 
-    private int offset;
+//    private int offset;
 
     private DtoFile() {
     }
 
-    public int getOffset() {
-        return offset;
-    }
-
-    public DtoFile setOffset(int offset) {
-        this.offset = offset;
-        return this;
-    }
+//    public int getOffset() {
+//        return offset;
+//    }
+//
+//    public DtoFile setOffset(int offset) {
+//        this.offset = offset;
+//        return this;
+//    }
 
     public String getFileId() {
         return fileId;
@@ -139,5 +139,12 @@ public class DtoFile {
                 .setMd5(entityFile.getMd5())
                 .setDiscovered_at(entityFile.getDiscovered_at())
                 .setType(entityFile.getType());
+    }
+
+    @Override
+    public String toString() {
+        return "DtoFile{" +
+                "name='" + name + '\'' +
+                '}';
     }
 }

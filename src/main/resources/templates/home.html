@@ -1,13 +1,34 @@
 <html>
-
 <head>
+    <title>Monkey notes</title>
 
 </head>
-
 <body>
 
-hello
+<h2>File and Folder Structure</h2>
+
+<ul>
+    <li th:each="fileNode : ${fileNodes}">
+        <span th:class="${fileNode.isDirectory} ? 'folder' : ''" th:text="${fileNode.name}"></span>
+        <ul th:if="${fileNode.isDirectory}">
+            <li th:replace="~{::subTree(${fileNode.children})}"></li>
+        </ul>
+    </li>
+</ul>
+
+<!-- Recursive Fragment -->
+<th:block th:fragment="subTree(children)">
+    <ul>
+        <li th:each="file : ${children}">
+            <span th:class="${file.isDirectory} ? 'folder' : ''" th:text="${file.name}"></span>
+            <ul th:if="${file.isDirectory}">
+                <li th:replace="~{::subTree(${file.children})}"></li>
+            </ul>
+        </li>
+    </ul>
+</th:block>
+
+
 
 </body>
-
 </html>

@@ -7,13 +7,13 @@ public class FileNode {
     private DtoFile dtoFile;
     private List<FileNode> children;
     private String name;
-    private boolean directory;
+    private boolean folder;
 
     public FileNode(DtoFile dtoFile) {
         children = new ArrayList<>();
         this.dtoFile = dtoFile;
         this.name = dtoFile.getName();
-        this.directory = dtoFile.isFolder();
+        this.folder = dtoFile.isFolder();
     }
 
     public DtoFile getDtoFile() {
@@ -38,8 +38,8 @@ public class FileNode {
         return name;
     }
 
-    public boolean isDirectory() {
-        return directory;
+    public boolean isFolder() {
+        return folder;
     }
 
 

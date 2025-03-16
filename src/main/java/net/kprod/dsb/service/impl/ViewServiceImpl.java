@@ -59,7 +59,14 @@ public class ViewServiceImpl implements ViewService {
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
         if (optDoc.isPresent()) {
             EntityTranscript doc = optDoc.get();
-            return doc.getTranscript();
+
+            return new StringBuilder()
+                    .append("Title ").append(doc.getName()).append("\n\n")
+                    .append("Date ").append(doc.getDocumented_at() != null ? "(d)" + doc.getDocumented_at() : "(t)" + doc.getTranscripted_at()).append("\n\n")
+                    .append(doc.getTranscript())
+                    .append("\n\n-----\n\n")
+                    .toString();
+
         }
         return "no transcript found for " + fileId;
     }
@@ -127,6 +134,12 @@ public class ViewServiceImpl implements ViewService {
                 .toList();
     }
 
+    @Override
+    public File createTranscriptPdf(String fileId) throws IOException {
+
+        return pdfService.createTranscriptPdf(fileId, getTranscript(fileId));
+
+    }
 
     @Override
     public File createTranscriptPdfFromFolder(String folderId) throws IOException {

@@ -1,6 +1,5 @@
 package net.kprod.dsb.controller;
 
-import net.kprod.dsb.data.dto.DtoFile;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.ViewService;
@@ -54,7 +53,17 @@ public class DefaultController {
 
     @GetMapping("/transcript/{fileId}")
     public ResponseEntity<String> getTranscript(@PathVariable String fileId) throws IOException {
-        return ResponseEntity.ok().body(viewService.getTranscript(fileId));
+        return ResponseEntity.ok().body(viewService.getTranscript(fileId).replaceAll("\n", "<br/>"));
+    }
+
+    @GetMapping("/transcript/pdf/{fileId}")
+    public ResponseEntity<byte[]> getTranscriptPdf(@PathVariable String fileId) throws IOException {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.CONTENT_TYPE, "application/pdf");
+        httpHeaders.set(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("").build().toString());
+
+        byte[] b = readFileToBytes(viewService.createTranscriptPdf(fileId));
+        return ResponseEntity.ok().headers(httpHeaders).body(b);
     }
 
     @GetMapping("/flush")
@@ -81,7 +90,7 @@ public class DefaultController {
     }
 
     @GetMapping("/folder/pdf/{folderId}")
-    public ResponseEntity<byte[]> getFile(@PathVariable String folderId) throws IOException {
+    public ResponseEntity<byte[]> getFolderPdf(@PathVariable String folderId) throws IOException {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.set(HttpHeaders.CONTENT_TYPE, "application/pdf");
         httpHeaders.set(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("").build().toString());

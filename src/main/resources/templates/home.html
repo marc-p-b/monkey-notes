@@ -21,8 +21,8 @@
 <th:block th:fragment="subTree(children)">
     <ul>
         <li th:each="file : ${children}">
-            <span th:if="${file.folder}"><a th:href="@{/folder/pdf/{id}(id=${file.dtoFile.fileId})}">folder : <span th:text="${file.name}"></span></a></span>
-            <span th:if="${not file.folder}"><a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">file : <span th:text="${file.name}"></span></a></span>
+            <span th:if="${file.folder}"><a th:href="@{/folder/pdf/{id}(id=${file.dtoFile.fileId})}">folder as pdf : <span th:text="${file.name}"></span></a></span>
+            <span th:if="${not file.folder}"> - <a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">transcript <span th:text="${file.name}"></span></a> - <a th:href="@{/transcript/pdf/{id}(id=${file.dtoFile.fileId})}">as pdf<span th:text="${file.name}"></span></a></span>
 
             <ul th:if="${file.folder}">
                 <li th:replace="~{::subTree(${file.children})}"></li>

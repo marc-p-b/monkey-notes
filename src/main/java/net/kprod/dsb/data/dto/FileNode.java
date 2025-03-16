@@ -42,6 +42,10 @@ public class FileNode {
         return folder;
     }
 
+    public boolean ifPdf() {
+        return dtoFile.isPdf();
+    }
+
 
     @Override
     public String toString() {

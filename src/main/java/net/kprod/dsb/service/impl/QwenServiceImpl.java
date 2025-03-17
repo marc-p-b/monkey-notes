@@ -50,6 +50,7 @@ public class QwenServiceImpl implements QwenService {
             return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageName + "(dry-run)");
         }
 
+        CompletionResponse completionResponse = null;
         try {
             JSONObject content1_url = new JSONObject();
 
@@ -96,13 +97,13 @@ public class QwenServiceImpl implements QwenService {
                 content = m.group(1);
             }
 
-            CompletionResponse completionResponse = new CompletionResponse(fileId, took, model, prompt_tokens, completion_tokens, content);
+            completionResponse = new CompletionResponse(fileId, took, model, prompt_tokens, completion_tokens, content);
             //LOG.info("Qwen response: {}", content);
-            return completionResponse;
+
         } catch (Exception e) {
             LOG.error("Failed request model", e);
-            return null;
+            completionResponse = CompletionResponse.failed(fileId, e.getMessage());
         }
-
+        return completionResponse;
     }
 }

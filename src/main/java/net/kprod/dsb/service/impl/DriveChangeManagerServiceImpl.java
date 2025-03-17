@@ -428,6 +428,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     File2Process f2p = listCompletionResponse.get(0).getFile2Process();
 
                     List<String> transcripts = listCompletionResponse.stream()
+                            .filter(CompletionResponse::isCompleted)
                             .map(CompletionResponse::getTranscript)
                             .toList();
 

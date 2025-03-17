@@ -8,6 +8,8 @@ public class CompletionResponse {
     private int tokensCompletion;
     private String transcript;
     private File2Process file2Process;
+    private boolean completed = true;
+    private String errorMessage;
 
     public CompletionResponse(String fileId, long transcriptTook, String aiModel, int tokensPrompt, int tokensCompletion, String transcript) {
         this.fileId = fileId;
@@ -16,6 +18,25 @@ public class CompletionResponse {
         this.tokensPrompt = tokensPrompt;
         this.tokensCompletion = tokensCompletion;
         this.transcript = transcript;
+    }
+
+    private CompletionResponse(String fileId) {
+        this.fileId = fileId;
+    }
+
+    public static CompletionResponse failed(String fileId, String errorMessage) {
+        CompletionResponse failedResponse = new CompletionResponse(fileId);
+        failedResponse.errorMessage = errorMessage;
+        failedResponse.completed = false;
+        return failedResponse;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
     public File2Process getFile2Process() {

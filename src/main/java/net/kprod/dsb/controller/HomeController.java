@@ -16,7 +16,7 @@ public class HomeController {
     @Autowired
     private ViewService viewService;
 
-    @GetMapping("/home")
+    @GetMapping("/")
     public String home(Model model) {
         List<FileNode> listFiles = viewService.listFolders();
         model.addAttribute("fileNodes", listFiles);

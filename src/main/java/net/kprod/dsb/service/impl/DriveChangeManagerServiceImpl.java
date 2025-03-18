@@ -115,14 +115,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private RepositoryTranscript repositoryTranscript;
 
-    @EventListener(ApplicationReadyEvent.class)
-    void startup() {
-        LOG.info("Starting up");
-        if(eraseDb) {
-            LOG.warn(">>> ERASE DB ON STARTUP");
-            repositoryFile.deleteAll();
-        }
-    }
+//    @EventListener(ApplicationReadyEvent.class)
+//    void startup() {
+//        LOG.info("Starting up");
+//        if(eraseDb) {
+//            LOG.warn(">>> ERASE DB ON STARTUP");
+//            repositoryFile.deleteAll();
+//        }
+//    }
 
     public void updateAll() {
         updateFolder(inboundFolderId);

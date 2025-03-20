@@ -47,8 +47,9 @@ public class WebhooksController {
         return new ResponseEntity<>("Notification received", HttpStatus.OK);
     }
 
-//    @GetMapping(value = "/image/{fileId}/{imageId}",produces = MediaType.IMAGE_JPEG_VALUE)
-//    public @ResponseBody byte[] getImageWithMediaType(@PathVariable String fileId, @PathVariable String imageId) throws IOException {
-//        return imageService.getImage(fileId, imageId);
-//    }
+    //todo secure
+    @GetMapping(value = "/image/{fileId}/{imageId}",produces = MediaType.IMAGE_JPEG_VALUE)
+    public @ResponseBody byte[] getImageWithMediaType(@PathVariable String fileId, @PathVariable String imageId) throws IOException {
+        return imageService.getImage(fileId, imageId);
+    }
 }

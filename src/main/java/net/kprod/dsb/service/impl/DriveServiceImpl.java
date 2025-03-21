@@ -8,7 +8,6 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -18,9 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -50,10 +47,10 @@ public class DriveServiceImpl implements DriveService {
     private String credentialsPath;
 
     @Value("${app.url.self}")
-    String appHost;
+    private String appHost;
 
     @Value("${app.oauth-callback.path}")
-    String oauthCallbackPath;
+    private String oauthCallbackPath;
 
     private static final Set<String> SCOPES = Set.of(
             DriveScopes.DRIVE,
@@ -80,6 +77,11 @@ public class DriveServiceImpl implements DriveService {
     //@EventListener(ApplicationReadyEvent.class)
     @Override
     public Optional<String> requireAuth() {
+
+        if(credential != null) {
+            return Optional.empty();
+        }
+
         HttpTransport httpTransport = new NetHttpTransport();
 
         //request auth
@@ -97,15 +99,15 @@ public class DriveServiceImpl implements DriveService {
         try {
             //TODO credential name ?
             credential = authFlow.loadCredential("marc");
-            LOG.info("Loaded credential");
-            this.getDriveConnection();
+            if (credential != null) {
+                LOG.info("Loaded credential from file");
+                this.getDriveConnection();
+            } else {
+                LOG.warn("Loaded credential from file must be expired");
+                return Optional.of(this.requiredNewAuth());
+            }
         } catch (IOException e) {
             LOG.error("Failed to load credential", e);
-        }
-
-        if (credential == null) {
-            LOG.warn("Loaded credential must be expired");
-            return Optional.of(this.requiredNewAuth());
         }
 
         if(credential != null) {
@@ -155,6 +157,13 @@ public class DriveServiceImpl implements DriveService {
         getDriveConnection();
     }
 
+    private Runnable connectCallback;
+
+    @Override
+    public void connectCallback(Runnable callback) {
+        connectCallback = callback;
+    }
+
     private void getDriveConnection() {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -165,7 +174,8 @@ public class DriveServiceImpl implements DriveService {
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
-        //todo future
+        connectCallback.run();
+
         taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
     }
 
@@ -179,7 +189,6 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Refresh token failed", e);
         }
 
-        //todo future
         taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
 
         googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)

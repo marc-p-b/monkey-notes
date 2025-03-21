@@ -9,4 +9,5 @@ public interface DriveService {
     void grantCallback(String code);
     void refreshToken();
     Drive getDrive();
+    void connectCallback(Runnable callback);
 }

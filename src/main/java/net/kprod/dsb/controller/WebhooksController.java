@@ -27,17 +27,13 @@ public class WebhooksController {
     @Autowired
     private ImageService imageService;
 
-    @Value("${app.changes.listen.on-startup.enabled}")
-    private boolean changesListenEnabled;
+
 
     @GetMapping("/grant-callback")
     public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
         driveService.grantCallback(code);
-        //todo a callback to driveChMgmtService when init auth ?
-        if(changesListenEnabled) {
-            driveChMgmtService.watch();
-        }
+
         return ResponseEntity.ok().body("OK");
     }
 

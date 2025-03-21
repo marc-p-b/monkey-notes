@@ -79,6 +79,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.paths.download}")
     private String downloadPath;
 
+    @Value("${app.changes.listen.on-startup.enabled}")
+    private boolean changesListenEnabled;
+
     private String lastPageToken = null;
     private String resourceId = null;
     private Channel channel;
@@ -112,17 +115,28 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private RepositoryFile repositoryFile;
+
     @Autowired
     private RepositoryTranscript repositoryTranscript;
 
-//    @EventListener(ApplicationReadyEvent.class)
-//    void startup() {
-//        LOG.info("Starting up");
-//        if(eraseDb) {
-//            LOG.warn(">>> ERASE DB ON STARTUP");
-//            repositoryFile.deleteAll();
-//        }
-//    }
+    @EventListener(ApplicationReadyEvent.class)
+    void startup() {
+        LOG.info("Starting up");
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                driveAuthCallBack();
+            }
+        };
+        driveService.connectCallback(runnable);
+    }
+
+    void driveAuthCallBack() {
+        LOG.info("Drive auth callback");
+        if(changesListenEnabled) {
+            this.watch();
+        }
+    }
 
     public void updateAll() {
         updateFolder(inboundFolderId);

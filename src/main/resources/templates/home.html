@@ -7,6 +7,8 @@
 
 <h2>File and Folder Structure</h2>
 
+<div th:if= "${authUrl != ''}"><a th:href="${authUrl}">authenticate</a></div>
+
 <ul>
     <li th:each="fileNode : ${fileNodes}">
         <span th:if="${fileNode.folder}"><a th:href="@{/folder/pdf/{id}(id=${fileNode.dtoFile.fileId})}">folder : <span th:text="${fileNode.name}"></span></a></span>

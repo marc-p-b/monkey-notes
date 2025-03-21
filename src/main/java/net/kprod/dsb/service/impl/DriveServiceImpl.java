@@ -28,10 +28,12 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
 public class DriveServiceImpl implements DriveService {
+    public static final String STORED_CREDENTIAL_NAME = "marc";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
     private static final long TOKEN_REFRESH_INTERVAL = 3500;
@@ -75,8 +77,9 @@ public class DriveServiceImpl implements DriveService {
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
 
-    @EventListener(ApplicationReadyEvent.class)
-    private void initAuth() {
+    //@EventListener(ApplicationReadyEvent.class)
+    @Override
+    public Optional<String> requireAuth() {
         HttpTransport httpTransport = new NetHttpTransport();
 
         //request auth
@@ -92,6 +95,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
+            //TODO credential name ?
             credential = authFlow.loadCredential("marc");
             LOG.info("Loaded credential");
             this.getDriveConnection();
@@ -101,8 +105,7 @@ public class DriveServiceImpl implements DriveService {
 
         if (credential == null) {
             LOG.warn("Loaded credential must be expired");
-            this.requiredNewAuth();
-
+            return Optional.of(this.requiredNewAuth());
         }
 
         if(credential != null) {
@@ -110,19 +113,18 @@ public class DriveServiceImpl implements DriveService {
         } else {
             LOG.error("Credentials failure");
         }
-
+        return Optional.empty();
     }
 
-    private void requiredNewAuth() {
+    private String requiredNewAuth() {
         String url = authFlow
                 .newAuthorizationUrl()
                 .setRedirectUri(appHost + oauthCallbackPath)
                 .build();
 
-        LOG.info("Authorise your app through using your browser : {}", url);
+        //LOG.info("Authorise your app through using your browser : {}", url);
+        return url;
     }
-
-
 
     public void grantCallback(String code) {
         LOG.info("Auth granted");
@@ -143,7 +145,7 @@ public class DriveServiceImpl implements DriveService {
 
         try {
             credential = authFlow
-                    .createAndStoreCredential(tokenResponse, "marc");
+                    .createAndStoreCredential(tokenResponse, STORED_CREDENTIAL_NAME);
         } catch (IOException e) {
             LOG.error("Failed to create credential", e);
         }

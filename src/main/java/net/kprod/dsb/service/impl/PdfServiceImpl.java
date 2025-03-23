@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.service.ImageService;
 import net.kprod.dsb.service.PdfService;
+import net.kprod.dsb.service.UtilsService;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -14,12 +15,14 @@ import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,10 +37,13 @@ public class PdfServiceImpl implements PdfService {
     public static final int PDF2IMAGE_DPI = 150;
     public static final ImageType PDF2IMAGE_IMAGE_TYPE = ImageType.GRAY;
 
+    @Autowired
+    private UtilsService utilsService;
+
     @Override
-    public List<Path> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
+    public List<URL> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
         LOG.info("Converting {} to images", sourceFile);
-        List<Path> listImages = null;
+        List<URL> listImages = null;
         try {
             //java.io.File sourceFile = new java.io.File(sourcePath);
             listImages = new ArrayList<>();
@@ -49,17 +55,15 @@ public class PdfServiceImpl implements PdfService {
                 int pageCount = document.getNumberOfPages();
                 //System.out.println("Total pages to be converted -> " + pageCount);
 
-                //String fileName = fileId;//sourceFile.getName().replace(".pdf", "");
                 for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
-                    String filename = fileId + "_" + (pageNumber + 1) + ".png";
                     BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, PDF2IMAGE_DPI, PDF2IMAGE_IMAGE_TYPE);
-                    Path pathPage = Paths.get(targetDir.toString(), filename);
+
+                    Path pathPage = utilsService.imagePath(fileId, (pageNumber + 1));
                     java.io.File outputFile = pathPage.toFile();
 
-                    //System.out.println("Image Created -> " + outputFile.getName());
                     ImageIO.write(image, "png", outputFile);
-                    listImages.add(pathPage);
-                    LOG.info("Page {} converted as {}", pageNumber, filename);
+                    listImages.add(utilsService.imageURL(fileId, (pageNumber + 1)));
+                    LOG.info("Page {} converted to image {}", pageNumber, pathPage);
                 }
 
                 document.close();

@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.regex.Matcher;
@@ -42,19 +43,19 @@ public class QwenServiceImpl implements QwenService {
     private boolean dryRun;
 
     @Override
-    public CompletionResponse analyzeImage(Path imagePath, String fileId, String imageName) {
-        LOG.info("Qwen request analyse image {}", imagePath);
+    public CompletionResponse analyzeImage(String fileId, URL imageURL) {
+        LOG.info("Qwen request analyse image {}", imageURL);
 
         if(dryRun) {
             LOG.warn("Qwen request dry run");
-            return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageName + "(dry-run)");
+            return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageURL + "(dry-run)");
         }
 
         CompletionResponse completionResponse = null;
         try {
             JSONObject content1_url = new JSONObject();
 
-            content1_url.put("url", appHost + "/image/" + fileId + "/" + imageName);
+            content1_url.put("url", imageURL);
 
             JSONObject content1 = new JSONObject();
             content1.put("type", "image_url");

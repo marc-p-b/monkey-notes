@@ -33,6 +33,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -53,7 +54,8 @@ import java.util.stream.Collectors;
 public class DriveChangeManagerServiceImpl implements DriveChangeManagerService {
     public static final int ANCESTORS_RETRIEVE_MAX_DEPTH = 4;
     public static final String MIME_PDF = "application/pdf";
-    private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerServiceImpl.class);
+
+    private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerService.class);
 
     @Value("${app.url.self}")
     private String appHost;
@@ -75,9 +77,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Value("${app.changes.flush}")
     private long flushInterval;
-
-    @Value("${app.paths.download}")
-    private String downloadPath;
 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
@@ -106,6 +105,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private DriveUtilsService driveUtilsService;
+
+    @Autowired
+    private UtilsService utilsService;
 
     @Autowired
     private PdfService pdfService;
@@ -253,7 +255,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                     optDoc.isPresent() == false) {
                         LOG.info("create or update file {} {}", fileId, file.getName());
 
-                        Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), fileWorkingDir(fileId));
+                        Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
 
                         File2Process file2Process = new File2Process(file)
                                 //.setFileName(file.getName())
@@ -320,7 +322,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     return f2p.getMimeType().equals(MIME_PDF);
                 })
                 .map(file2Process-> {
-                        Path targetFolder = fileWorkingDir(file2Process.getFileId());
+                        Path targetFolder = utilsService.downloadDir(file2Process.getFileId());
                         Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
                         file2Process.setFilePath(downloadFilePath);
                         return file2Process;
@@ -379,23 +381,23 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
+
         //get completions from AI model
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
                 .flatMap(file2Process-> {
-                    Path workingDir = fileWorkingDir(file2Process.getFileId());
-                    List<Path> listImages = pdfService.pdf2Images(
+                    Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
+                    List<URL> listImages = pdfService.pdf2Images(
                             file2Process.getFileId(),
                             file2Process.getFilePath().toFile(),
-                            workingDir);
+                            imageWorkingDir);
                     LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
                     return listImages.stream()
                             .map(imagePath->{
                                 CompletionResponse completionResponse = qwenService.analyzeImage(
-                                        imagePath,
                                         file2Process.getFileId(),
-                                        imagePath.getFileName().toString());
+                                        imagePath);
                                 completionResponse.setFile2Process(file2Process);
-                                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath.getFileName(), completionResponse.getTranscript().length());
+                                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
                                 return completionResponse;
                             });
                 })
@@ -496,21 +498,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
 
         repositoryTranscript.saveAll(listTranscript);
-
-//        List<java.io.File> listFiles = listTranscript.stream()
-//                .map(t -> {
-//                    Optional<java.io.File> file = Optional.empty();
-//                    try {
-//                        file = Optional.of(pdfService.createTranscriptPdf(t.getFileId(), t.getTranscript()));
-//                    } catch (IOException e) {
-//                        LOG.error("Failed to create pdf file {}", t.getFileId(), e);
-//                    }
-//                    return file;
-//                })
-//                .filter(Optional::isPresent)
-//                .map(Optional::get)
-//                .toList();
-
 
     }
 
@@ -618,21 +605,5 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    private Path fileWorkingDir(String fileId) {
 
-        Path pathDownloadFolder = Paths.get(downloadPath, fileId);
-
-        if(pathDownloadFolder.toFile().exists()) {
-            LOG.info("folder {} already exists", fileId);
-
-        } else {
-            if(pathDownloadFolder.toFile().mkdir()) {
-                LOG.info("created folder {}", fileId);
-            } else {
-                LOG.error("failed to create directory {}", pathDownloadFolder);
-            }
-        }
-
-        return pathDownloadFolder;
-    }
 }

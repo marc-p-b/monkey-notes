@@ -44,8 +44,8 @@ public class WebhooksController {
     }
 
     //todo secure
-    @GetMapping(value = "/image/{fileId}/{imageId}",produces = MediaType.IMAGE_JPEG_VALUE)
-    public @ResponseBody byte[] getImageWithMediaType(@PathVariable String fileId, @PathVariable String imageId) throws IOException {
-        return imageService.getImage(fileId, imageId);
+    @GetMapping(value = "/image/{fileId}/{imageNum}",produces = MediaType.IMAGE_JPEG_VALUE)
+    public @ResponseBody byte[] getImageWithMediaType(@PathVariable String fileId, @PathVariable int imageNum) throws IOException {
+        return imageService.getImage(fileId, imageNum);
     }
 }

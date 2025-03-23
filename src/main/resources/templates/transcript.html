@@ -1,0 +1,20 @@
+<html>
+<head>
+    <title>Monkey notes</title>
+
+</head>
+<body>
+
+<h2>Transcript</h2>
+
+<p th:text="${dtoTranscript.transcript}"></p>
+
+<ul>
+    <li th:each="imageUrl : ${dtoTranscript.pageImages}">
+        <img th:src="${imageUrl}" />
+    </li>
+</ul>
+
+
+</body>
+</html>

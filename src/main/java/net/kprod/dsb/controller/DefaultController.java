@@ -51,10 +51,6 @@ public class DefaultController {
         return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
     }
 
-    @GetMapping("/transcript/{fileId}")
-    public ResponseEntity<String> getTranscript(@PathVariable String fileId) throws IOException {
-        return ResponseEntity.ok().body(viewService.getTranscript(fileId).replaceAll("\n", "<br/>"));
-    }
 
     @GetMapping("/transcript/pdf/{fileId}")
     public ResponseEntity<byte[]> getTranscriptPdf(@PathVariable String fileId) throws IOException {

@@ -1,5 +1,6 @@
 package net.kprod.dsb.service;
 
+import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.FileNode;
 
 import java.io.File;
@@ -12,4 +13,5 @@ public interface ViewService {
     List<FileNode> listFolders();
     File createTranscriptPdf(String fileId) throws IOException;
     java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;
+    DtoTranscript getTranscript2(String fileId);
 }

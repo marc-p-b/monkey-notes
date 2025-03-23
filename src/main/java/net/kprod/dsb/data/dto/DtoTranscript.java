@@ -2,7 +2,9 @@ package net.kprod.dsb.data.dto;
 
 import net.kprod.dsb.data.entity.EntityTranscript;
 
+import java.net.URL;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public class DtoTranscript {
     private String fileId;
@@ -16,6 +18,7 @@ public class DtoTranscript {
     private int tokensResponse;
     private int pageCount;
     private int version;
+    private List<URL> pageImages;
 
     public static DtoTranscript fromEntity(EntityTranscript entity) {
         DtoTranscript dto = new DtoTranscript();
@@ -30,8 +33,16 @@ public class DtoTranscript {
         dto.tokensResponse = entity.getTokensResponse();
         dto.pageCount = entity.getPageCount();
         dto.version = entity.getVersion();
-
         return dto;
+    }
+
+    public List<URL> getPageImages() {
+        return pageImages;
+    }
+
+    public DtoTranscript setPageImages(List<URL> pageImages) {
+        this.pageImages = pageImages;
+        return this;
     }
 
     public String getFileId() {

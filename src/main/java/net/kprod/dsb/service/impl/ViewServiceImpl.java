@@ -6,12 +6,16 @@ import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
+import net.kprod.dsb.data.entity.EntityTranscriptPage;
+import net.kprod.dsb.data.entity.IdTranscriptPage;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
+import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
 import net.kprod.dsb.service.PdfService;
 import net.kprod.dsb.service.UtilsService;
 import net.kprod.dsb.service.ViewService;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +26,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,6 +49,9 @@ public class ViewServiceImpl implements ViewService {
     private RepositoryTranscript repositoryTranscript;
 
     @Autowired
+    RepositoryTranscriptPage repositoryTranscriptPage;
+
+    @Autowired
     private PdfService pdfService;
 
     @Override
@@ -60,64 +66,56 @@ public class ViewServiceImpl implements ViewService {
                 .toList();
     }
 
-    @Override
-    public String getTranscript(String fileId) {
-        Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
-        if (optDoc.isPresent()) {
-            EntityTranscript doc = optDoc.get();
+//    @Override
+//    public String getTranscript(String fileId) {
+//        Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
+//        if (optDoc.isPresent()) {
+//            EntityTranscript doc = optDoc.get();
+//
+//            return new StringBuilder()
+//                    .append("Title ").append(doc.getName()).append("\n\n")
+//                    .append("Date ").append(doc.getDocumented_at() != null ? "(d)" + doc.getDocumented_at() : "(t)" + doc.getTranscripted_at()).append("\n\n")
+//                    .append(doc.getTranscript())
+//                    .append("\n\n-----\n\n")
+//                    .toString();
+//
+//        }
+//        return "no transcript found for " + fileId;
+//    }
 
-            return new StringBuilder()
-                    .append("Title ").append(doc.getName()).append("\n\n")
-                    .append("Date ").append(doc.getDocumented_at() != null ? "(d)" + doc.getDocumented_at() : "(t)" + doc.getTranscripted_at()).append("\n\n")
-                    .append(doc.getTranscript())
-                    .append("\n\n-----\n\n")
-                    .toString();
 
-        }
-        return "no transcript found for " + fileId;
-    }
+//    private DtoTranscript htmlDtoFile(String parentFolderId, DtoTranscript dtoTranscript) {
 
 
-    private DtoTranscript htmlDtoFile(String parentFolderId, DtoTranscript dtoTranscript) {
 
-        Pattern booxBulkExportTitlePattern = Pattern.compile("(\\d{4}-\\d{2}-\\d{2}_\\d{2}_\\d{2}_\\d{2})\\.pdf");
-        Matcher m = booxBulkExportTitlePattern.matcher(dtoTranscript.getName());
-        //DateTimeFormatter dtfBook = DateTimeFormatter.ofPattern("yyyy-MM-dd_hh_mm_ss");
-                        dtoTranscript.setTranscriptHtml(dtoTranscript.getTranscript().replaceAll("\n", "<br/>"));
-
-                        if(m.matches()) {
-            Optional<EntityFile> parentFolder = repositoryFile.findById(parentFolderId);
-            dtoTranscript.setTitle(parentFolder.isPresent() ? parentFolder.get().getName() : "unknown");
-        }
-
-        return dtoTranscript;
-    }
+//        return dtoTranscript;
+//    }
 
     @Override
     public DtoTranscript getTranscript2(String fileId) {
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
         Optional<EntityFile> optFile = repositoryFile.findById(fileId);
         if (optDoc.isPresent() && optFile.isPresent()) {
-            EntityTranscript doc = optDoc.get();
-            DtoTranscript dtoTranscript = DtoTranscript.fromEntity(doc);
+
+            DtoTranscript dtoTranscript = buildDtoTranscript(optDoc.get(), optFile.get().getParentFolderId());
 
             //todo common
 
 
 
-                List<URL> list = new ArrayList<>();
-                for(int i = 0; i < dtoTranscript.getPageCount(); i++) {
+//                List<URL> list = new ArrayList<>();
+//                for(int i = 0; i < dtoTranscript.getPageCount(); i++) {
+//
+//                    try {
+//                        list.add(utilsService.imageURL(fileId, i+1));
+//                    } catch (MalformedURLException e) {
+//                        LOG.error("Failed to create image URL fileId{} page {}", fileId, i+1);
+//                    }
+//
+//                }
+//                dtoTranscript.setPageImages(list);
 
-                    try {
-                        list.add(utilsService.imageURL(fileId, i+1));
-                    } catch (MalformedURLException e) {
-                        LOG.error("Failed to create image URL fileId{} page {}", fileId, i+1);
-                    }
-
-                }
-                dtoTranscript.setPageImages(list);
-
-                dtoTranscript = htmlDtoFile(optFile.get().getParentFolderId(), dtoTranscript);
+            // dtoTranscript = htmlDtoFile(optFile.get().getParentFolderId(), dtoTranscript);
 
 
             return dtoTranscript;
@@ -137,26 +135,29 @@ public class ViewServiceImpl implements ViewService {
 
 //todo COMMON and place HERE vvv
             DtoTranscript dtoTranscript = null;
-            if (child.getType() == FileType.pdf) {
+            if (child.getType() == FileType.transcript) {
 
                 Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getFileId());
                 if(optTranscript.isPresent()) {
 
-                    dtoTranscript = DtoTranscript.fromEntity(optTranscript.get());
 
-                    //todo common TITLE and html
+                    //todo is dir.getParentFolderId() OK ?
+                    dtoTranscript = buildDtoTranscript(optTranscript.get(), dir.getParentFolderId());
 
-                    List<URL> list = new ArrayList<>();
-                    for(int i = 0; i < dtoTranscript.getPageCount(); i++) {
+                    //dtoTranscript = DtoTranscript.fromEntity(optTranscript.get());
 
-                        try {
-                            list.add(utilsService.imageURL(child.getFileId(), i+1));
-                        } catch (MalformedURLException e) {
-                            LOG.error("Failed to create image URL fileId{} page {}", child.getFileId(), i+1);
-                        }
-
-                    }
-                    dtoTranscript.setPageImages(list);
+//                    //todo common TITLE and html
+//                    List<URL> list = new ArrayList<>();
+//                    for(int i = 0; i < dtoTranscript.getPageCount(); i++) {
+//
+//                        try {
+//                            list.add(utilsService.imageURL(child.getFileId(), i+1));
+//                        } catch (MalformedURLException e) {
+//                            LOG.error("Failed to create image URL fileId{} page {}", child.getFileId(), i+1);
+//                        }
+//
+//                    }
+//                    dtoTranscript.setPageImages(list);
                 }
             }
 
@@ -178,7 +179,7 @@ public class ViewServiceImpl implements ViewService {
         List<DtoFile> files = new ArrayList<>();
         List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
         for (EntityFile child : childen) {
-            if (child.getType() == FileType.pdf) {
+            if (child.getType() == FileType.transcript) {
                 files.add(DtoFile.fromEntity(child));
             } if(child.getType() == FileType.folder) {
                 files.addAll(listAllFilesRecurs(child));
@@ -210,44 +211,84 @@ public class ViewServiceImpl implements ViewService {
             return folders;
     }
 
-    private List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
-        Optional<EntityFile> optFolder = repositoryFile.findById(folderId);
+//    private List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
+//        Optional<EntityFile> optFolder = repositoryFile.findById(folderId);
+//
+//        if(!optFolder.isPresent()) {
+//            return Collections.emptyList();
+//        }
+//
+//        Set<String> setTranscriptId = listAllFilesRecurs(optFolder.get()).stream()
+//                .map(DtoFile::getFileId)
+//                .collect(Collectors.toSet());
+//
+//        return repositoryTranscript.findAllByFileIdIn(setTranscriptId).stream()
+//                .map(t -> buildDtoTranscript(t))
+//                .toList();
+//    }
 
-        if(!optFolder.isPresent()) {
-            return Collections.emptyList();
+    private DtoTranscript buildDtoTranscript(EntityTranscript t, String parentFolderId) {
+        List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
+        for(int n = 1; n <= t.getPageCount(); n++) {
+            //todo optimize ? include in all requests ? // remove n ?
+
+            Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(new IdTranscriptPage(t.getFileId(), n));
+                        listPages.add(optPage);
         }
 
-        Set<String> setTranscriptId = listAllFilesRecurs(optFolder.get()).stream()
-                .map(DtoFile::getFileId)
-                .collect(Collectors.toSet());
+        DtoTranscript dtoTranscript = DtoTranscript.fromEntities(t, listPages.stream()
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList());
 
-        return repositoryTranscript.findAllByFileIdIn(setTranscriptId).stream()
-                .map(DtoTranscript::fromEntity)
-                .toList();
+        dtoTranscript.getPages().stream()
+                .forEach(p-> {
+                    try {
+                        p.setImageUrl(utilsService.imageURL(p.getFileId(), p.getPageNumber()));
+                        p.setTranscript(p.getTranscript().replaceAll("\n", "<br/>"));
+                    } catch (MalformedURLException e) {
+                        LOG.error("Failed to create image URL fileId {} page {}", p.getFileId(), p.getPageNumber());
+                        //p.setImageUrl("/404")
+                    }
+                });
+
+        Pattern booxBulkExportTitlePattern = Pattern.compile("(\\d{4}-\\d{2}-\\d{2}_\\d{2}_\\d{2}_\\d{2})\\.pdf");
+        Matcher m = booxBulkExportTitlePattern.matcher(dtoTranscript.getName());
+        //DateTimeFormatter dtfBook = DateTimeFormatter.ofPattern("yyyy-MM-dd_hh_mm_ss");
+
+        if(m.matches()) {
+            Optional<EntityFile> parentFolder = repositoryFile.findById(parentFolderId);
+            dtoTranscript.setTitle(parentFolder.isPresent() ? parentFolder.get().getName() : "unknown");
+        }
+
+        return dtoTranscript;
     }
 
     @Override
     public File createTranscriptPdf(String fileId) throws IOException {
 
-        return pdfService.createTranscriptPdf(fileId, getTranscript(fileId));
+        //TODO
+        return null;//pdfService.createTranscriptPdf(fileId, getTranscript(fileId));
 
     }
 
     @Override
     public File createTranscriptPdfFromFolder(String folderId) throws IOException {
 
-        String folderTranscripts = listTranscriptFromFolderRecurs(folderId).stream()
-                .map(t -> {
-                    return new StringBuilder()
-                            .append("Title ").append(t.getName()).append("\n\n")
-                            .append("Date ").append(t.getDocumented_at() != null ? "(d)" + t.getDocumented_at() : "(t)" + t.getTranscripted_at()).append("\n\n")
-                            .append(t.getTranscript())
-                            .append("\n\n-----\n\n");
-                })
-                .collect(Collectors.joining());
-
-
-        return pdfService.createTranscriptPdf(folderId, folderTranscripts);
+        //TODO
+//        String folderTranscripts = listTranscriptFromFolderRecurs(folderId).stream()
+//                .map(t -> {
+//                    return new StringBuilder()
+//                            .append("Title ").append(t.getName()).append("\n\n")
+//                            .append("Date ").append(t.getDocumented_at() != null ? "(d)" + t.getDocumented_at() : "(t)" + t.getTranscripted_at()).append("\n\n")
+//                            .append(t.getTranscript())
+//                            .append("\n\n-----\n\n");
+//                })
+//                .collect(Collectors.joining());
+//
+//
+//        return pdfService.createTranscriptPdf(folderId, folderTranscripts);
+        return null;
 
     }
 }

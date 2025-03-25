@@ -13,9 +13,11 @@ import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
+import net.kprod.dsb.data.entity.EntityTranscriptPage;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
+import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.monitoring.MonitoringData;
 import net.kprod.dsb.monitoring.MonitoringService;
@@ -120,6 +122,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private RepositoryTranscript repositoryTranscript;
+
+    @Autowired
+    RepositoryTranscriptPage repositoryTranscriptPage;
 
     @EventListener(ApplicationReadyEvent.class)
     void startup() {
@@ -419,53 +424,40 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
         repositoryFile.saveAll(listDocs);
 
-        // create transcript objects
-        List<EntityTranscript> listTranscript = mapCompleted.entrySet().stream()
-                .map(entry -> {
+        for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
                     String fileId = entry.getKey();
-
                     Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
-
-                    EntityTranscript doc = null;
+                    EntityTranscript entityTranscript = null;
                     if(optDoc.isPresent()) {
-                        doc = optDoc.get();
-                        doc.setVersion(doc.getVersion() + 1);
+                        entityTranscript = optDoc.get();
+                        entityTranscript.setVersion(entityTranscript.getVersion() + 1);
                     } else {
-                        doc = new EntityTranscript();
+                        entityTranscript = new EntityTranscript();
                     }
                     List<CompletionResponse> listCompletionResponse = entry.getValue();
 
-                    long took = listCompletionResponse.stream()
-                            .map(CompletionResponse::getTranscriptTook).reduce(0l, Long::sum);
-                    int tokensPrompt = listCompletionResponse.stream()
-                            .map(CompletionResponse::getTokensPrompt).reduce(0, Integer::sum);
-                    int tokensCompletion = listCompletionResponse.stream()
-                            .map(CompletionResponse::getTokensCompletion).reduce(0, Integer::sum);
+                    int page = 1;
+                    for (CompletionResponse completionResponse : listCompletionResponse) {
+
+                        EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(fileId, page++)
+                                .setTranscript(completionResponse.getTranscript())
+                                .setTranscriptTook(completionResponse.getTranscriptTook())
+                                .setTokensPrompt(completionResponse.getTokensPrompt())
+                                .setTokensResponse(completionResponse.getTokensCompletion());
+
+                        repositoryTranscriptPage.save(entityTranscriptPage);
+                    }
+
+
+//                    //retrieve full path
+//                    String fullFolderPath = null;
+//                    try {
+//                        fullFolderPath = getAncestors(fileId);
+//                    } catch (ServiceException e) {
+//                        LOG.warn("Failed to get full folder path {}", fileId, e);
+//                    }
 
                     File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-
-                    List<String> transcripts = listCompletionResponse.stream()
-                            .filter(CompletionResponse::isCompleted)
-                            .map(CompletionResponse::getTranscript)
-                            .toList();
-
-                    //move page numbering to image analysis ?
-                    int page = 1;
-                    StringBuilder sbTranscripts = new StringBuilder();
-                    for(String transcript : transcripts) {
-                        sbTranscripts
-                            .append(page == 1 ? "" : "\n\n")
-                            .append("## Page ").append(page++).append("\n\n").append(transcript);
-                    }
-
-                    //retrieve full path
-                    String fullFolderPath = null;
-                    try {
-                        fullFolderPath = getAncestors(fileId);
-                    } catch (ServiceException e) {
-                        LOG.warn("Failed to get full folder path {}", fileId, e);
-                    }
-
                     //todo update patterns
                     Pattern datePattern1 = Pattern.compile("(\\d{6})");
                     Matcher m1 = datePattern1.matcher(f2p.getFileName());
@@ -482,23 +474,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         }
                     }
 
-                    doc = new EntityTranscript()
+                    entityTranscript = new EntityTranscript()
                         .setFileId(fileId)
                         .setName(f2p.getFileName())
                         .setTranscripted_at(OffsetDateTime.now())
-                        .setTranscript(sbTranscripts.toString())
                         .setDocumented_at(documentTitleDate)
-                        //.setRemoteFolder(fullFolderPath)
                         .setAiModel(listCompletionResponse.get(0).getAiModel())
-                        .setPageCount(listCompletionResponse.size())
-                        .setTokensPrompt(tokensPrompt)
-                        .setTokensResponse(tokensCompletion)
-                        .setTranscriptTook(took);
-                    return doc;
-                })
-                .toList();
+                        .setPageCount(listCompletionResponse.size());
 
-        repositoryTranscript.saveAll(listTranscript);
+                    repositoryTranscript.save(entityTranscript);
+
+                }
+
 
     }
 

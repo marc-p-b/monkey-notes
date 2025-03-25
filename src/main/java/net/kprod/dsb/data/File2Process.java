@@ -31,7 +31,7 @@ public class File2Process {
     public EntityFile asDoc() {
 
         return new EntityFile()
-                .setType(FileType.pdf)
+                .setType(FileType.transcript)
                 .setFileId(fileId)
                 .setName(fileName)
                 .setMd5(md5)

@@ -94,7 +94,7 @@ public class DtoFile {
                 .setName(name)
                 .setMd5(md5)
                 .setDiscovered_at(OffsetDateTime.now())
-                .setType(FileType.pdf);
+                .setType(FileType.transcript);
         }
 
         public Builder setFileId(String fileId) {
@@ -118,7 +118,7 @@ public class DtoFile {
     }
 
     public boolean isPdf() {
-        return type == FileType.pdf;
+        return type == FileType.transcript;
     }
 
     public static EntityFile toEntity(DtoFile dtoFile) {

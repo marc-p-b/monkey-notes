@@ -1,6 +1,8 @@
 package net.kprod.dsb.data.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 
 import java.time.OffsetDateTime;
 
@@ -8,20 +10,11 @@ import java.time.OffsetDateTime;
 public class EntityTranscript {
     @Id
     private String fileId;
-
     private String name;
-
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-
     @Lob
-    private String transcript;
-//    private String parentFolderName;
-//    private String parentFolderId;
-    private long transcriptTook;
     private String aiModel;
-    private int tokensPrompt;
-    private int tokensResponse;
     private int pageCount;
     private int version;
 
@@ -70,41 +63,23 @@ public class EntityTranscript {
         return this;
     }
 
-    public String getTranscript() {
-        return transcript;
-    }
-
-    public EntityTranscript setTranscript(String transcript) {
-        this.transcript = transcript;
-        return this;
-    }
-
-//    public String getParentFolderName() {
-//        return parentFolderName;
+//    public String getTranscript() {
+//        return transcript;
 //    }
 //
-//    public EntityTranscript setParentFolderName(String parentFolderName) {
-//        this.parentFolderName = parentFolderName;
-//        return this;
-//    }
-//
-//    public String getParentFolderId() {
-//        return parentFolderId;
-//    }
-//
-//    public EntityTranscript setParentFolderId(String parentFolderId) {
-//        this.parentFolderId = parentFolderId;
+//    public EntityTranscript setTranscript(String transcript) {
+//        this.transcript = transcript;
 //        return this;
 //    }
 
-    public long getTranscriptTook() {
-        return transcriptTook;
-    }
-
-    public EntityTranscript setTranscriptTook(long transcriptTook) {
-        this.transcriptTook = transcriptTook;
-        return this;
-    }
+//    public long getTranscriptTook() {
+//        return transcriptTook;
+//    }
+//
+//    public EntityTranscript setTranscriptTook(long transcriptTook) {
+//        this.transcriptTook = transcriptTook;
+//        return this;
+//    }
 
     public String getAiModel() {
         return aiModel;
@@ -115,23 +90,23 @@ public class EntityTranscript {
         return this;
     }
 
-    public int getTokensPrompt() {
-        return tokensPrompt;
-    }
-
-    public EntityTranscript setTokensPrompt(int tokensPrompt) {
-        this.tokensPrompt = tokensPrompt;
-        return this;
-    }
-
-    public int getTokensResponse() {
-        return tokensResponse;
-    }
-
-    public EntityTranscript setTokensResponse(int tokensResponse) {
-        this.tokensResponse = tokensResponse;
-        return this;
-    }
+//    public int getTokensPrompt() {
+//        return tokensPrompt;
+//    }
+//
+//    public EntityTranscript setTokensPrompt(int tokensPrompt) {
+//        this.tokensPrompt = tokensPrompt;
+//        return this;
+//    }
+//
+//    public int getTokensResponse() {
+//        return tokensResponse;
+//    }
+//
+//    public EntityTranscript setTokensResponse(int tokensResponse) {
+//        this.tokensResponse = tokensResponse;
+//        return this;
+//    }
 
     public int getPageCount() {
         return pageCount;

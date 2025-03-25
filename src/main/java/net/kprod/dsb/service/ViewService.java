@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface ViewService {
     List<String> listAvailableTranscripts();
-    String getTranscript(String fileId);
+    //String getTranscript(String fileId);
     List<FileNode> listFolders();
     File createTranscriptPdf(String fileId) throws IOException;
     java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;

@@ -1,0 +1,110 @@
+package net.kprod.dsb.data.dto;
+
+import net.kprod.dsb.data.entity.EntityTranscriptPage;
+
+import java.net.URL;
+
+public class DtoTranscriptPage {
+    private String fileId;
+    private int pageNumber;
+    private String transcript;
+    private String transcriptHtml;
+    private long transcriptTook;
+    private int tokensPrompt;
+    private int tokensResponse;
+    private int version;
+    private URL imageUrl;
+
+    public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
+        DtoTranscriptPage dto = new DtoTranscriptPage()
+                .setFileId(page.getFileId())
+                .setPageNumber(page.getPageNumber())
+                .setTranscript(page.getTranscript())
+                .setTranscriptHtml(page.getTranscript())
+                .setTranscriptTook(page.getTranscriptTook())
+                .setTokensPrompt(page.getTokensPrompt())
+                .setTokensResponse(page.getTokensResponse());
+        return dto;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public DtoTranscriptPage setFileId(String fileId) {
+        this.fileId = fileId;
+        return this;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public DtoTranscriptPage setPageNumber(int pageNumber) {
+        this.pageNumber = pageNumber;
+        return this;
+    }
+
+    public String getTranscript() {
+        return transcript;
+    }
+
+    public DtoTranscriptPage setTranscript(String transcript) {
+        this.transcript = transcript;
+        return this;
+    }
+
+    public String getTranscriptHtml() {
+        return transcriptHtml;
+    }
+
+    public DtoTranscriptPage setTranscriptHtml(String transcriptHtml) {
+        this.transcriptHtml = transcriptHtml;
+        return this;
+    }
+
+    public long getTranscriptTook() {
+        return transcriptTook;
+    }
+
+    public DtoTranscriptPage setTranscriptTook(long transcriptTook) {
+        this.transcriptTook = transcriptTook;
+        return this;
+    }
+
+    public int getTokensPrompt() {
+        return tokensPrompt;
+    }
+
+    public DtoTranscriptPage setTokensPrompt(int tokensPrompt) {
+        this.tokensPrompt = tokensPrompt;
+        return this;
+    }
+
+    public int getTokensResponse() {
+        return tokensResponse;
+    }
+
+    public DtoTranscriptPage setTokensResponse(int tokensResponse) {
+        this.tokensResponse = tokensResponse;
+        return this;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public DtoTranscriptPage setVersion(int version) {
+        this.version = version;
+        return this;
+    }
+
+    public URL getImageUrl() {
+        return imageUrl;
+    }
+
+    public DtoTranscriptPage setImageUrl(URL imageUrl) {
+        this.imageUrl = imageUrl;
+        return this;
+    }
+}

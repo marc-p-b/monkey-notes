@@ -5,13 +5,13 @@
 </head>
 <body>
 
-<h2>Transcript</h2>
+<h2 th:text="${dtoTranscript.title}"></h2>
 
-<p th:text="${dtoTranscript.transcript}"></p>
+<th:block th:utext="${dtoTranscript.transcriptHtml}"/>
 
 <ul>
-    <li th:each="imageUrl : ${dtoTranscript.pageImages}">
-        <img th:src="${imageUrl}" />
+    <li th:each="imageUrl, iterStat : ${dtoTranscript.pageImages}">
+        <a th:href="${imageUrl}"><span th:text="${iterStat.index}"></span></a>
     </li>
 </ul>
 

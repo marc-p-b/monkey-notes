@@ -22,7 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,10 +77,27 @@ public class ViewServiceImpl implements ViewService {
         return "no transcript found for " + fileId;
     }
 
+
+    private DtoTranscript htmlDtoFile(String parentFolderId, DtoTranscript dtoTranscript) {
+
+        Pattern booxBulkExportTitlePattern = Pattern.compile("(\\d{4}-\\d{2}-\\d{2}_\\d{2}_\\d{2}_\\d{2})\\.pdf");
+        Matcher m = booxBulkExportTitlePattern.matcher(dtoTranscript.getName());
+        //DateTimeFormatter dtfBook = DateTimeFormatter.ofPattern("yyyy-MM-dd_hh_mm_ss");
+                        dtoTranscript.setTranscriptHtml(dtoTranscript.getTranscript().replaceAll("\n", "<br/>"));
+
+                        if(m.matches()) {
+            Optional<EntityFile> parentFolder = repositoryFile.findById(parentFolderId);
+            dtoTranscript.setTitle(parentFolder.isPresent() ? parentFolder.get().getName() : "unknown");
+        }
+
+        return dtoTranscript;
+    }
+
     @Override
     public DtoTranscript getTranscript2(String fileId) {
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
-        if (optDoc.isPresent()) {
+        Optional<EntityFile> optFile = repositoryFile.findById(fileId);
+        if (optDoc.isPresent() && optFile.isPresent()) {
             EntityTranscript doc = optDoc.get();
             DtoTranscript dtoTranscript = DtoTranscript.fromEntity(doc);
 
@@ -96,6 +116,8 @@ public class ViewServiceImpl implements ViewService {
 
                 }
                 dtoTranscript.setPageImages(list);
+
+                dtoTranscript = htmlDtoFile(optFile.get().getParentFolderId(), dtoTranscript);
 
 
             return dtoTranscript;
@@ -121,6 +143,9 @@ public class ViewServiceImpl implements ViewService {
                 if(optTranscript.isPresent()) {
 
                     dtoTranscript = DtoTranscript.fromEntity(optTranscript.get());
+
+                    //todo common TITLE and html
+
                     List<URL> list = new ArrayList<>();
                     for(int i = 0; i < dtoTranscript.getPageCount(); i++) {
 

@@ -382,6 +382,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
 
+        //todo save file by file
         //get completions from AI model
         Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
                 .flatMap(file2Process-> {

@@ -9,19 +9,12 @@ import java.time.OffsetDateTime;
 public class EntityFile {
     @Id
     private String fileId;
-
     private String parentFolderId;
-
-    //private String parentFolderName;
-
     @Column(length = 1024)
     private String name;
-
     @Column(length = 32)
     private String md5;
-
     private OffsetDateTime discovered_at;
-
     @Enumerated(EnumType.STRING)
     private FileType type;
 

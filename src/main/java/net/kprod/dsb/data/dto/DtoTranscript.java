@@ -19,14 +19,18 @@ public class DtoTranscript {
     private int pageCount;
     private int version;
     private List<URL> pageImages;
+    private String transcriptHtml;
+    private String title;
 
     public static DtoTranscript fromEntity(EntityTranscript entity) {
         DtoTranscript dto = new DtoTranscript();
         dto.fileId = entity.getFileId();
         dto.name = entity.getName();
+        dto.title = entity.getName();
         dto.transcripted_at = entity.getTranscripted_at();
         dto.documented_at = entity.getDocumented_at();
         dto.transcript = entity.getTranscript();
+        dto.transcriptHtml = entity.getTranscript();
         dto.transcriptTook = entity.getTranscriptTook();
         dto.aiModel = entity.getAiModel();
         dto.tokensPrompt = entity.getTokensPrompt();
@@ -87,5 +91,23 @@ public class DtoTranscript {
 
     public int getVersion() {
         return version;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public DtoTranscript setTitle(String title) {
+        this.title = title;
+        return this;
+    }
+
+    public String getTranscriptHtml() {
+        return transcriptHtml;
+    }
+
+    public DtoTranscript setTranscriptHtml(String transcriptHtml) {
+        this.transcriptHtml = transcriptHtml;
+        return this;
     }
 }

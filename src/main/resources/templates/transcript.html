@@ -7,13 +7,15 @@
 
 <h2 th:text="${dtoTranscript.title}"></h2>
 
-<th:block th:utext="${dtoTranscript.transcriptHtml}"/>
+<th:block th:each="page, iterStat : ${dtoTranscript.pages}">
 
-<ul>
-    <li th:each="imageUrl, iterStat : ${dtoTranscript.pageImages}">
-        <a th:href="${imageUrl}"><span th:text="${iterStat.index}"></span></a>
-    </li>
-</ul>
+    <h3 th:text="'Page #'+ ${page.pageNumber}"></h3>
+    <p>
+    <th:block th:utext="${page.transcriptHtml}"/>
+    </p>
+    <a th:href="${page.imageUrl}"><span th:text="${iterStat.index}"></span></a>
+</th:block>
+
 
 
 </body>

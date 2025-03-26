@@ -40,6 +40,7 @@ public class SupplyAsync implements Supplier {
         try {
             runnable.runThrows();
         } catch (Exception e) {
+
             return AsyncResult.failure(System.currentTimeMillis() - start, e);
         }
 

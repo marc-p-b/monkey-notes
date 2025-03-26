@@ -37,7 +37,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -386,95 +385,93 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
-
-        //todo save file by file
         //get completions from AI model
-        Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
-                .flatMap(file2Process-> {
-                    Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
-                    List<URL> listImages = pdfService.pdf2Images(
-                            file2Process.getFileId(),
-                            file2Process.getFilePath().toFile(),
-                            imageWorkingDir);
-                    LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
-                    return listImages.stream()
-                            .map(imagePath->{
-                                CompletionResponse completionResponse = qwenService.analyzeImage(
-                                        file2Process.getFileId(),
-                                        imagePath);
-                                completionResponse.setFile2Process(file2Process);
-                                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
-                                return completionResponse;
-                            });
-                })
-                .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+        //Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
 
         // create file objects
         List<EntityFile> listDocs = files2Process.stream()
-                .map(f2p -> {
-                    String fileId = f2p.getFileId();
+            .map(f2p -> {
+                String fileId = f2p.getFileId();
 
-                    Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
-                    if (optDoc.isPresent()) {
-                        return optDoc.get();
-                    } else {
-                        return f2p.asDoc();
-                    }
-                })
-                .toList();
+                Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
+                if (optDoc.isPresent()) {
+                    return optDoc.get();
+                } else {
+                    return f2p.asDoc();
+                }
+            })
+            .toList();
         repositoryFile.saveAll(listDocs);
 
-        for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
-                    String fileId = entry.getKey();
-                    Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
-                    EntityTranscript entityTranscript = null;
-                    if(optDoc.isPresent()) {
-                        entityTranscript = optDoc.get();
-                        entityTranscript.setVersion(entityTranscript.getVersion() + 1);
-                    } else {
-                        entityTranscript = new EntityTranscript();
+        for(File2Process file2Process : files2Process) {
+
+            //update full path
+            try {
+                updateAncestorsFolders(file2Process.getFileId());
+            } catch (ServiceException e) {
+                LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+            }
+
+            Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
+            List<URL> listImages = pdfService.pdf2Images(
+                    file2Process.getFileId(),
+                    file2Process.getFilePath().toFile(),
+                    imageWorkingDir);
+            LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
+
+            Map<String, List<CompletionResponse>> mapCompleted = listImages.stream()
+                .map(imagePath -> {
+                    CompletionResponse completionResponse = qwenService.analyzeImage(
+                            file2Process.getFileId(),
+                            imagePath);
+                    completionResponse.setFile2Process(file2Process);
+                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
+                    return completionResponse;
+                })
+                .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+
+            for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
+
+                String fileId = entry.getKey();
+                Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
+                EntityTranscript entityTranscript = null;
+                if(optDoc.isPresent()) {
+                    entityTranscript = optDoc.get();
+                    entityTranscript.setVersion(entityTranscript.getVersion() + 1);
+                } else {
+                    entityTranscript = new EntityTranscript();
+                }
+                List<CompletionResponse> listCompletionResponse = entry.getValue();
+
+                int page = 1;
+                for (CompletionResponse completionResponse : listCompletionResponse) {
+
+                    EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(fileId, page++)
+                            .setTranscript(completionResponse.getTranscript())
+                            .setTranscriptTook(completionResponse.getTranscriptTook())
+                            .setTokensPrompt(completionResponse.getTokensPrompt())
+                            .setTokensResponse(completionResponse.getTokensCompletion());
+                    repositoryTranscriptPage.save(entityTranscriptPage);
+                }
+
+                File2Process f2p = listCompletionResponse.get(0).getFile2Process();
+                //todo update patterns
+                Pattern datePattern1 = Pattern.compile("(\\d{6})");
+                Matcher m1 = datePattern1.matcher(f2p.getFileName());
+
+                OffsetDateTime documentTitleDate = null;
+                if (m1.find()) {
+                    try {
+                        LocalDate ld = LocalDate.parse(m1.group(), DateTimeFormatter.ofPattern("yyMMdd"));
+                        ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
+                        documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
+                    } catch (DateTimeParseException e) {
+                        //  todo
+                        LOG.warn("Could not parse date {}", m1.group(1), e);
                     }
-                    List<CompletionResponse> listCompletionResponse = entry.getValue();
+                }
 
-                    int page = 1;
-                    for (CompletionResponse completionResponse : listCompletionResponse) {
-
-                        EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(fileId, page++)
-                                .setTranscript(completionResponse.getTranscript())
-                                .setTranscriptTook(completionResponse.getTranscriptTook())
-                                .setTokensPrompt(completionResponse.getTokensPrompt())
-                                .setTokensResponse(completionResponse.getTokensCompletion());
-
-                        repositoryTranscriptPage.save(entityTranscriptPage);
-                    }
-
-
-//                    //retrieve full path
-//                    String fullFolderPath = null;
-//                    try {
-//                        fullFolderPath = getAncestors(fileId);
-//                    } catch (ServiceException e) {
-//                        LOG.warn("Failed to get full folder path {}", fileId, e);
-//                    }
-
-                    File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-                    //todo update patterns
-                    Pattern datePattern1 = Pattern.compile("(\\d{6})");
-                    Matcher m1 = datePattern1.matcher(f2p.getFileName());
-
-                    OffsetDateTime documentTitleDate = null;
-                    if (m1.find()) {
-                        try {
-                            LocalDate ld = LocalDate.parse(m1.group(), DateTimeFormatter.ofPattern("yyMMdd"));
-                            ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
-                            documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
-                        } catch (DateTimeParseException e) {
-                            //  todo
-                            LOG.warn("Could not parse date {}", m1.group(1), e);
-                        }
-                    }
-
-                    entityTranscript = new EntityTranscript()
+                entityTranscript = new EntityTranscript()
                         .setFileId(fileId)
                         .setName(f2p.getFileName())
                         .setTranscripted_at(OffsetDateTime.now())
@@ -482,11 +479,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         .setAiModel(listCompletionResponse.get(0).getAiModel())
                         .setPageCount(listCompletionResponse.size());
 
-                    repositoryTranscript.save(entityTranscript);
+                repositoryTranscript.save(entityTranscript);
 
-                }
-
-
+            }
+        }
     }
 
     public void watchStop() throws IOException {
@@ -552,7 +548,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public String getAncestors(String fileId) throws ServiceException {
+    public String updateAncestorsFolders(String fileId) throws ServiceException {
         File file = driveUtilsService.getDriveFileDetails(fileId);
         List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
 

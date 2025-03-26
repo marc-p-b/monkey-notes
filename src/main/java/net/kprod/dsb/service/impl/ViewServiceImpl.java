@@ -3,6 +3,7 @@ package net.kprod.dsb.service.impl;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.DtoFile;
 import net.kprod.dsb.data.dto.DtoTranscript;
+import net.kprod.dsb.data.dto.DtoTranscriptPage;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
@@ -236,21 +237,35 @@ public class ViewServiceImpl implements ViewService {
                         listPages.add(optPage);
         }
 
-        DtoTranscript dtoTranscript = DtoTranscript.fromEntities(t, listPages.stream()
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .toList());
+        DtoTranscript dtoTranscript = DtoTranscript.fromEntities(t,
+                listPages.stream()
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .toList());
 
-        dtoTranscript.getPages().stream()
-                .forEach(p-> {
-                    try {
-                        p.setImageUrl(utilsService.imageURL(p.getFileId(), p.getPageNumber()));
-                        p.setTranscript(p.getTranscript().replaceAll("\n", "<br/>"));
-                    } catch (MalformedURLException e) {
-                        LOG.error("Failed to create image URL fileId {} page {}", p.getFileId(), p.getPageNumber());
-                        //p.setImageUrl("/404")
-                    }
-                });
+        List<DtoTranscriptPage> listP = dtoTranscript.getPages();
+        listP.stream()
+            .map(page->{
+                try {
+                    page.setImageUrl(utilsService.imageURL(page.getFileId(), page.getPageNumber()));
+                } catch (MalformedURLException e) {
+                    LOG.error("Failed to create image URL fileId {} page {}", page.getFileId(), page.getPageNumber());
+                }
+
+                String[] lines = page.getTranscript().split("\n");
+                StringBuilder sb = new StringBuilder();
+                for(String line : lines) {
+                    sb.append(line).append("<br/>");
+                }
+                page.setTranscriptHtml(sb.toString());
+                return page;
+            })
+            .toList();
+
+        dtoTranscript.setPages(listP);
+
+
+
 
         Pattern booxBulkExportTitlePattern = Pattern.compile("(\\d{4}-\\d{2}-\\d{2}_\\d{2}_\\d{2}_\\d{2})\\.pdf");
         Matcher m = booxBulkExportTitlePattern.matcher(dtoTranscript.getName());

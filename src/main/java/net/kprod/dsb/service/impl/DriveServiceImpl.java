@@ -99,6 +99,28 @@ public class DriveServiceImpl implements DriveService {
         try {
             //TODO credential name ?
             credential = authFlow.loadCredential("marc");
+
+            LOG.info("rt {}",
+                    credential.getRefreshToken());
+
+            long currentTime = System.currentTimeMillis();
+            long expTk = credential.getExpirationTimeMilliseconds();
+
+            if(expTk > currentTime) {
+                LOG.warn("token expired");
+                this.refreshToken();
+
+                currentTime = System.currentTimeMillis();
+                expTk = credential.getExpirationTimeMilliseconds();
+                if(expTk > currentTime) {
+                    LOG.warn("token expired");
+                } else {
+                    LOG.info("token is now ok !");
+                }
+            } else {
+                LOG.info("token valid");
+            }
+
             if (credential != null) {
                 LOG.info("Loaded credential from file");
                 this.getDriveConnection();

@@ -78,9 +78,9 @@ public class DriveServiceImpl implements DriveService {
     @Override
     public Optional<String> requireAuth() {
 
-        if(credential != null) {
-            return Optional.empty();
-        }
+//        if(credential != null) {
+//            return Optional.empty();
+//        }
 
         HttpTransport httpTransport = new NetHttpTransport();
 
@@ -100,28 +100,27 @@ public class DriveServiceImpl implements DriveService {
             //TODO credential name ?
             credential = authFlow.loadCredential("marc");
 
-            LOG.info("rt {}",
-                    credential.getRefreshToken());
+            if (credential != null) {
 
-            long currentTime = System.currentTimeMillis();
-            long expTk = credential.getExpirationTimeMilliseconds();
+                long currentTime = System.currentTimeMillis();
+                long expTk = credential.getExpirationTimeMilliseconds();
 
-            if(expTk > currentTime) {
-                LOG.warn("token expired");
-                this.refreshToken();
-
-                currentTime = System.currentTimeMillis();
-                expTk = credential.getExpirationTimeMilliseconds();
                 if(expTk > currentTime) {
                     LOG.warn("token expired");
-                } else {
-                    LOG.info("token is now ok !");
-                }
-            } else {
-                LOG.info("token valid");
-            }
+                    //todo not working
+                    this.refreshToken();
 
-            if (credential != null) {
+                    currentTime = System.currentTimeMillis();
+                    expTk = credential.getExpirationTimeMilliseconds();
+                    if(expTk > currentTime) {
+                        LOG.warn("token expired");
+                    } else {
+                        LOG.info("token is now ok !");
+                    }
+                } else {
+                    LOG.info("token valid");
+                }
+
                 LOG.info("Loaded credential from file");
                 this.getDriveConnection();
             } else {
@@ -140,7 +139,7 @@ public class DriveServiceImpl implements DriveService {
         return Optional.empty();
     }
 
-    private String requiredNewAuth() {
+    public String requiredNewAuth() {
         String url = authFlow
                 .newAuthorizationUrl()
                 .setRedirectUri(appHost + oauthCallbackPath)
@@ -196,6 +195,7 @@ public class DriveServiceImpl implements DriveService {
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
+        //todo not nececerally required
         connectCallback.run();
 
         taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
@@ -204,7 +204,7 @@ public class DriveServiceImpl implements DriveService {
     public void refreshToken()  {
         LOG.info("Refresh token");
 
-        credential.setRefreshToken(refreshToken);
+        //credential.setRefreshToken(refreshToken);
         try {
             credential.refreshToken();
         } catch (IOException e) {
@@ -213,9 +213,11 @@ public class DriveServiceImpl implements DriveService {
 
         taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
 
-        googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+        this.getDriveConnection();
+//        googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+//                .setApplicationName(APPLICATION_NAME)
+//                .build();
+        LOG.info("Credential refreshed, gdrive {}", googleDrive!=null?"yes":"no");
     }
 
     public Drive getDrive() {

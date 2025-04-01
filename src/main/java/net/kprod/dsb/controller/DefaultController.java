@@ -2,6 +2,7 @@ package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.DriveChangeManagerService;
+import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ViewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,22 @@ public class DefaultController {
     private DriveChangeManagerService driveChMgmtService;
 
     @Autowired
+    private DriveService driveService;
+
+    @Autowired
     private ViewService viewService;
+
+//    @GetMapping("/force/auth")
+//    public ResponseEntity<String> forceAuth() throws IOException {
+//        driveService.requiredNewAuth();
+//        return ResponseEntity.ok("ok");
+//    }
+
+    @GetMapping("/force/refresh")
+    public ResponseEntity<String> forceRefresh() throws IOException {
+        driveService.refreshToken();
+        return ResponseEntity.ok("ok");
+    }
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {

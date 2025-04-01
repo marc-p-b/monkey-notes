@@ -4,6 +4,7 @@ import com.google.api.services.drive.model.Change;
 import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
+import jakarta.annotation.PostConstruct;
 import net.kprod.dsb.FlushTask;
 import net.kprod.dsb.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
@@ -125,7 +126,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     RepositoryTranscriptPage repositoryTranscriptPage;
 
-    @EventListener(ApplicationReadyEvent.class)
+    //@EventListener(ApplicationReadyEvent.class)
+    @PostConstruct
     void startup() {
         LOG.info("Starting up");
         Runnable runnable = new Runnable() {

@@ -1,5 +1,7 @@
 package net.kprod.dsb.service.impl;
 
+import net.kprod.dsb.data.dto.DtoTranscript;
+import net.kprod.dsb.data.dto.DtoTranscriptPage;
 import net.kprod.dsb.service.ImageService;
 import net.kprod.dsb.service.PdfService;
 import net.kprod.dsb.service.UtilsService;
@@ -79,8 +81,12 @@ public class PdfServiceImpl implements PdfService {
     }
 
     @Override
-    public java.io.File createTranscriptPdf(String fileId, String textContent) throws IOException {
-        textContent = textContent.replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+    public java.io.File createTranscriptPdf(String fileId, DtoTranscript dtoTranscript) throws IOException {
+
+
+
+
+        //textContent = textContent.replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
         PDDocument doc = null;
         java.io.File file = null;
         try
@@ -97,65 +103,75 @@ public class PdfServiceImpl implements PdfService {
             PDRectangle mediabox = page.getMediaBox();
             float margin = 20;
             float pageWidth = mediabox.getWidth() - 2 * margin;
-            float pageHeight = mediabox.getHeight() - 2 * margin;
+            //float pageHeight = mediabox.getHeight() - 2 * margin;
             float startX = mediabox.getLowerLeftX() + margin;
             float startY = mediabox.getUpperRightY() - margin;
 
-            String text = textContent;
+
             List<String> lines = new ArrayList<>();
             Map<Integer, List<String>> pages = new HashMap<>();
 
             int lastSpace = -1;
             float lineWidth = 0;
-            float lineHeight = (pdfFont.getFontDescriptor().getCapHeight()) / 1000 * fontSize;
+            //float lineHeight = (pdfFont.getFontDescriptor().getCapHeight()) / 1000 * fontSize;
 
             String subString;
             int pageNumber = 1;
-            while (text.length() > 0) {
-                int nlIndex = text.indexOf('\n');
-                int spaceIndex = text.indexOf(' ', lastSpace + 1);
 
-                if (spaceIndex < 0) {
-                    spaceIndex = text.length();
-                }
+            for(DtoTranscriptPage transcriptPage : dtoTranscript.getPages()) {
 
-                subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
-                lineWidth = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
 
-                if (nlIndex < spaceIndex && nlIndex != -1) {
-                    subString = text.substring(0, nlIndex);
+                String text = transcriptPage.getTranscript().replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
 
-                    lines.add(subString.replaceAll("\\p{C}", ""));
-                    text = text.substring(nlIndex).trim();
-                    //System.out.printf("> %s\n", subString);
-                } else if (lineWidth > pageWidth) {
-                    if (lastSpace < 0) {
+
+                while (text.length() > 0) {
+                    int nlIndex = text.indexOf('\n');
+                    int spaceIndex = text.indexOf(' ', lastSpace + 1);
+
+                    if (spaceIndex < 0) {
+                        spaceIndex = text.length();
+                    }
+
+                    subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
+                    lineWidth = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
+
+                    if (nlIndex < spaceIndex && nlIndex != -1) {
+                        subString = text.substring(0, nlIndex);
+
+                        lines.add(subString.replaceAll("\\p{C}", ""));
+                        text = text.substring(nlIndex).trim();
+                        //System.out.printf("> %s\n", subString);
+                    } else if (lineWidth > pageWidth) {
+                        if (lastSpace < 0) {
+                            lastSpace = spaceIndex;
+                        }
+                        subString = text.substring(0, lastSpace);
+
+                        lines.add(subString.replaceAll("\\p{C}", ""));
+                        text = text.substring(lastSpace).trim();
+                        //System.out.printf("> %s\n", subString);
+                        lastSpace = -1;
+                    }
+                    else if (spaceIndex == text.length()) {
+                        lines.add(text.replaceAll("\\p{C}", ""));
+                        //System.out.printf(">%s\n", text);
+                        text = "";
+                    }
+                    else {
                         lastSpace = spaceIndex;
                     }
-                    subString = text.substring(0, lastSpace);
 
-                    lines.add(subString.replaceAll("\\p{C}", ""));
-                    text = text.substring(lastSpace).trim();
-                    //System.out.printf("> %s\n", subString);
-                    lastSpace = -1;
-                }
-                else if (spaceIndex == text.length()) {
-                    lines.add(text.replaceAll("\\p{C}", ""));
-                    //System.out.printf(">%s\n", text);
-                    text = "";
-                }
-                else {
-                    lastSpace = spaceIndex;
-                }
+                    //if(lineHeight * lines.size() >= pageHeight) {
+                    if (lines.size() > 42) {
+                        pages.put(pageNumber, new ArrayList<>(lines));
+                        pageNumber++;
+                        lines.clear();
+                    }
 
-                //if(lineHeight * lines.size() >= pageHeight) {
-                if (lines.size() > 42) {
-                    pages.put(pageNumber, new ArrayList<>(lines));
-                    pageNumber++;
-                    lines.clear();
                 }
-
             }
+
+
             pages.put(pageNumber, new ArrayList<>(lines));
 
             contentStream.beginText();

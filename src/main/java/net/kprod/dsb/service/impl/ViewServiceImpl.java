@@ -283,7 +283,7 @@ public class ViewServiceImpl implements ViewService {
     public File createTranscriptPdf(String fileId) throws IOException {
 
         //TODO
-        return null;//pdfService.createTranscriptPdf(fileId, getTranscript(fileId));
+        return pdfService.createTranscriptPdf(fileId, getTranscript2(fileId));
 
     }
 

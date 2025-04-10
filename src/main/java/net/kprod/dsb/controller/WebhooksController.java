@@ -27,14 +27,12 @@ public class WebhooksController {
     @Autowired
     private ImageService imageService;
 
-
-
     @GetMapping("/grant-callback")
     public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
         driveService.grantCallback(code);
 
-        return ResponseEntity.ok().body("OK");
+        return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY).header("Location", "/").build();
     }
 
     @PostMapping("/notify")

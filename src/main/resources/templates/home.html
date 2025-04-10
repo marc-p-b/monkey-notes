@@ -5,39 +5,40 @@
 </head>
 <body>
 
-<h2>File and Folder Structure</h2>
+
 
 <div th:if= "${authUrl != ''}"><a th:href="${authUrl}">authenticate</a></div>
-
-<ul>
-    <li th:each="fileNode : ${fileNodes}">
-        <span th:if="${fileNode.folder}"><a th:href="@{/folder/pdf/{id}(id=${fileNode.dtoFile.fileId})}">folder : <span th:text="${fileNode.name}"></span></a></span>
-        <span th:if="${not fileNode.folder}"><a th:href="@{/transcript/{id}(id=${fileNode.dtoFile.fileId})}">file : <span th:text="${fileNode.name}"></span></a></span>
-        <ul th:if="${fileNode.folder}">
-            <li th:replace="~{::subTree(${fileNode.children})}"></li>
-        </ul>
-    </li>
-</ul>
-
-<!-- Recursive Fragment -->
-<th:block th:fragment="subTree(children)">
-<!--    <ul>-->
-        <li th:each="file : ${children}">
-            <span th:if="${file.folder}"><a th:href="@{/folder/pdf/{id}(id=${file.dtoFile.fileId})}">folder as pdf : <span th:text="${file.name}"></span></a></span>
-            <span th:if="${not file.folder}">
-                pages <span th:text="${file.dtoTranscript.pageCount}"></span> -
-                <a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">transcript <span th:text="${file.name}"></span></a> -
-                <a th:href="@{/transcript/pdf/{id}(id=${file.dtoFile.fileId})}">as pdf<span th:text="${file.name}"></span></a>
-
-
-            </span>
-            <ul th:if="${file.folder}">
-                <li th:replace="~{::subTree(${file.children})}"></li>
+<div th:if= "${authUrl == ''}">
+    <h2>File and Folder Structure</h2>
+    <ul>
+        <li th:each="fileNode : ${fileNodes}">
+            <span th:if="${fileNode.folder}"><a th:href="@{/folder/pdf/{id}(id=${fileNode.dtoFile.fileId})}">folder : <span th:text="${fileNode.name}"></span></a></span>
+            <span th:if="${not fileNode.folder}"><a th:href="@{/transcript/{id}(id=${fileNode.dtoFile.fileId})}">file : <span th:text="${fileNode.name}"></span></a></span>
+            <ul th:if="${fileNode.folder}">
+                <li th:replace="~{::subTree(${fileNode.children})}"></li>
             </ul>
         </li>
-<!--    </ul>-->
-</th:block>
+    </ul>
 
+    <!-- Recursive Fragment -->
+    <th:block th:fragment="subTree(children)">
+    <!--    <ul>-->
+            <li th:each="file : ${children}">
+                <span th:if="${file.folder}"><a th:href="@{/folder/pdf/{id}(id=${file.dtoFile.fileId})}">folder as pdf : <span th:text="${file.name}"></span></a></span>
+                <span th:if="${not file.folder}">
+                    pages <span th:text="${file.dtoTranscript.pageCount}"></span> -
+                    <a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">transcript <span th:text="${file.name}"></span></a> -
+                    <a th:href="@{/transcript/pdf/{id}(id=${file.dtoFile.fileId})}">as pdf<span th:text="${file.name}"></span></a>
+
+
+                </span>
+                <ul th:if="${file.folder}">
+                    <li th:replace="~{::subTree(${file.children})}"></li>
+                </ul>
+            </li>
+    <!--    </ul>-->
+    </th:block>
+</div>
 
 
 </body>

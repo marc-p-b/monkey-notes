@@ -31,6 +31,7 @@ import java.util.Set;
 @Service
 public class DriveServiceImpl implements DriveService {
     public static final String STORED_CREDENTIAL_NAME = "marc";
+    //public static final String CREDENTIAL_FILE_NAME = "marc";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
     private static final long TOKEN_REFRESH_INTERVAL = 3500;
@@ -98,7 +99,7 @@ public class DriveServiceImpl implements DriveService {
 
         try {
             //TODO credential name ?
-            credential = authFlow.loadCredential("marc");
+            credential = authFlow.loadCredential(STORED_CREDENTIAL_NAME);
 
             if (credential != null) {
 
@@ -217,7 +218,7 @@ public class DriveServiceImpl implements DriveService {
 //        googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
 //                .setApplicationName(APPLICATION_NAME)
 //                .build();
-        LOG.info("Credential refreshed, gdrive {}", googleDrive!=null?"yes":"no");
+        LOG.info("Credential refreshed, gdrive connected {}", googleDrive != null  ? "yes" : "no");
     }
 
     public Drive getDrive() {

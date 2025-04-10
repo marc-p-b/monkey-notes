@@ -17,28 +17,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
-                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/grant-callback").permitAll()  // Public endpoints
-//                        .requestMatchers("/notify").permitAll()
-//                        .requestMatchers("/image/*/*").permitAll()
-                        .anyRequest().permitAll()  // Secure all other endpoints
-                )
-                .formLogin(Customizer.withDefaults()) // Enable form login
-                .httpBasic(Customizer.withDefaults()); // Enable basic auth
-
-
-//        http
-//            .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
-//            .authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/grant-callback").permitAll()  // Public endpoints
-//                .requestMatchers("/notify").permitAll()
-//                .requestMatchers("/image/*/*").permitAll()
-//                .anyRequest().authenticated()  // Secure all other endpoints
-//            )
-//            .formLogin(Customizer.withDefaults()) // Enable form login
-//            .httpBasic(Customizer.withDefaults()); // Enable basic auth
+            .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/grant-callback").permitAll()  // Public endpoints
+                .requestMatchers("/notify").permitAll()
+                .requestMatchers("/image/*/*").permitAll()
+                .anyRequest().authenticated()  // Secure all other endpoints
+            )
+            .formLogin(Customizer.withDefaults()) // Enable form login
+            .httpBasic(Customizer.withDefaults()); // Enable basic auth
         
         return http.build();
     }
@@ -50,12 +39,6 @@ public class SecurityConfig {
                 .password("outsoon4242")
                 .roles("USER")
                 .build();
-
-//    UserDetails admin = User.withDefaultPasswordEncoder()
-//            .username("admin")
-//            .password("admin123")
-//            .roles("ADMIN")
-//            .build();
 
         return new InMemoryUserDetailsManager(user);
     }

@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DriveChangeManagerServiceImpl implements DriveChangeManagerService {
+    //todo props
     public static final int ANCESTORS_RETRIEVE_MAX_DEPTH = 4;
     public static final String MIME_PDF = "application/pdf";
 

@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -30,8 +31,7 @@ import java.util.Set;
 
 @Service
 public class DriveServiceImpl implements DriveService {
-    public static final String STORED_CREDENTIAL_NAME = "marc";
-    //public static final String CREDENTIAL_FILE_NAME = "marc";
+    public static final String STORED_CREDENTIAL_NAME = "dsb-gdrive-credential";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
     private static final long TOKEN_REFRESH_INTERVAL = 3500;
@@ -98,22 +98,21 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
-            //TODO credential name ?
             credential = authFlow.loadCredential(STORED_CREDENTIAL_NAME);
 
             if (credential != null) {
 
                 long currentTime = System.currentTimeMillis();
-                long expTk = credential.getExpirationTimeMilliseconds();
+                long expTk = credential != null ? credential.getExpirationTimeMilliseconds() : 0;
 
-                if(expTk > currentTime) {
+                if(expTk <= currentTime) {
                     LOG.warn("token expired");
                     //todo not working
                     this.refreshToken();
 
                     currentTime = System.currentTimeMillis();
                     expTk = credential.getExpirationTimeMilliseconds();
-                    if(expTk > currentTime) {
+                    if(expTk <= currentTime) {
                         LOG.warn("token expired");
                     } else {
                         LOG.info("token is now ok !");
@@ -187,19 +186,24 @@ public class DriveServiceImpl implements DriveService {
     }
 
     private void getDriveConnection() {
-        try {
-            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        } catch (IOException | GeneralSecurityException e) {
-            throw new RuntimeException(e);
+        if(googleDrive == null) {
+            LOG.info("Connecting to Google Drive");
+            try {
+                HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+            } catch (IOException | GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+            googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                    .setApplicationName(APPLICATION_NAME)
+                    .build();
+
+            //todo not nececerally required
+            connectCallback.run();
+
+            taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
+        } else {
+            LOG.info("Already connected to Google Drive");
         }
-        googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
-
-        //todo not nececerally required
-        connectCallback.run();
-
-        taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
     }
 
     public void refreshToken()  {

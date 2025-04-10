@@ -2,7 +2,6 @@ package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.DtoTranscriptPage;
-import net.kprod.dsb.service.ImageService;
 import net.kprod.dsb.service.PdfService;
 import net.kprod.dsb.service.UtilsService;
 import org.apache.pdfbox.Loader;
@@ -15,6 +14,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +22,9 @@ import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,10 +79,13 @@ public class PdfServiceImpl implements PdfService {
     }
 
     @Override
-    public java.io.File createTranscriptPdf(String fileId, DtoTranscript dtoTranscript) throws IOException {
+    public java.io.File createTranscriptPdf(String fileId, List<DtoTranscript> listDtoTranscript) throws IOException {
 
 
 
+        Map<String, String> replacements = new HashMap<>();
+        replacements.put("\u2713", "[V]");
+        replacements.put("\u2717", "[X]");
 
         //textContent = textContent.replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
         PDDocument doc = null;
@@ -118,56 +119,76 @@ public class PdfServiceImpl implements PdfService {
             String subString;
             int pageNumber = 1;
 
-            for(DtoTranscriptPage transcriptPage : dtoTranscript.getPages()) {
+
+            int docNumber = 0;
+            for(DtoTranscript dtoTranscript : listDtoTranscript) {
+
+                //Doc title
+                StringBuilder sbDocTitle = new StringBuilder()
+                        .append(dtoTranscript.getTitle())
+                        .append(" (")
+                        .append(dtoTranscript.getPages().size())
+                        .append(" pages)")
+                        .append(" date ").append(dtoTranscript.getDocumented_at());
+
+                lines.add(sbDocTitle.toString());
+
+                for (DtoTranscriptPage transcriptPage : dtoTranscript.getPages()) {
+                    //document pages
+                    String text = replaceCars4Pdf(transcriptPage, replacements);
+
+                    while (text.length() > 0) {
+                        int nlIndex = text.indexOf('\n');
+                        int spaceIndex = text.indexOf(' ', lastSpace + 1);
+
+                        if (spaceIndex < 0) {
+                            spaceIndex = text.length();
+                        }
+
+                        subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
+                        lineWidth = fontSize * getStringWidth(pdfFont, subString) / 1000;
 
 
-                String text = transcriptPage.getTranscript().replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+                        if (nlIndex < spaceIndex && nlIndex != -1) {
+                            subString = text.substring(0, nlIndex);
 
+                            lines.add(subString.replaceAll("\\p{C}", ""));
+                            text = text.substring(nlIndex).trim();
+                            //System.out.printf("> %s\n", subString);
+                        } else if (lineWidth > pageWidth) {
+                            if (lastSpace < 0) {
+                                lastSpace = spaceIndex;
+                            }
+                            subString = text.substring(0, lastSpace);
 
-                while (text.length() > 0) {
-                    int nlIndex = text.indexOf('\n');
-                    int spaceIndex = text.indexOf(' ', lastSpace + 1);
-
-                    if (spaceIndex < 0) {
-                        spaceIndex = text.length();
-                    }
-
-                    subString = text.substring(0, spaceIndex > nlIndex ? spaceIndex : nlIndex);
-                    lineWidth = fontSize * pdfFont.getStringWidth(subString.replaceAll("\\p{C}", "")) / 1000;
-
-                    if (nlIndex < spaceIndex && nlIndex != -1) {
-                        subString = text.substring(0, nlIndex);
-
-                        lines.add(subString.replaceAll("\\p{C}", ""));
-                        text = text.substring(nlIndex).trim();
-                        //System.out.printf("> %s\n", subString);
-                    } else if (lineWidth > pageWidth) {
-                        if (lastSpace < 0) {
+                            lines.add(subString.replaceAll("\\p{C}", ""));
+                            text = text.substring(lastSpace).trim();
+                            //System.out.printf("> %s\n", subString);
+                            lastSpace = -1;
+                        } else if (spaceIndex == text.length()) {
+                            lines.add(text.replaceAll("\\p{C}", ""));
+                            //System.out.printf(">%s\n", text);
+                            text = "";
+                        } else {
                             lastSpace = spaceIndex;
                         }
-                        subString = text.substring(0, lastSpace);
 
-                        lines.add(subString.replaceAll("\\p{C}", ""));
-                        text = text.substring(lastSpace).trim();
-                        //System.out.printf("> %s\n", subString);
-                        lastSpace = -1;
-                    }
-                    else if (spaceIndex == text.length()) {
-                        lines.add(text.replaceAll("\\p{C}", ""));
-                        //System.out.printf(">%s\n", text);
-                        text = "";
-                    }
-                    else {
-                        lastSpace = spaceIndex;
+                        //if(lineHeight * lines.size() >= pageHeight) {
+                        if (lines.size() > 42) {
+                            pages.put(pageNumber, new ArrayList<>(lines));
+                            pageNumber++;
+                            lines.clear();
+                        }
+
+
                     }
 
-                    //if(lineHeight * lines.size() >= pageHeight) {
-                    if (lines.size() > 42) {
-                        pages.put(pageNumber, new ArrayList<>(lines));
-                        pageNumber++;
-                        lines.clear();
-                    }
-
+                }
+                if(docNumber++ < listDtoTranscript.size()-1) {
+                    //add page break
+                    pages.put(pageNumber, new ArrayList<>(lines));
+                    pageNumber++;
+                    lines.clear();
                 }
             }
 
@@ -181,7 +202,7 @@ public class PdfServiceImpl implements PdfService {
             for(Map.Entry<Integer, List<String>> entry : pages.entrySet()) {
 
                 for (String line : entry.getValue()) {
-                    contentStream.showText(line);
+                    addContentToStream(line, contentStream);
                     contentStream.newLineAtOffset(0, -leading);
                 }
                 contentStream.endText();
@@ -211,5 +232,30 @@ public class PdfServiceImpl implements PdfService {
             }
         }
         return file;
+    }
+
+    @NotNull
+    private static String replaceCars4Pdf(DtoTranscriptPage transcriptPage, Map<String, String> replacements) {
+        String text = transcriptPage.getTranscript().replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+        for(Map.Entry<String, String> replacement : replacements.entrySet()) {
+            text = text.replaceAll(replacement.getKey(), replacement.getValue());
+        }
+        return text;
+    }
+
+    private static void addContentToStream(String line, PDPageContentStream contentStream) throws IOException {
+        try {
+            contentStream.showText(line);
+        } catch (IllegalArgumentException e) {
+            contentStream.showText("ERROR");
+        }
+    }
+
+    private static float getStringWidth(PDFont pdfFont, String subString) throws IOException {
+        try {
+            return pdfFont.getStringWidth(subString.replaceAll("\\p{C}", ""));
+        } catch (IllegalArgumentException e) {
+            return 20;
+        }
     }
 }

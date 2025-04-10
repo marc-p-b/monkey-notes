@@ -212,21 +212,29 @@ public class ViewServiceImpl implements ViewService {
             return folders;
     }
 
-//    private List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
-//        Optional<EntityFile> optFolder = repositoryFile.findById(folderId);
-//
-//        if(!optFolder.isPresent()) {
-//            return Collections.emptyList();
-//        }
-//
-//        Set<String> setTranscriptId = listAllFilesRecurs(optFolder.get()).stream()
-//                .map(DtoFile::getFileId)
-//                .collect(Collectors.toSet());
-//
-//        return repositoryTranscript.findAllByFileIdIn(setTranscriptId).stream()
-//                .map(t -> buildDtoTranscript(t))
-//                .toList();
-//    }
+    private List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
+        Optional<EntityFile> optFolder = repositoryFile.findById(folderId);
+
+        if(!optFolder.isPresent()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> setTranscriptId = listAllFilesRecurs(optFolder.get()).stream()
+                .map(DtoFile::getFileId)
+                .collect(Collectors.toSet());
+
+
+        return repositoryTranscript.findAllByFileIdIn(setTranscriptId).stream()
+                .map(t -> {
+
+                    Optional<EntityFile> f = repositoryFile.findById(t.getFileId());
+
+                    String parentFolderId = f.isPresent() ? f.get().getParentFolderId() : folderId;
+
+                    return buildDtoTranscript(t, parentFolderId);
+                })
+                .toList();
+    }
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, String parentFolderId) {
         List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
@@ -281,16 +289,12 @@ public class ViewServiceImpl implements ViewService {
 
     @Override
     public File createTranscriptPdf(String fileId) throws IOException {
-
-        //TODO
-        return pdfService.createTranscriptPdf(fileId, getTranscript2(fileId));
-
+        return pdfService.createTranscriptPdf(fileId, Collections.singletonList(getTranscript2(fileId)));
     }
 
     @Override
     public File createTranscriptPdfFromFolder(String folderId) throws IOException {
 
-        //TODO
 //        String folderTranscripts = listTranscriptFromFolderRecurs(folderId).stream()
 //                .map(t -> {
 //                    return new StringBuilder()
@@ -303,7 +307,11 @@ public class ViewServiceImpl implements ViewService {
 //
 //
 //        return pdfService.createTranscriptPdf(folderId, folderTranscripts);
-        return null;
 
+
+
+        //return null;
+
+        return pdfService.createTranscriptPdf(folderId, listTranscriptFromFolderRecurs(folderId));
     }
 }

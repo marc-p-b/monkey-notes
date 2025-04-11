@@ -11,16 +11,10 @@ public class DtoTranscript {
     private String name;
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-    //private String transcript;
-    //private long transcriptTook;
     private String aiModel;
-    //private int tokensPrompt;
-    //private int tokensResponse;
     private int pageCount;
     private int version;
     private List<DtoTranscriptPage> pages;
-    //private List<URL> pageImages;
-    //private String transcriptHtml;
     private String title;
 
     public static DtoTranscript fromEntities(EntityTranscript transcript, List<EntityTranscriptPage> pages) {
@@ -38,22 +32,8 @@ public class DtoTranscript {
                 .map(DtoTranscriptPage::fromEntity)
                 .toList());
 
-//        dto.transcript = transcript.getTranscript();
-//        dto.transcriptHtml = transcript.getTranscript();
-//        dto.transcriptTook = transcript.getTranscriptTook();
-//        dto.tokensPrompt = transcript.getTokensPrompt();
-//        dto.tokensResponse = transcript.getTokensResponse();
         return dto;
     }
-
-//    public List<URL> getPageImages() {
-//        return pageImages;
-//    }
-//
-//    public DtoTranscript setPageImages(List<URL> pageImages) {
-//        this.pageImages = pageImages;
-//        return this;
-//    }
 
     public String getFileId() {
         return fileId;
@@ -76,7 +56,6 @@ public class DtoTranscript {
         return aiModel;
     }
 
-
     public int getPageCount() {
         return pageCount;
     }
@@ -91,6 +70,11 @@ public class DtoTranscript {
 
     public DtoTranscript setTitle(String title) {
         this.title = title;
+        return this;
+    }
+
+    public DtoTranscript setDocumented_at(OffsetDateTime documented_at) {
+        this.documented_at = documented_at;
         return this;
     }
 

@@ -27,6 +27,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -272,16 +277,18 @@ public class ViewServiceImpl implements ViewService {
 
         dtoTranscript.setPages(listP);
 
-
-
-
+        
         Pattern booxBulkExportTitlePattern = Pattern.compile("(\\d{4}-\\d{2}-\\d{2}_\\d{2}_\\d{2}_\\d{2})\\.pdf");
         Matcher m = booxBulkExportTitlePattern.matcher(dtoTranscript.getName());
         //DateTimeFormatter dtfBook = DateTimeFormatter.ofPattern("yyyy-MM-dd_hh_mm_ss");
 
         if(m.matches()) {
+            String strDocDate = m.group(1);
+            OffsetDateTime odt = LocalDateTime.parse(strDocDate, DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+
             Optional<EntityFile> parentFolder = repositoryFile.findById(parentFolderId);
             dtoTranscript.setTitle(parentFolder.isPresent() ? parentFolder.get().getName() : "unknown");
+            dtoTranscript.setDocumented_at(odt);
         }
 
         return dtoTranscript;

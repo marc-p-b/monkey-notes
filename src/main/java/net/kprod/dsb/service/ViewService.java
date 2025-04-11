@@ -13,5 +13,5 @@ public interface ViewService {
     List<FileNode> listFolders();
     File createTranscriptPdf(String fileId) throws IOException;
     java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;
-    DtoTranscript getTranscript2(String fileId);
+    DtoTranscript getTranscript(String fileId);
 }

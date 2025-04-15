@@ -13,6 +13,8 @@
     <p>
     <th:block th:utext="${page.transcriptHtml}"/>
     </p>
+    <a th:href="@{/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">force refresh</a> -
+
     <a th:href="${page.imageUrl}"><span th:text="${iterStat.index}"></span></a>
 </th:block>
 

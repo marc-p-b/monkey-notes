@@ -33,18 +33,6 @@ public class DefaultController {
     @Autowired
     private ViewService viewService;
 
-//    @GetMapping("/force/auth")
-//    public ResponseEntity<String> forceAuth() throws IOException {
-//        driveService.requiredNewAuth();
-//        return ResponseEntity.ok("ok");
-//    }
-
-    @GetMapping("/force/refresh")
-    public ResponseEntity<String> forceRefresh() throws IOException {
-        driveService.refreshToken();
-        return ResponseEntity.ok("ok");
-    }
-
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
         driveChMgmtService.watch();
@@ -66,7 +54,6 @@ public class DefaultController {
     public ResponseEntity<List<String>> listTranscipt() throws IOException {
         return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
     }
-
 
     @GetMapping("/transcript/pdf/{fileId}")
     public ResponseEntity<byte[]> getTranscriptPdf(@PathVariable String fileId) throws IOException {
@@ -93,6 +80,12 @@ public class DefaultController {
     @GetMapping("/update/folder/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
         driveChMgmtService.updateFolder(folderId);
+        return ResponseEntity.ok().body("OK");
+    }
+
+    @GetMapping("/update/transcript/{fileId}/{pageNumber}")
+    public ResponseEntity<String> updateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
+        driveChMgmtService.forcePageUpdate(fileId, pageNumber);
         return ResponseEntity.ok().body("OK");
     }
 

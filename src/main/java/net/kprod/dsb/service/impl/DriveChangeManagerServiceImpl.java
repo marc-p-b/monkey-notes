@@ -15,6 +15,7 @@ import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
 import net.kprod.dsb.data.entity.EntityTranscriptPage;
+import net.kprod.dsb.data.entity.IdTranscriptPage;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
@@ -36,6 +37,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -437,18 +439,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .filter(CompletionResponse::isCompleted)
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
-//            Map<String, List<CompletionResponse>> mapCompleted = listImages.stream()
-//                .map(imagePath -> {
-//                    CompletionResponse completionResponse = qwenService.analyzeImage(
-//                            file2Process.getFileId(),
-//                            imagePath);
-//                    completionResponse.setFile2Process(file2Process);
-//                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
-//                    return completionResponse;
-//                })
-//                .filter(CompletionResponse::isCompleted)
-//                .collect(Collectors.groupingBy(CompletionResponse::getFileId));
-
             for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
 
                 String fileId = entry.getKey();
@@ -504,6 +494,63 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
         LOG.info("Done processing files {}", listDocs.size());
     }
+
+    public void forcePageUpdate(String fileId, int pageNumber) {
+
+        LOG.info("Force page update for {} page {}", fileId, pageNumber);
+        try {
+            URL imageURL = utilsService.imageURL(fileId, pageNumber);
+            runAsyncForcePageUpdate(monitoringService.getCurrentMonitoringData(), fileId, pageNumber, imageURL);
+        } catch (MalformedURLException e) {
+            //todo error
+            LOG.error("Could not parse URL {}", fileId, e);
+        }
+    }
+
+    @Async
+    public void runAsyncForcePageUpdate(MonitoringData monitoringData, String fileId, int pageNumber, URL imageURL) {
+
+        SupplyAsync sa = null;
+
+        try {
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+
+        CompletableFuture.supplyAsync(sa);
+    }
+
+    private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL) {
+        CompletionResponse completionResponse = qwenService.analyzeImage(
+                fileId,
+                imageURL);
+
+        if (completionResponse.isCompleted()) {
+
+            IdTranscriptPage idTranscriptPage = new IdTranscriptPage(fileId, pageNumber);
+
+            Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(idTranscriptPage);
+
+            EntityTranscriptPage entityTranscriptPage = null;
+            if (optTranscriptPage.isPresent()) {
+                entityTranscriptPage = optTranscriptPage.get()
+                        .setTranscript(completionResponse.getTranscript())
+                        .setTranscriptTook(completionResponse.getTranscriptTook())
+                        .setTokensPrompt(completionResponse.getTokensPrompt())
+                        .setTokensResponse(completionResponse.getTokensCompletion());
+            } else {
+                entityTranscriptPage = new EntityTranscriptPage(fileId, pageNumber)
+                        .setTranscript(completionResponse.getTranscript())
+                        .setTranscriptTook(completionResponse.getTranscriptTook())
+                        .setTokensPrompt(completionResponse.getTokensPrompt())
+                        .setTokensResponse(completionResponse.getTokensCompletion());
+            }
+            repositoryTranscriptPage.save(entityTranscriptPage);
+        }
+    }
+
+
 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());

@@ -94,6 +94,9 @@ public class ViewServiceImpl implements ViewService {
                 Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getFileId());
                 if(optTranscript.isPresent()) {
                     dtoTranscript = buildDtoTranscript(optTranscript.get(), dir.getParentFolderId());
+                } else {
+                    LOG.warn("No transcript found for id {}", child.getFileId());
+                    //todo NO transcript / error
                 }
             }
             FileNode node = new FileNode(DtoFile.fromEntity(child));
@@ -176,6 +179,7 @@ public class ViewServiceImpl implements ViewService {
                     .toList());
 
         List<DtoTranscriptPage> listP = dtoTranscript.getPages();
+
         listP.stream()
             .map(page->{
                 try {

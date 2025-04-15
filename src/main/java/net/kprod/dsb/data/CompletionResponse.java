@@ -26,6 +26,7 @@ public class CompletionResponse {
 
     public static CompletionResponse failed(String fileId, String errorMessage) {
         CompletionResponse failedResponse = new CompletionResponse(fileId);
+        failedResponse.fileId = fileId;
         failedResponse.errorMessage = errorMessage;
         failedResponse.completed = false;
         return failedResponse;

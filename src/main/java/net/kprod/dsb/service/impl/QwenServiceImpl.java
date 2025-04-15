@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.service.QwenService;
 import org.json.JSONObject;
@@ -79,12 +80,17 @@ public class QwenServiceImpl implements QwenService {
 
             //LOG.info("debug json {}", requestBody.toString());
 
+            String respBody;
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
             long start = System.currentTimeMillis();
-            ResponseEntity<String> response = new RestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
+            try {
+                ResponseEntity<String> response = new RestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
+                respBody = response.getBody();
+            } catch (RuntimeException e) {
+                throw new ServiceException("Failed to execute Qwen API", e);
+            }
             long took = System.currentTimeMillis() - start;
 
-            String respBody = response.getBody();
             DocumentContext context = JsonPath.parse(respBody);
 
             String content = context.read("$.choices[0].message.content");

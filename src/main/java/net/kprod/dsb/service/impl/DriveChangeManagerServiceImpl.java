@@ -422,16 +422,32 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     imageWorkingDir);
             LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
 
-            Map<String, List<CompletionResponse>> mapCompleted = listImages.stream()
-                .map(imagePath -> {
-                    CompletionResponse completionResponse = qwenService.analyzeImage(
-                            file2Process.getFileId(),
-                            imagePath);
-                    completionResponse.setFile2Process(file2Process);
-                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
-                    return completionResponse;
-                })
+            List<CompletionResponse> listCompletionResponse = new ArrayList<>();
+            for(URL imagePath : listImages) {
+                CompletionResponse completionResponse = qwenService.analyzeImage(
+                        file2Process.getFileId(),
+                        imagePath);
+                completionResponse.setFile2Process(file2Process);
+                listCompletionResponse.add(completionResponse);
+                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
+            }
+            LOG.info("Images converted {}", listCompletionResponse.size());
+
+            Map<String, List<CompletionResponse>> mapCompleted = listCompletionResponse.stream()
+                .filter(CompletionResponse::isCompleted)
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+
+//            Map<String, List<CompletionResponse>> mapCompleted = listImages.stream()
+//                .map(imagePath -> {
+//                    CompletionResponse completionResponse = qwenService.analyzeImage(
+//                            file2Process.getFileId(),
+//                            imagePath);
+//                    completionResponse.setFile2Process(file2Process);
+//                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
+//                    return completionResponse;
+//                })
+//                .filter(CompletionResponse::isCompleted)
+//                .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
             for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
 
@@ -444,7 +460,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 } else {
                     entityTranscript = new EntityTranscript();
                 }
-                List<CompletionResponse> listCompletionResponse = entry.getValue();
+                listCompletionResponse = entry.getValue();
 
                 int page = 1;
                 for (CompletionResponse completionResponse : listCompletionResponse) {
@@ -486,6 +502,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             }
         }
+        LOG.info("Done processing files {}", listDocs.size());
     }
 
     public void watchStop() throws IOException {

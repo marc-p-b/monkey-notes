@@ -5,6 +5,10 @@
 </head>
 <body>
 
+<div>
+    <a href="/preferences">Preferences</a>
+</div>
+
 <div th:if= "${authUrl != ''}"><a th:href="${authUrl}">authenticate</a></div>
 <div th:if= "${authUrl == ''}">
 

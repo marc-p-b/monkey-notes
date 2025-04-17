@@ -44,8 +44,8 @@ public class QwenServiceImpl implements QwenService {
     private boolean dryRun;
 
     @Override
-    public CompletionResponse analyzeImage(String fileId, URL imageURL) {
-        LOG.info("Qwen request analyse image {}", imageURL);
+    public CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
+        LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);
 
         if(dryRun) {
             LOG.warn("Qwen request dry run");
@@ -64,14 +64,15 @@ public class QwenServiceImpl implements QwenService {
 
             JSONObject content2 = new JSONObject();
             content2.put("type", "text");
-            content2.put("text", qwenPrompt);
+            content2.put("text", prompt);
 
             JSONObject messages = new JSONObject();
             messages.put("role", "user");
             messages.put("content", Arrays.asList(content1, content2));
 
             JSONObject requestBody = new JSONObject();
-            requestBody.put("model", qwenModel); //qwen2.5-vl-72b-instruct //qwen-vl-max
+            //qwen2.5-vl-72b-instruct //qwen-vl-max
+            requestBody.put("model", model);
             requestBody.put("messages", Arrays.asList(messages));
 
             HttpHeaders headers = new HttpHeaders();
@@ -94,17 +95,17 @@ public class QwenServiceImpl implements QwenService {
             DocumentContext context = JsonPath.parse(respBody);
 
             String content = context.read("$.choices[0].message.content");
-            String model = context.read("$.model");
+            String usedModel = context.read("$.model");
             int completion_tokens = context.read("$.usage.completion_tokens");
             int prompt_tokens = context.read("$.usage.prompt_tokens");
 
-            Pattern p = Pattern.compile("\\[(.*?)]", Pattern.DOTALL| Pattern.MULTILINE);
-            Matcher m = p.matcher(content);
-            if (m.find()) {
-                content = m.group(1);
-            }
+//            Pattern p = Pattern.compile("\\[(.*?)]", Pattern.DOTALL| Pattern.MULTILINE);
+//            Matcher m = p.matcher(content);
+//            if (m.find()) {
+//                content = m.group(1);
+//            }
 
-            completionResponse = new CompletionResponse(fileId, took, model, prompt_tokens, completion_tokens, content);
+            completionResponse = new CompletionResponse(fileId, took, usedModel, prompt_tokens, completion_tokens, content);
             //LOG.info("Qwen response: {}", content);
 
         } catch (Exception e) {
@@ -112,5 +113,10 @@ public class QwenServiceImpl implements QwenService {
             completionResponse = CompletionResponse.failed(fileId, e.getMessage());
         }
         return completionResponse;
+    }
+
+    @Override
+    public CompletionResponse analyzeImage(String fileId, URL imageURL) {
+        return analyzeImage(fileId, imageURL, qwenModel, qwenPrompt);
     }
 }

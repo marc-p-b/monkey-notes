@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -83,9 +84,15 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-    @GetMapping("/update/transcript/{fileId}/{pageNumber}")
-    public ResponseEntity<String> updateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
-        driveChMgmtService.forcePageUpdate(fileId, pageNumber);
+//    @GetMapping("/update/transcript/{fileId}/{pageNumber}")
+//    public ResponseEntity<String> updateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
+//        driveChMgmtService.forcePageUpdate(fileId, pageNumber);
+//        return ResponseEntity.ok().body("OK");
+//    }
+
+    @GetMapping("/form/update/transcript/{fileId}/{pageNumber}")
+    public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestParam String model, @RequestParam String prompt) {
+        driveChMgmtService.forcePageUpdate(fileId, pageNumber, model, prompt);
         return ResponseEntity.ok().body("OK");
     }
 

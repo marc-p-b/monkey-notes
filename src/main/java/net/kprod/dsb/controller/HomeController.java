@@ -2,6 +2,7 @@ package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.DriveService;
+import net.kprod.dsb.service.PreferencesService;
 import net.kprod.dsb.service.ViewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 public class HomeController {
@@ -25,6 +28,9 @@ public class HomeController {
 
     @Value("${app.drive.folders.in}")
     private String folderIn;
+
+    @Autowired
+    private PreferencesService preferencesService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -42,7 +48,11 @@ public class HomeController {
     public String getTranscript(Model model, @PathVariable String fileId) throws IOException {
         //return ResponseEntity.ok().body();
 
+        Map<String, String> map = preferencesService.listPreferences().stream()
+                .collect(Collectors.toMap(e -> e.getKey().name(), e -> e.getValue()));
+
         model.addAttribute("dtoTranscript", viewService.getTranscript(fileId));
+        model.addAttribute("config", map);
 
         return "transcript";
     }

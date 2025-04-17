@@ -100,7 +100,7 @@ public class DriveServiceImpl implements DriveService {
         try {
             credential = authFlow.loadCredential(STORED_CREDENTIAL_NAME);
 
-            if (credential != null) {
+            if (credential != null && credential.getExpirationTimeMilliseconds() != null) {
 
                 long currentTime = System.currentTimeMillis();
                 long expTk = credential != null ? credential.getExpirationTimeMilliseconds() : 0;
@@ -111,7 +111,8 @@ public class DriveServiceImpl implements DriveService {
                     this.refreshToken();
 
                     currentTime = System.currentTimeMillis();
-                    expTk = credential.getExpirationTimeMilliseconds();
+                    //todo can be null !! java.lang.NullPointerException: Cannot invoke "java.lang.Long.longValue()" because the return value of "com.google.api.client.auth.oauth2.Credential.getExpirationTimeMilliseconds()" is null
+
                     if(expTk <= currentTime) {
                         LOG.warn("token expired");
                     } else {

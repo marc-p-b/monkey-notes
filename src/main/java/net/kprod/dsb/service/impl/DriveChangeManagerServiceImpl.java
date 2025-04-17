@@ -431,7 +431,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         imagePath);
                 completionResponse.setFile2Process(file2Process);
                 listCompletionResponse.add(completionResponse);
-                LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
+                //todo ok ?
+                if(completionResponse.isCompleted()) {
+                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
+                } else {
+                    LOG.info("FileId {} Image {} failed", file2Process.getFileId(), imagePath) ;
+                }
             }
             LOG.info("Images converted {}", listCompletionResponse.size());
 
@@ -495,12 +500,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Done processing files {}", listDocs.size());
     }
 
-    public void forcePageUpdate(String fileId, int pageNumber) {
+    public void forcePageUpdate(String fileId, int pageNumber, String model, String prompt) {
 
         LOG.info("Force page update for {} page {}", fileId, pageNumber);
         try {
             URL imageURL = utilsService.imageURL(fileId, pageNumber);
-            runAsyncForcePageUpdate(monitoringService.getCurrentMonitoringData(), fileId, pageNumber, imageURL);
+            runAsyncForcePageUpdate(monitoringService.getCurrentMonitoringData(), fileId, pageNumber, imageURL, model, prompt);
         } catch (MalformedURLException e) {
             //todo error
             LOG.error("Could not parse URL {}", fileId, e);
@@ -508,12 +513,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Async
-    public void runAsyncForcePageUpdate(MonitoringData monitoringData, String fileId, int pageNumber, URL imageURL) {
+    public void runAsyncForcePageUpdate(MonitoringData monitoringData, String fileId, int pageNumber, URL imageURL, String model, String prompt) {
 
         SupplyAsync sa = null;
 
         try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
+            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncForcePageUpdate(fileId, pageNumber, imageURL, model, prompt));
         } catch (ServiceException e) {
             throw new RuntimeException(e);
         }
@@ -521,10 +526,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         CompletableFuture.supplyAsync(sa);
     }
 
-    private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL) {
-        CompletionResponse completionResponse = qwenService.analyzeImage(
-                fileId,
-                imageURL);
+    private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL, String model, String prompt) {
+        CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL, model, prompt);
 
         if (completionResponse.isCompleted()) {
 

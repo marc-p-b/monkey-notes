@@ -45,16 +45,12 @@ public class PdfServiceImpl implements PdfService {
         LOG.info("Converting {} to images", sourceFile);
         List<URL> listImages = null;
         try {
-            //java.io.File sourceFile = new java.io.File(sourcePath);
             listImages = new ArrayList<>();
 
             if (sourceFile.exists()) {
                 PDDocument document = Loader.loadPDF(sourceFile);
                 PDFRenderer pdfRenderer = new PDFRenderer(document);
-
                 int pageCount = document.getNumberOfPages();
-                //System.out.println("Total pages to be converted -> " + pageCount);
-
                 for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
                     BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, PDF2IMAGE_DPI, PDF2IMAGE_IMAGE_TYPE);
 
@@ -65,7 +61,6 @@ public class PdfServiceImpl implements PdfService {
                     listImages.add(utilsService.imageURL(fileId, (pageNumber + 1)));
                     LOG.info("Page {} converted to image {}", pageNumber, pathPage);
                 }
-
                 document.close();
             } else {
                 LOG.error("PDF not found: {}", sourceFile);
@@ -80,14 +75,10 @@ public class PdfServiceImpl implements PdfService {
 
     @Override
     public java.io.File createTranscriptPdf(String fileId, List<DtoTranscript> listDtoTranscript) throws IOException {
-
-
-
         Map<String, String> replacements = new HashMap<>();
         replacements.put("\u2713", "[V]");
         replacements.put("\u2717", "[X]");
 
-        //textContent = textContent.replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
         PDDocument doc = null;
         java.io.File file = null;
         try

@@ -5,8 +5,8 @@ import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
 import jakarta.annotation.PostConstruct;
-import net.kprod.dsb.FlushTask;
-import net.kprod.dsb.RefreshWatchTask;
+import net.kprod.dsb.tasks.FlushTask;
+import net.kprod.dsb.tasks.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.ChangedFile;
 import net.kprod.dsb.data.CompletionResponse;
@@ -29,9 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -129,6 +127,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     RepositoryTranscriptPage repositoryTranscriptPage;
 
+    //todo ?
     //@EventListener(ApplicationReadyEvent.class)
     @PostConstruct
     void startup() {
@@ -267,13 +266,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
 
                         File2Process file2Process = new File2Process(file)
-                                //.setFileName(file.getName())
                                 .setFilePath(downloadFileFromDrive)
                                 .setParentFolderId(parentFolder.getId())
                                 .setParentFolderName(parentFolder.getName());
-                                //.setMd5(file.getMd5Checksum());
 
-                        //list2Process.add(file2Process);
                         returnObject = Optional.of(file2Process);
                     }  else {
                         LOG.warn("Nothing to do with file {} {}", file.getId(), file.getName());
@@ -375,8 +371,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                     optDoc.isPresent() == false) {
                         //new or updated file
                         remoteFiles.add(new File2Process(file)
-                                //.setFileName(file.getName())
-                                //.setMd5(file.getMd5Checksum())
                                 .setParentFolderId(currentFolderId)
                                 .setParentFolderName(currentFolderName));
                     } else {
@@ -389,10 +383,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
-
-        //get completions from AI model
-        //Map<String, List<CompletionResponse>> mapCompleted = files2Process.stream()
-
         // create file objects
         List<EntityFile> listDocs = files2Process.stream()
             .map(f2p -> {

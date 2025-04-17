@@ -57,8 +57,6 @@ public class MailServiceImpl implements MailService {
         }
     }
 
-
-
     private void sendMailjetMessage(String[] to, String subject, String body) {
         if (mailjetClient == null) {
             initMailjetClient();

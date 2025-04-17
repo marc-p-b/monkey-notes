@@ -13,19 +13,8 @@ public class DtoFile {
     private OffsetDateTime discovered_at;
     private FileType type;
 
-//    private int offset;
-
     private DtoFile() {
     }
-
-//    public int getOffset() {
-//        return offset;
-//    }
-//
-//    public DtoFile setOffset(int offset) {
-//        this.offset = offset;
-//        return this;
-//    }
 
     public String getFileId() {
         return fileId;

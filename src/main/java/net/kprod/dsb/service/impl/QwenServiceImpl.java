@@ -71,7 +71,7 @@ public class QwenServiceImpl implements QwenService {
             messages.put("content", Arrays.asList(content1, content2));
 
             JSONObject requestBody = new JSONObject();
-            //qwen2.5-vl-72b-instruct //qwen-vl-max
+
             requestBody.put("model", model);
             requestBody.put("messages", Arrays.asList(messages));
 
@@ -99,14 +99,7 @@ public class QwenServiceImpl implements QwenService {
             int completion_tokens = context.read("$.usage.completion_tokens");
             int prompt_tokens = context.read("$.usage.prompt_tokens");
 
-//            Pattern p = Pattern.compile("\\[(.*?)]", Pattern.DOTALL| Pattern.MULTILINE);
-//            Matcher m = p.matcher(content);
-//            if (m.find()) {
-//                content = m.group(1);
-//            }
-
             completionResponse = new CompletionResponse(fileId, took, usedModel, prompt_tokens, completion_tokens, content);
-            //LOG.info("Qwen response: {}", content);
 
         } catch (Exception e) {
             LOG.error("Failed request model", e);

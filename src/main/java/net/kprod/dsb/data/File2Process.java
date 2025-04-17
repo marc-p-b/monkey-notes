@@ -40,7 +40,6 @@ public class File2Process {
 
     }
 
-
     public String getFileId() {
         return fileId;
     }
@@ -67,15 +66,6 @@ public class File2Process {
         this.filePath = filePath;
         return this;
     }
-
-//    public String getDriveFullFolderPath() {
-//        return driveFullFolderPath;
-//    }
-//
-//    public File2Process setDriveFullFolderPath(String driveFullFolderPath) {
-//        this.driveFullFolderPath = driveFullFolderPath;
-//        return this;
-//    }
 
     public String getParentFolderId() {
         return parentFolderId;

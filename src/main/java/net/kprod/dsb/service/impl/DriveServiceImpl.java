@@ -11,7 +11,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
-import net.kprod.dsb.RefreshTokenTask;
+import net.kprod.dsb.tasks.RefreshTokenTask;
 import net.kprod.dsb.service.DriveService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,10 +109,7 @@ public class DriveServiceImpl implements DriveService {
                     LOG.warn("token expired");
                     //todo not working
                     this.refreshToken();
-
                     currentTime = System.currentTimeMillis();
-                    //todo can be null !! java.lang.NullPointerException: Cannot invoke "java.lang.Long.longValue()" because the return value of "com.google.api.client.auth.oauth2.Credential.getExpirationTimeMilliseconds()" is null
-
                     if(expTk <= currentTime) {
                         LOG.warn("token expired");
                     } else {

@@ -4,6 +4,7 @@ public enum ConfigKey {
     set,
     prompt,
     model,
+    modelTimeout,
     useDefaultPrompt;
 
 }

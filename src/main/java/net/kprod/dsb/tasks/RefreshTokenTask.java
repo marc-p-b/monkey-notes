@@ -1,10 +1,8 @@
-package net.kprod.dsb;
+package net.kprod.dsb.tasks;
 
 import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveService;
 import org.springframework.context.ApplicationContext;
-
-import java.io.IOException;
 
 public class RefreshTokenTask implements Runnable{
 	private ApplicationContext ctx;

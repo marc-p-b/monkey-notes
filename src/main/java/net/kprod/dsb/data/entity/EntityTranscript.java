@@ -14,7 +14,7 @@ public class EntityTranscript {
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
     @Lob
-    private String aiModel;
+    private String aiModel; //todo rename me !!
     private int pageCount;
     private int version;
 
@@ -63,24 +63,6 @@ public class EntityTranscript {
         return this;
     }
 
-//    public String getTranscript() {
-//        return transcript;
-//    }
-//
-//    public EntityTranscript setTranscript(String transcript) {
-//        this.transcript = transcript;
-//        return this;
-//    }
-
-//    public long getTranscriptTook() {
-//        return transcriptTook;
-//    }
-//
-//    public EntityTranscript setTranscriptTook(long transcriptTook) {
-//        this.transcriptTook = transcriptTook;
-//        return this;
-//    }
-
     public String getAiModel() {
         return aiModel;
     }
@@ -89,24 +71,6 @@ public class EntityTranscript {
         this.aiModel = aiModel;
         return this;
     }
-
-//    public int getTokensPrompt() {
-//        return tokensPrompt;
-//    }
-//
-//    public EntityTranscript setTokensPrompt(int tokensPrompt) {
-//        this.tokensPrompt = tokensPrompt;
-//        return this;
-//    }
-//
-//    public int getTokensResponse() {
-//        return tokensResponse;
-//    }
-//
-//    public EntityTranscript setTokensResponse(int tokensResponse) {
-//        this.tokensResponse = tokensResponse;
-//        return this;
-//    }
 
     public int getPageCount() {
         return pageCount;

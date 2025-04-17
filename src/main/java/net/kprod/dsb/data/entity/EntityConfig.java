@@ -1,9 +1,7 @@
 package net.kprod.dsb.data.entity;
 
-import jakarta.persistence.Embedded;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 
 @Entity
 public class EntityConfig {

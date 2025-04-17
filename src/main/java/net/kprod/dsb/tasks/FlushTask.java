@@ -1,31 +1,24 @@
-package net.kprod.dsb;
+package net.kprod.dsb.tasks;
 
 import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import org.springframework.context.ApplicationContext;
 
-import java.io.IOException;
-
-public class RefreshWatchTask implements Runnable{
+public class FlushTask implements Runnable{
 	private ApplicationContext ctx;
 
-	public RefreshWatchTask(ApplicationContext ctx){
+	public FlushTask(ApplicationContext ctx){
 		this.ctx = ctx;
+
 	}
 
 	@Override
 	public void run() {
-		DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
-
 		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
-		monitoringService.start("RefreshWatchTask", "run");
-
+		monitoringService.start("FlushTask", "run");
+		DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
 		long startTime = System.currentTimeMillis();
-		try {
-            service.renewWatch();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+		service.flushChanges();
 		monitoringService.end(System.currentTimeMillis() - startTime);
-    }
+	}
 }

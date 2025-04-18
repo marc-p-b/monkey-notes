@@ -448,33 +448,48 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 Optional<EntityTranscript> optDoc = repositoryTranscript.findById(idFile(fileId));
                 EntityTranscript entityTranscript = null;
                 if(optDoc.isPresent()) {
+                    // already exists transcript
                     entityTranscript = optDoc.get();
-                    entityTranscript.setVersion(entityTranscript.getVersion() + 1);
+                    entityTranscript.bumpVersion();
                 } else {
-                    entityTranscript = new EntityTranscript();
+                    // new transcript
+                    entityTranscript = new EntityTranscript()
+                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
                 }
                 listCompletionResponse = entry.getValue();
 
                 int page = 1;
                 for (CompletionResponse completionResponse : listCompletionResponse) {
 
-                    EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(
-                            IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, page++))
-                            .setTranscript(completionResponse.getTranscript())
-                            .setTranscriptTook(completionResponse.getTranscriptTook())
-                            .setTokensPrompt(completionResponse.getTokensPrompt())
-                            .setTokensResponse(completionResponse.getTokensCompletion());
+                    IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, page++);
+                    Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
+
+                    EntityTranscriptPage entityTranscriptPage = null;
+                    if(optPage.isPresent()) {
+                        //already exists page
+                        entityTranscriptPage = optPage.get();
+                        entityTranscriptPage.bumpVersion();
+                    } else {
+                        //new page
+                        entityTranscriptPage = new EntityTranscriptPage()
+                                .setIdTranscriptPage(idTranscriptPage);
+
+                    }
+                    entityTranscriptPage
+                        .setTranscript(completionResponse.getTranscript())
+                        .setAiModel(completionResponse.getAiModel())
+                        .setTranscriptTook(completionResponse.getTranscriptTook())
+                        .setTokensPrompt(completionResponse.getTokensPrompt())
+                        .setTokensResponse(completionResponse.getTokensCompletion());
                     repositoryTranscriptPage.save(entityTranscriptPage);
                 }
 
                 File2Process f2p = listCompletionResponse.get(0).getFile2Process();
 
-                entityTranscript = new EntityTranscript()
-                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), fileId))
+                entityTranscript
                         .setName(f2p.getFileName())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setDocumented_at(identifyDates(f2p))
-                        .setAiModel(listCompletionResponse.get(0).getAiModel())
                         .setPageCount(listCompletionResponse.size());
 
                 repositoryTranscript.save(entityTranscript);
@@ -555,19 +570,22 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             EntityTranscriptPage entityTranscriptPage = null;
             if (optTranscriptPage.isPresent()) {
-                entityTranscriptPage = optTranscriptPage.get()
-                        .setTranscript(completionResponse.getTranscript())
-                        .setTranscriptTook(completionResponse.getTranscriptTook())
-                        .setTokensPrompt(completionResponse.getTokensPrompt())
-                        .setTokensResponse(completionResponse.getTokensCompletion());
+                //already exists page
+                entityTranscriptPage = optTranscriptPage.get();
+                entityTranscriptPage.bumpVersion();
+
             } else {
-                entityTranscriptPage = new EntityTranscriptPage(
-                        IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber))
-                        .setTranscript(completionResponse.getTranscript())
-                        .setTranscriptTook(completionResponse.getTranscriptTook())
-                        .setTokensPrompt(completionResponse.getTokensPrompt())
-                        .setTokensResponse(completionResponse.getTokensCompletion());
+                LOG.warn("This page may already exists... something wrong ? fileId {}", fileId);
+                //new (should not happen)
+                entityTranscriptPage = new EntityTranscriptPage()
+                        .setIdTranscriptPage(IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
             }
+            entityTranscriptPage
+                    .setTranscript(completionResponse.getTranscript())
+                    .setTranscriptTook(completionResponse.getTranscriptTook())
+                    .setTokensPrompt(completionResponse.getTokensPrompt())
+                    .setTokensResponse(completionResponse.getTokensCompletion());
+
             repositoryTranscriptPage.save(entityTranscriptPage);
         }
     }
@@ -652,7 +670,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         for(File folderFile : ancestors) {
 
             EntityFile folder = new EntityFile()
-                    //.setFileId(folderFile.getId())
                     .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), folderFile.getId()))
                     .setType(FileType.folder)
                     .setName(folderFile.getName());

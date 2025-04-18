@@ -14,6 +14,7 @@ public class DtoTranscriptPage {
     private int tokensPrompt;
     private int tokensResponse;
     private int version;
+    private String aiModel;
     private URL imageUrl;
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
@@ -21,8 +22,10 @@ public class DtoTranscriptPage {
                 .setUsername(page.getIdTranscriptPage().getUsername())
                 .setFileId(page.getIdTranscriptPage().getFileId())
                 .setPageNumber(page.getIdTranscriptPage().getPageNumber())
+                .setVersion(page.getVersion())
                 .setTranscript(page.getTranscript())
                 .setTranscriptHtml(page.getTranscript())
+                .setAiModel(page.getAiModel())
                 .setTranscriptTook(page.getTranscriptTook())
                 .setTokensPrompt(page.getTokensPrompt())
                 .setTokensResponse(page.getTokensResponse());
@@ -116,6 +119,15 @@ public class DtoTranscriptPage {
 
     public DtoTranscriptPage setImageUrl(URL imageUrl) {
         this.imageUrl = imageUrl;
+        return this;
+    }
+
+    public String getAiModel() {
+        return aiModel;
+    }
+
+    public DtoTranscriptPage setAiModel(String aiModel) {
+        this.aiModel = aiModel;
         return this;
     }
 }

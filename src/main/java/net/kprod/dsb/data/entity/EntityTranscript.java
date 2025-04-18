@@ -14,17 +14,15 @@ public class EntityTranscript {
     private String name;
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-    private String aiModel;
     private int pageCount;
     private int version;
 
-    public EntityTranscript(IdFile idFile) {
-        this.idFile = idFile;
+    public EntityTranscript() {
         this.version = 1;
     }
 
-    public EntityTranscript() {
-        this.version = 1;
+    public void bumpVersion() {
+        this.version++;
     }
 
     public IdFile getIdFile() {
@@ -60,15 +58,6 @@ public class EntityTranscript {
 
     public EntityTranscript setDocumented_at(OffsetDateTime documented_at) {
         this.documented_at = documented_at;
-        return this;
-    }
-
-    public String getAiModel() {
-        return aiModel;
-    }
-
-    public EntityTranscript setAiModel(String aiModel) {
-        this.aiModel = aiModel;
         return this;
     }
 

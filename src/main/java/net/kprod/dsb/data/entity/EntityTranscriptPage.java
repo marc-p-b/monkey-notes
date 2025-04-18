@@ -11,15 +11,18 @@ public class EntityTranscriptPage {
 
     @Lob
     private String transcript;
+    private String aiModel;
     private long transcriptTook;
     private int tokensPrompt;
     private int tokensResponse;
+    private int version;
 
     public EntityTranscriptPage() {
+        version = 1;
     }
 
-    public EntityTranscriptPage(IdTranscriptPage idTranscriptPage) {
-        this.idTranscriptPage = idTranscriptPage;
+    public void bumpVersion() {
+        version++;
     }
 
     public IdTranscriptPage getIdTranscriptPage() {
@@ -64,6 +67,24 @@ public class EntityTranscriptPage {
 
     public EntityTranscriptPage setTokensResponse(int tokensResponse) {
         this.tokensResponse = tokensResponse;
+        return this;
+    }
+
+    public String getAiModel() {
+        return aiModel;
+    }
+
+    public EntityTranscriptPage setAiModel(String aiModel) {
+        this.aiModel = aiModel;
+        return this;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public EntityTranscriptPage setVersion(int version) {
+        this.version = version;
         return this;
     }
 }

@@ -12,7 +12,7 @@ public class DtoTranscript {
     private String name;
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-    private String aiModel;
+    //private String aiModel;
     private int pageCount;
     private int version;
     private List<DtoTranscriptPage> pages;
@@ -26,7 +26,6 @@ public class DtoTranscript {
         dto.title = transcript.getName();
         dto.transcripted_at = transcript.getTranscripted_at();
         dto.documented_at = transcript.getDocumented_at();
-        dto.aiModel = transcript.getAiModel();
         dto.pageCount = transcript.getPageCount();
         dto.version = transcript.getVersion();
 
@@ -55,11 +54,6 @@ public class DtoTranscript {
 
     public OffsetDateTime getDocumented_at() {
         return documented_at;
-    }
-
-
-    public String getAiModel() {
-        return aiModel;
     }
 
     public int getPageCount() {

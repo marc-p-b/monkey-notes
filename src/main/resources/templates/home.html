@@ -21,7 +21,9 @@
         <li th:each="fileNode : ${fileNodes}">
             <span th:if="${fileNode.folder}"><a th:href="@{/folder/pdf/{id}(id=${fileNode.dtoFile.fileId})}"><span th:text="${fileNode.name}"></span></a></span>
             <ul th:if="${fileNode.folder}">
-                <li th:replace="~{::subTree(${fileNode.children})}"></li>
+                <a th:href="@{/update/folder/{folderId}(folderId=${fileNode.dtoFile.fileId})}">Refresh</a>
+                <li th:replace="~{::subTree(${fileNode.children})}">
+                </li>
             </ul>
         </li>
     </ul>

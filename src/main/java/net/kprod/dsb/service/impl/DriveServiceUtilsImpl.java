@@ -49,6 +49,7 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
             }
             LOG.info("Downloaded name {} to {}", filename, targetFolder);
         } catch (IOException e) {
+            //todo ?
             LOG.error("Failed to download file {}", fileId, e);
         }
 

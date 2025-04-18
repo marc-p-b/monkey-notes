@@ -33,6 +33,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -565,6 +566,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if (completionResponse.isCompleted()) {
 
+
+
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
 
@@ -587,6 +590,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     .setTokensResponse(completionResponse.getTokensCompletion());
 
             repositoryTranscriptPage.save(entityTranscriptPage);
+
+            Optional<EntityTranscript> entityTranscript = repositoryTranscript.findById(idFile(fileId));
+            if (entityTranscript.isPresent()) {
+                entityTranscript.get().bumpVersion();
+                repositoryTranscript.save(entityTranscript.get());
+            }
+
+
+        } else {
+            LOG.error("Could not force page update for {} page {}", fileId, pageNumber);
         }
     }
 

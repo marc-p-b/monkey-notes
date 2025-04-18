@@ -2,6 +2,7 @@ package net.kprod.dsb.data;
 
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.data.entity.EntityFile;
+import net.kprod.dsb.data.entity.IdFile;
 import net.kprod.dsb.data.enums.FileType;
 
 import java.nio.file.Path;
@@ -28,11 +29,11 @@ public class File2Process {
         this.mimeType = file.getMd5Checksum() != null ? file.getMimeType() : "unknown";
     }
 
-    public EntityFile asDoc() {
+    public EntityFile asEntity(String username) {
 
         return new EntityFile()
                 .setType(FileType.transcript)
-                .setFileId(fileId)
+                .setIdFile(IdFile.createIdFile(username, fileId))
                 .setName(fileName)
                 .setMd5(md5)
                 .setParentFolderId(parentFolderId);

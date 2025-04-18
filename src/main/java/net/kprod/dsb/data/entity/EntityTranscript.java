@@ -1,5 +1,6 @@
 package net.kprod.dsb.data.entity;
 
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
@@ -8,18 +9,17 @@ import java.time.OffsetDateTime;
 
 @Entity(name="transcript")
 public class EntityTranscript {
-    @Id
-    private String fileId;
+    @EmbeddedId
+    private IdFile idFile;
     private String name;
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-    @Lob
-    private String aiModel; //todo rename me !!
+    private String aiModel;
     private int pageCount;
     private int version;
 
-    public EntityTranscript(String fileId) {
-        this.fileId = fileId;
+    public EntityTranscript(IdFile idFile) {
+        this.idFile = idFile;
         this.version = 1;
     }
 
@@ -27,12 +27,12 @@ public class EntityTranscript {
         this.version = 1;
     }
 
-    public String getFileId() {
-        return fileId;
+    public IdFile getIdFile() {
+        return idFile;
     }
 
-    public EntityTranscript setFileId(String fileId) {
-        this.fileId = fileId;
+    public EntityTranscript setIdFile(IdFile idFile) {
+        this.idFile = idFile;
         return this;
     }
 

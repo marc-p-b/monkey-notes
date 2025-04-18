@@ -7,8 +7,9 @@ import java.time.OffsetDateTime;
 
 @Entity(name="file")
 public class EntityFile {
-    @Id
-    private String fileId;
+    @EmbeddedId
+    private IdFile idFile;
+
     private String parentFolderId;
     @Column(length = 1024)
     private String name;
@@ -22,12 +23,12 @@ public class EntityFile {
         this.discovered_at = OffsetDateTime.now();
     }
 
-    public String getFileId() {
-        return fileId;
+    public IdFile getIdFile() {
+        return idFile;
     }
 
-    public EntityFile setFileId(String fileId) {
-        this.fileId = fileId;
+    public EntityFile setIdFile(IdFile idFile) {
+        this.idFile = idFile;
         return this;
     }
 

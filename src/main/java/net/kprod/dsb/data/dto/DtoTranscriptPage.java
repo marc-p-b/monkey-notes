@@ -6,6 +6,7 @@ import java.net.URL;
 
 public class DtoTranscriptPage {
     private String fileId;
+    private String username;
     private int pageNumber;
     private String transcript;
     private String transcriptHtml;
@@ -17,14 +18,24 @@ public class DtoTranscriptPage {
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
         DtoTranscriptPage dto = new DtoTranscriptPage()
-                .setFileId(page.getFileId())
-                .setPageNumber(page.getPageNumber())
+                .setUsername(page.getIdTranscriptPage().getUsername())
+                .setFileId(page.getIdTranscriptPage().getFileId())
+                .setPageNumber(page.getIdTranscriptPage().getPageNumber())
                 .setTranscript(page.getTranscript())
                 .setTranscriptHtml(page.getTranscript())
                 .setTranscriptTook(page.getTranscriptTook())
                 .setTokensPrompt(page.getTokensPrompt())
                 .setTokensResponse(page.getTokensResponse());
         return dto;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public DtoTranscriptPage setUsername(String username) {
+        this.username = username;
+        return this;
     }
 
     public String getFileId() {

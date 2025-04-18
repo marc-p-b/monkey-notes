@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public class DtoTranscript {
+    private String username;
     private String fileId;
     private String name;
     private OffsetDateTime transcripted_at;
@@ -19,7 +20,8 @@ public class DtoTranscript {
 
     public static DtoTranscript fromEntities(EntityTranscript transcript, List<EntityTranscriptPage> pages) {
         DtoTranscript dto = new DtoTranscript();
-        dto.fileId = transcript.getFileId();
+        dto.username = transcript.getIdFile().getUsername();
+        dto.fileId = transcript.getIdFile().getFileId();
         dto.name = transcript.getName();
         dto.title = transcript.getName();
         dto.transcripted_at = transcript.getTranscripted_at();
@@ -33,6 +35,10 @@ public class DtoTranscript {
                 .toList());
 
         return dto;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public String getFileId() {
@@ -86,4 +92,6 @@ public class DtoTranscript {
         this.pages = pages;
         return this;
     }
+
+
 }

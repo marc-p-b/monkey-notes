@@ -18,22 +18,27 @@ public class EntityTranscriptPage {
     public EntityTranscriptPage() {
     }
 
-    public EntityTranscriptPage(String fileId, int page) {
-        this.idTranscriptPage = new IdTranscriptPage(fileId, page);
+//    public EntityTranscriptPage(String username, String fileId, int page) {
+//        this.idTranscriptPage = new IdTranscriptPage(username, fileId, page);
+//
+//    }
 
+
+    public EntityTranscriptPage(IdTranscriptPage idTranscriptPage) {
+        this.idTranscriptPage = idTranscriptPage;
     }
 
     public IdTranscriptPage getIdTranscriptPage() {
         return idTranscriptPage;
     }
 
-    public String getFileId() {
-        return idTranscriptPage.getFileId();
-    }
-
-    public int getPageNumber() {
-        return idTranscriptPage.getPageNumber();
-    }
+//    public String getFileId() {
+//        return idTranscriptPage.getFileId();
+//    }
+//
+//    public int getPageNumber() {
+//        return idTranscriptPage.getPageNumber();
+//    }
 
     public EntityTranscriptPage setIdTranscriptPage(IdTranscriptPage idTranscriptPage) {
         this.idTranscriptPage = idTranscriptPage;

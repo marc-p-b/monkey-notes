@@ -1,11 +1,13 @@
 package net.kprod.dsb.data.dto;
 
 import net.kprod.dsb.data.entity.EntityFile;
+import net.kprod.dsb.data.entity.IdFile;
 import net.kprod.dsb.data.enums.FileType;
 
 import java.time.OffsetDateTime;
 
 public class DtoFile {
+    private String username;
     private String fileId;
     private String parentFolderId;
     private String name;
@@ -42,6 +44,13 @@ public class DtoFile {
 
 
     //TODO private setters
+
+
+    public DtoFile setUsername(String username) {
+        this.username = username;
+        return this;
+    }
+
     public DtoFile setFileId(String fileId) {
         this.fileId = fileId;
         return this;
@@ -111,8 +120,11 @@ public class DtoFile {
     }
 
     public static EntityFile toEntity(DtoFile dtoFile) {
+
+        IdFile idFile = IdFile.createIdFile(dtoFile.username, dtoFile.fileId);
+
         return new EntityFile()
-                .setFileId(dtoFile.fileId)
+                .setIdFile(idFile)
                 .setParentFolderId(dtoFile.parentFolderId)
                 .setName(dtoFile.name)
                 .setMd5(dtoFile.md5)
@@ -122,7 +134,8 @@ public class DtoFile {
 
     public static DtoFile fromEntity(EntityFile entityFile) {
         return new DtoFile()
-                .setFileId(entityFile.getFileId())
+                .setFileId(entityFile.getIdFile().getFileId())
+                .setUsername(entityFile.getIdFile().getUsername())
                 .setParentFolderId(entityFile.getParentFolderId())
                 .setName(entityFile.getName())
                 .setMd5(entityFile.getMd5())
@@ -133,7 +146,9 @@ public class DtoFile {
     @Override
     public String toString() {
         return "DtoFile{" +
-                "name='" + name + '\'' +
+                "username='" + username + '\'' +
+                ", fileId='" + fileId + '\'' +
+                ", name='" + name + '\'' +
                 '}';
     }
 }

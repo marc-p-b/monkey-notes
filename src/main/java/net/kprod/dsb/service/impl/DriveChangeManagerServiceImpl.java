@@ -5,6 +5,7 @@ import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
 import jakarta.annotation.PostConstruct;
+import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.tasks.FlushTask;
 import net.kprod.dsb.tasks.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
@@ -12,10 +13,6 @@ import net.kprod.dsb.data.ChangedFile;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
-import net.kprod.dsb.data.entity.EntityFile;
-import net.kprod.dsb.data.entity.EntityTranscript;
-import net.kprod.dsb.data.entity.EntityTranscriptPage;
-import net.kprod.dsb.data.entity.IdTranscriptPage;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
@@ -125,7 +122,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private RepositoryTranscript repositoryTranscript;
 
     @Autowired
-    RepositoryTranscriptPage repositoryTranscriptPage;
+    private RepositoryTranscriptPage repositoryTranscriptPage;
+
+    @Autowired
+    private AuthService authService;
+
+    private IdFile idFile(String fileId) {
+        return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
+    }
 
     //todo ?
     //@EventListener(ApplicationReadyEvent.class)
@@ -232,7 +236,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     String filename = change.getFile().getName();
                     LOG.info("Flushing fileid {} name {}", fileId, filename);
 
-                    Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
+                    Optional<EntityFile> optDoc = repositoryFile.findById(idFile(fileId));
 
                     File file = null;
                     try {
@@ -304,6 +308,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         try {
             sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncUpdateFolder(folderId));
         } catch (ServiceException e) {
+            LOG.error("Error while processing async folderId {}", folderId, e);
             throw new RuntimeException(e);
         }
 
@@ -360,7 +365,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
-                    Optional<EntityFile> optDoc = repositoryFile.findById(file.getId());
+                    Optional<EntityFile> optDoc = repositoryFile.findById(idFile(file.getId()));
                     if (file.getTrashed() == true) {
                         LOG.info("File is trashed {} {}", file.getId(), file.getName());
                     } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
@@ -388,11 +393,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             .map(f2p -> {
                 String fileId = f2p.getFileId();
 
-                Optional<EntityFile> optDoc = repositoryFile.findById(fileId);
+                Optional<EntityFile> optDoc = repositoryFile.findById(idFile(fileId));
                 if (optDoc.isPresent()) {
                     return optDoc.get();
                 } else {
-                    return f2p.asDoc();
+                    return f2p.asEntity(authService.getConnectedUsername());
                 }
             })
             .toList();
@@ -437,7 +442,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
 
                 String fileId = entry.getKey();
-                Optional<EntityTranscript> optDoc = repositoryTranscript.findById(fileId);
+                Optional<EntityTranscript> optDoc = repositoryTranscript.findById(idFile(fileId));
                 EntityTranscript entityTranscript = null;
                 if(optDoc.isPresent()) {
                     entityTranscript = optDoc.get();
@@ -450,7 +455,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 int page = 1;
                 for (CompletionResponse completionResponse : listCompletionResponse) {
 
-                    EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(fileId, page++)
+                    EntityTranscriptPage entityTranscriptPage = new EntityTranscriptPage(
+                            IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, page++))
                             .setTranscript(completionResponse.getTranscript())
                             .setTranscriptTook(completionResponse.getTranscriptTook())
                             .setTokensPrompt(completionResponse.getTokensPrompt())
@@ -461,7 +467,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 File2Process f2p = listCompletionResponse.get(0).getFile2Process();
 
                 entityTranscript = new EntityTranscript()
-                        .setFileId(fileId)
+                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), fileId))
                         .setName(f2p.getFileName())
                         .setTranscripted_at(OffsetDateTime.now())
                         .setDocumented_at(identifyDates(f2p))
@@ -494,13 +500,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         } else if (f2p.getParentFolderName() != null) {
             Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
 
-            try {
-                LocalDate ld = LocalDate.parse(m2.group(), DateTimeFormatter.ofPattern("yyMMdd"));
-                ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
-                documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
-            } catch (DateTimeParseException e) {
-                //  todo
-                LOG.warn("Could not parse date {}", m1.group(1), e);
+            if(m2.find()) {
+                try {
+                    LocalDate ld = LocalDate.parse(m2.group(), DateTimeFormatter.ofPattern("yyMMdd"));
+                    ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
+                    documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
+                } catch (DateTimeParseException e) {
+                    //  todo
+                    LOG.warn("Could not parse date {}", m1.group(1), e);
+                }
             }
         }
 
@@ -539,9 +547,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if (completionResponse.isCompleted()) {
 
-            IdTranscriptPage idTranscriptPage = new IdTranscriptPage(fileId, pageNumber);
+            //IdTranscriptPage idTranscriptPage = new IdTranscriptPage(fileId, pageNumber);
 
-            Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(idTranscriptPage);
+            Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
+                    IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
 
             EntityTranscriptPage entityTranscriptPage = null;
             if (optTranscriptPage.isPresent()) {
@@ -551,7 +560,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         .setTokensPrompt(completionResponse.getTokensPrompt())
                         .setTokensResponse(completionResponse.getTokensCompletion());
             } else {
-                entityTranscriptPage = new EntityTranscriptPage(fileId, pageNumber)
+                entityTranscriptPage = new EntityTranscriptPage(
+                        IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber))
                         .setTranscript(completionResponse.getTranscript())
                         .setTranscriptTook(completionResponse.getTranscriptTook())
                         .setTokensPrompt(completionResponse.getTokensPrompt())
@@ -635,15 +645,17 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         List<EntityFile> folders = new ArrayList<>();
         EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder)
                 .orElse(new EntityFile()
+                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), inboundFolderId))
                         .setType(FileType.folder)
-                        .setName("/").setFileId(inboundFolderId));
+                        .setName("/"));
         folders.add(rootFolder);
 
         for(File folderFile : ancestors) {
 
             EntityFile folder = new EntityFile()
+                    //.setFileId(folderFile.getId())
+                    .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), folderFile.getId()))
                     .setType(FileType.folder)
-                    .setFileId(folderFile.getId())
                     .setName(folderFile.getName());
 
             if(!folderFile.getParents().isEmpty()) {

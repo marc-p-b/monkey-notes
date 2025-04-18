@@ -42,10 +42,6 @@ public class DtoFile {
         return type;
     }
 
-
-    //TODO private setters
-
-
     public DtoFile setUsername(String username) {
         this.username = username;
         return this;

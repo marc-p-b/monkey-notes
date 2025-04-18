@@ -26,7 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -132,8 +134,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     //todo ?
-    //@EventListener(ApplicationReadyEvent.class)
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
+    //@PostConstruct
     void startup() {
         LOG.info("Starting up");
         Runnable runnable = new Runnable() {
@@ -213,6 +215,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
+        //use completable future ?
         processFlushed(monitoringService.getCurrentMonitoringData(), setFlushedFileId);
     }
 
@@ -495,7 +498,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
             } catch (DateTimeParseException e) {
                 //  todo
-                // LOG.warn("Could not parse date {}", m1.group(1), e);
+                LOG.warn("Could not parse date in file title {}", m1.group(1), e);
             }
         } else if (f2p.getParentFolderName() != null) {
             Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
@@ -507,7 +510,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
                 } catch (DateTimeParseException e) {
                     //  todo
-                    LOG.warn("Could not parse date {}", m1.group(1), e);
+                    LOG.warn("Could not parse date in parent title {}", m1.group(1), e);
                 }
             }
         }
@@ -547,8 +550,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if (completionResponse.isCompleted()) {
 
-            //IdTranscriptPage idTranscriptPage = new IdTranscriptPage(fileId, pageNumber);
-
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
 
@@ -570,8 +571,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             repositoryTranscriptPage.save(entityTranscriptPage);
         }
     }
-
-
 
     public void watchStop() throws IOException {
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
@@ -667,17 +666,4 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         //todo return dto instead
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }
-
-
-    private void removeFileIfExists(Path target) {
-        if(target.toFile().exists()) {
-            if(target.toFile().delete()) {
-                LOG.info("deleted file {}", target);
-            } else {
-                LOG.info("failed to delete folder {}", target);
-            }
-        }
-    }
-
-
 }

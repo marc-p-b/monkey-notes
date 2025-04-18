@@ -75,18 +75,11 @@ public class DriveServiceImpl implements DriveService {
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
 
-    //@EventListener(ApplicationReadyEvent.class)
     @Override
     public Optional<String> requireAuth() {
-
-//        if(credential != null) {
-//            return Optional.empty();
-//        }
-
         HttpTransport httpTransport = new NetHttpTransport();
 
         //request auth
-
         try {
             authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
                     .setDataStoreFactory(new FileDataStoreFactory(new File(credentialsPath)))
@@ -217,9 +210,6 @@ public class DriveServiceImpl implements DriveService {
         taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
 
         this.getDriveConnection();
-//        googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-//                .setApplicationName(APPLICATION_NAME)
-//                .build();
         LOG.info("Credential refreshed, gdrive connected {}", googleDrive != null  ? "yes" : "no");
     }
 

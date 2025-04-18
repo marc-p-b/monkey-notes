@@ -79,8 +79,6 @@ public class QwenServiceImpl implements QwenService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + qwenApiKey);
 
-            //LOG.info("debug json {}", requestBody.toString());
-
             String respBody;
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
             long start = System.currentTimeMillis();

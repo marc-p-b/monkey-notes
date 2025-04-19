@@ -20,6 +20,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Controller
 public class DefaultController {
@@ -27,9 +29,6 @@ public class DefaultController {
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
-
-    @Autowired
-    private DriveService driveService;
 
     @Autowired
     private ViewService viewService;
@@ -124,4 +123,17 @@ public class DefaultController {
         }
         return bytes;
     }
+
+    @GetMapping("/asyncProcesses")
+    public ResponseEntity<String> asyncProcesses() {
+        Map<String, CompletableFuture> map = driveChMgmtService.getMapAsyncProcess();
+
+        map.entrySet().stream()
+                .forEach(entry -> {
+                    LOG.info("asyncProcesses: {} status {}", entry.getKey(), entry.getValue().isDone());
+                });
+
+        return ResponseEntity.ok().body("OK");
+    }
+
 }

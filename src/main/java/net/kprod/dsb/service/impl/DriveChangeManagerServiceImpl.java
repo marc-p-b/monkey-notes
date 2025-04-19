@@ -547,7 +547,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    @Async
+    //@Async
     public void runAsyncForcePageUpdate(MonitoringData monitoringData, String fileId, int pageNumber, URL imageURL, String model, String prompt) {
 
         SupplyAsync sa = null;
@@ -558,7 +558,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             throw new RuntimeException(e);
         }
 
-        CompletableFuture.supplyAsync(sa);
+        mapAsyncProcess.put("runAsyncForcePageUpdate", CompletableFuture.supplyAsync(sa));
+
+        LOG.info("Done");
+
+    }
+
+    Map<String, CompletableFuture> mapAsyncProcess = new HashMap<>();
+
+    public Map<String, CompletableFuture> getMapAsyncProcess() {
+        return mapAsyncProcess;
     }
 
     private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL, String model, String prompt) {

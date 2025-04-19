@@ -4,6 +4,7 @@ import net.kprod.dsb.ServiceException;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public interface DriveChangeManagerService {
     void updateAll();
@@ -17,4 +18,5 @@ public interface DriveChangeManagerService {
     //CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
     String updateAncestorsFolders(String fileId) throws ServiceException;
     void forcePageUpdate(String fileId, int pageNumber, String model, String prompt);
+    Map<String, CompletableFuture> getMapAsyncProcess();
 }

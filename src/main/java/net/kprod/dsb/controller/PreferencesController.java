@@ -36,7 +36,7 @@ public class PreferencesController {
 
     @PostMapping("/form/preferences")
     public String savePreferences(@RequestParam Map<String, String> formData) {
-        System.out.println(formData);
+        preferencesService.setPreference(formData);
         return "preferences";
     }
 

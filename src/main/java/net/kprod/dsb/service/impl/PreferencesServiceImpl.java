@@ -12,9 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,8 +78,16 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     @Override
-    public void setPreference(DtoConfig dtoConfig) {
-
+    public void setPreference(Map<String, String> formData) {
+        List<DtoConfig> list = new ArrayList<>();
+        formData.forEach((k, v) -> {
+            list.add(new DtoConfig(authService.getConnectedUsername(), ConfigKey.valueOf(k), v));
+        });
+        list.add(new DtoConfig(authService.getConnectedUsername(), ConfigKey.set, "done"));
+        List<EntityConfig> listE = list.stream()
+                .map(DtoConfig::toEntity)
+                .toList();
+        repositoryConfig.saveAll(listE);
     }
 
     @Override

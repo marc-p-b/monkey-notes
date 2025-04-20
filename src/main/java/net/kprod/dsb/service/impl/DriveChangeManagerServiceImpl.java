@@ -298,25 +298,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public void updateFolder(String folderId) {
-        updateFolder2(monitoringService.getCurrentMonitoringData(), folderId);
-    }
-
-    //todo fix naming
-    public CompletableFuture<AsyncResult> updateFolder2(MonitoringData monitoringData, String folderId) {
-        SupplyAsync sa = null;
-
+        LOG.info("Prepare Async (Update folder id {})", folderId);
         try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncUpdateFolder(folderId));
+            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    () -> asyncUpdateFolder(folderId));
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+            mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (ServiceException e) {
-            LOG.error("Error while processing async folderId {}", folderId, e);
             throw new RuntimeException(e);
         }
-
-        return CompletableFuture.supplyAsync(sa);
     }
 
-    @Async
-    public void asyncUpdateFolder(String folderId) {
+    private void asyncUpdateFolder(String folderId) {
+        LOG.info("Processing : Update folder id {}", folderId);
         File gFolder = null;
         try {
             //check this is a folder
@@ -340,6 +334,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
 
         runListAsyncProcess(files2Process);
+        LOG.info("Completed : Update folder id {}", folderId);
     }
 
     private List<File2Process> recursRefreshFolder(String currentFolderId, String offset, int max_depth, String currentFolderPath, String currentFolderName, List<File2Process> remoteFiles) {
@@ -557,9 +552,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     AsyncResult asyncResult = entry.getValue().get();
                     switch (entry.getValue().get().getState()) {
                         case failed ->
-                                LOG.error("Processing {} failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
-                        case completed -> LOG.info("Processing {} completed", entry.getKey());
-                        default -> LOG.error("Processing {} unknown state", entry.getKey()); // should not happen
+                                LOG.error("Processing {} : failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
+                        case completed -> LOG.info("Processing {} : completed", entry.getKey());
+                        default -> LOG.error("Processing {} : unknown state", entry.getKey()); // should not happen
                     }
                 } catch (InterruptedException e2) {
                     throw new RuntimeException(e2);
@@ -567,7 +562,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     throw new RuntimeException(e2);
                 }
             } else {
-                LOG.info("Processing {} is running", entry.getKey());
+                LOG.info("Processing {} : running", entry.getKey());
             }
         }
 
@@ -608,12 +603,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 entityTranscript.get().bumpVersion();
                 repositoryTranscript.save(entityTranscript.get());
             }
-
-
         } else {
+            //todo throw ?
             LOG.error("Could not force page update for {} page {}", fileId, pageNumber);
         }
-        LOG.info("Done : Force page update for {} page {}", fileId, pageNumber);
+        LOG.info("Completed : Force page update for {} page {}", fileId, pageNumber);
     }
 
     public void watchStop() throws IOException {

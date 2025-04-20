@@ -1,21 +1,38 @@
 package net.kprod.dsb.monitoring;
 
 public class AsyncResult {
+    public enum State {
+        unknown,
+        completed,
+        failed;
+    };
     private Long runTime;
     private Exception exception;
+    private State state = State.unknown;
 
     private AsyncResult() {
     }
 
     public static AsyncResult success(long runTime) {
         return new AsyncResult()
+                .setState(State.completed)
                 .setRunTime(runTime);
     }
 
     public static AsyncResult failure(long runTime, Exception e) {
         return new AsyncResult()
+                .setState(State.failed)
                 .setRunTime(runTime)
                 .setException(e);
+    }
+
+    public State getState() {
+        return state;
+    }
+
+    public AsyncResult setState(State state) {
+        this.state = state;
+        return this;
     }
 
     public Long getRunTime() {
@@ -37,7 +54,11 @@ public class AsyncResult {
     }
 
     public boolean isSuccessful() {
-        return exception == null;
+        return state == State.completed;
+    }
+
+    public boolean isFailure() {
+        return state == State.failed;
     }
 }
 

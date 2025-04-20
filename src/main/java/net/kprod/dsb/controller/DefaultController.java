@@ -126,12 +126,13 @@ public class DefaultController {
 
     @GetMapping("/asyncProcesses")
     public ResponseEntity<String> asyncProcesses() {
-        Map<String, CompletableFuture> map = driveChMgmtService.getMapAsyncProcess();
-
-        map.entrySet().stream()
-                .forEach(entry -> {
-                    LOG.info("asyncProcesses: {} status {}", entry.getKey(), entry.getValue().isDone());
-                });
+//        Map<String, CompletableFuture<String>> map = driveChMgmtService.getMapAsyncProcess();
+//
+//        map.entrySet().stream()
+//                .forEach(entry -> {
+//                    LOG.info("asyncProcesses: {} status {}", entry.getKey(), entry.getValue().isDone());
+//                });
+        driveChMgmtService.getMapAsyncProcess();
 
         return ResponseEntity.ok().body("OK");
     }

@@ -4,8 +4,8 @@ import com.google.api.services.drive.model.Change;
 import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
-import jakarta.annotation.PostConstruct;
 import net.kprod.dsb.data.entity.*;
+import net.kprod.dsb.monitoring.*;
 import net.kprod.dsb.tasks.FlushTask;
 import net.kprod.dsb.tasks.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
@@ -17,10 +17,6 @@ import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
-import net.kprod.dsb.monitoring.AsyncResult;
-import net.kprod.dsb.monitoring.MonitoringData;
-import net.kprod.dsb.monitoring.MonitoringService;
-import net.kprod.dsb.monitoring.SupplyAsync;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +29,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
-import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -46,6 +41,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -536,47 +532,54 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public void forcePageUpdate(String fileId, int pageNumber, String model, String prompt) {
-
-        LOG.info("Force page update for {} page {}", fileId, pageNumber);
+        LOG.info("Prepare Async (Force page update for {} page {})", fileId, pageNumber);
         try {
             URL imageURL = utilsService.imageURL(fileId, pageNumber);
-            runAsyncForcePageUpdate(monitoringService.getCurrentMonitoringData(), fileId, pageNumber, imageURL, model, prompt);
+            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    () -> asyncForcePageUpdate(fileId, pageNumber, imageURL, model, prompt));
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+            mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (MalformedURLException e) {
-            //todo error
-            LOG.error("Could not parse URL {}", fileId, e);
-        }
-    }
-
-    //@Async
-    public void runAsyncForcePageUpdate(MonitoringData monitoringData, String fileId, int pageNumber, URL imageURL, String model, String prompt) {
-
-        SupplyAsync sa = null;
-
-        try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncForcePageUpdate(fileId, pageNumber, imageURL, model, prompt));
+            LOG.warn("Failed to create image url {}", fileId, e);
         } catch (ServiceException e) {
             throw new RuntimeException(e);
         }
-
-        mapAsyncProcess.put("runAsyncForcePageUpdate", CompletableFuture.supplyAsync(sa));
-
-        LOG.info("Done");
-
     }
 
-    Map<String, CompletableFuture> mapAsyncProcess = new HashMap<>();
+    Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
 
-    public Map<String, CompletableFuture> getMapAsyncProcess() {
+    public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
+        for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
+
+            //entry.getValue().whenComplete((result, e) -> { //this could be usefull ; when call, when complete firesup when future is completed
+            if (entry.getValue().isDone()) {
+                try {
+                    AsyncResult asyncResult = entry.getValue().get();
+                    switch (entry.getValue().get().getState()) {
+                        case failed ->
+                                LOG.error("Processing {} failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
+                        case completed -> LOG.info("Processing {} completed", entry.getKey());
+                        default -> LOG.error("Processing {} unknown state", entry.getKey()); // should not happen
+                    }
+                } catch (InterruptedException e2) {
+                    throw new RuntimeException(e2);
+                } catch (ExecutionException e2) {
+                    throw new RuntimeException(e2);
+                }
+            } else {
+                LOG.info("Processing {} is running", entry.getKey());
+            }
+        }
+
         return mapAsyncProcess;
     }
 
+    @MonitoringAsync
     private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL, String model, String prompt) {
+        LOG.info("Processing : Force page update for {} page {}", fileId, pageNumber);
         CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL, model, prompt);
 
         if (completionResponse.isCompleted()) {
-
-
-
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
 
@@ -610,6 +613,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         } else {
             LOG.error("Could not force page update for {} page {}", fileId, pageNumber);
         }
+        LOG.info("Done : Force page update for {} page {}", fileId, pageNumber);
     }
 
     public void watchStop() throws IOException {

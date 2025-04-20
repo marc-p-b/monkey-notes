@@ -24,28 +24,28 @@ public class ControllerLogAsyncAspect {
      * @return
      * @throws Throwable
      */
-    @Around("@annotation(org.springframework.scheduling.annotation.Async)"
+    @Around("@annotation(net.kprod.dsb.monitoring.MonitoringAsync)"
             + " && !@annotation(net.kprod.dsb.monitoring.MonitoringDisable)")
     public void asyncMethodInterceptor(ProceedingJoinPoint joinPoint) throws Throwable {
         Object proceed = joinPoint.proceed();
-        if(proceed instanceof CompletableFuture) {
-                CompletableFuture<?> future = (CompletableFuture<?>) proceed;
-                future.thenAccept(futureReturnValue -> {
-
-                    if (futureReturnValue instanceof AsyncResult) {
-                        AsyncResult result = (AsyncResult) futureReturnValue;
-                        if(result.isSuccessful()) {
-                            monitoringService.end(result.getRunTime());
-                        } else {
-                            //monitoringService.logException("Async handler", result.getException());
-                            //LOG.error("AsyncHandler caught exception", result.getException());
-                            System.err.println("AsyncHandler caught exception : " + result.getException());
-                        }
-                    }
-                });
-        } else {
-            //LOG.error("Async method does not return CompletableFuture");
-            System.err.println("Async method does not return CompletableFuture");
-        }
+//        if(proceed instanceof CompletableFuture) {
+//                CompletableFuture<?> future = (CompletableFuture<?>) proceed;
+//                future.thenAccept(futureReturnValue -> {
+//
+//                    if (futureReturnValue instanceof AsyncResult) {
+//                        AsyncResult result = (AsyncResult) futureReturnValue;
+//                        if(result.isSuccessful()) {
+//                            monitoringService.end(result.getRunTime());
+//                        } else {
+//                            //monitoringService.logException("Async handler", result.getException());
+//                            //LOG.error("AsyncHandler caught exception", result.getException());
+//                            System.err.println("AsyncHandler caught exception : " + result.getException());
+//                        }
+//                    }
+//                });
+//        } else {
+//            //LOG.error("Async method does not return CompletableFuture");
+//            System.err.println("Async method does not return CompletableFuture");
+//        }
     }
 }

@@ -40,11 +40,8 @@ public class SupplyAsync implements Supplier {
         try {
             runnable.runThrows();
         } catch (Exception e) {
-
-            //todo how to log this ?
             return AsyncResult.failure(System.currentTimeMillis() - start, e);
         }
-
         return AsyncResult.success(System.currentTimeMillis() - start);
     }
 }

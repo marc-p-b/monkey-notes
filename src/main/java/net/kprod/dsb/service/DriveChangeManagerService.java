@@ -1,6 +1,7 @@
 package net.kprod.dsb.service;
 
 import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.monitoring.AsyncResult;
 
 import java.io.IOException;
 import java.util.Map;
@@ -18,5 +19,5 @@ public interface DriveChangeManagerService {
     //CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
     String updateAncestorsFolders(String fileId) throws ServiceException;
     void forcePageUpdate(String fileId, int pageNumber, String model, String prompt);
-    Map<String, CompletableFuture> getMapAsyncProcess();
+    Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess();
 }

@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Monkey notes</title>
+
+</head>
+<body>
+
+<div>
+    <a href="/">Home</a>
+
+</div>
+
+<h2>Current processing</h2>
+
+<ul>
+    <li th:each="process : ${processes}">
+        <span th:text="${process}"></span>
+    </li>
+</ul>
+
+</body>
+</html>

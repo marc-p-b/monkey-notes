@@ -130,9 +130,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
     }
 
-    //todo ?
     @EventListener(ApplicationReadyEvent.class)
-    //@PostConstruct
     void startup() {
         LOG.info("Starting up");
         Runnable runnable = new Runnable() {
@@ -205,6 +203,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public synchronized void flushChanges() {
+        LOG.info("Prepare Async (flushChanges)");
+
         long now = System.currentTimeMillis();
         Set<String> setFlushedFileId = mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion
@@ -212,24 +212,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        //use completable future ?
-        processFlushed(monitoringService.getCurrentMonitoringData(), setFlushedFileId);
-    }
-
-    public CompletableFuture<AsyncResult> processFlushed(MonitoringData monitoringData, Set<String> setFlushedFileId) {
-
-
-        //TODO
-
-        SupplyAsync sa = null;
-
         try {
-            sa = new SupplyAsync(monitoringService, monitoringData, () -> asyncProcessFlushed(setFlushedFileId));
+            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    () -> asyncProcessFlushed(setFlushedFileId));
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+            mapAsyncProcess.put("flushChanges-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            LOG.error("Failed preparing flushChanges async", e);
         }
 
-        return CompletableFuture.supplyAsync(sa);
     }
 
     public void asyncProcessFlushed(Set<String> setFlushedFileId) {
@@ -310,7 +301,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("updateFolder-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            LOG.info("Failed to prepare updateFolder async", e);
         }
     }
 
@@ -544,36 +535,36 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (MalformedURLException e) {
-            LOG.warn("Failed to create image url {}", fileId, e);
+            LOG.error("Failed to create image url {}", fileId, e);
         } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            LOG.error("Failed to prepare runAsyncForcePageUpdate async", e);
         }
     }
 
     Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
 
     public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
-        for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
-
-            //entry.getValue().whenComplete((result, e) -> { //this could be usefull ; when call, when complete firesup when future is completed
-            if (entry.getValue().isDone()) {
-                try {
-                    AsyncResult asyncResult = entry.getValue().get();
-                    switch (entry.getValue().get().getState()) {
-                        case failed ->
-                                LOG.error("Processing {} : failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
-                        case completed -> LOG.info("Processing {} : completed", entry.getKey());
-                        default -> LOG.error("Processing {} : unknown state", entry.getKey()); // should not happen
-                    }
-                } catch (InterruptedException e2) {
-                    throw new RuntimeException(e2);
-                } catch (ExecutionException e2) {
-                    throw new RuntimeException(e2);
-                }
-            } else {
-                LOG.info("Processing {} : running", entry.getKey());
-            }
-        }
+//        for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
+//
+//            //entry.getValue().whenComplete((result, e) -> { //this could be usefull ; when call, when complete firesup when future is completed
+//            if (entry.getValue().isDone()) {
+//                try {
+//                    AsyncResult asyncResult = entry.getValue().get();
+//                    switch (entry.getValue().get().getState()) {
+//                        case failed ->
+//                                LOG.error("Processing {} : failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
+//                        case completed -> LOG.info("Processing {} : completed", entry.getKey());
+//                        default -> LOG.error("Processing {} : unknown state", entry.getKey()); // should not happen
+//                    }
+//                } catch (InterruptedException e2) {
+//                    throw new RuntimeException(e2);
+//                } catch (ExecutionException e2) {
+//                    throw new RuntimeException(e2);
+//                }
+//            } else {
+//                LOG.info("Processing {} : running", entry.getKey());
+//            }
+//        }
 
         return mapAsyncProcess;
     }

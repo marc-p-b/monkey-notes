@@ -217,6 +217,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public CompletableFuture<AsyncResult> processFlushed(MonitoringData monitoringData, Set<String> setFlushedFileId) {
+
+
+        //TODO
+
         SupplyAsync sa = null;
 
         try {
@@ -273,6 +277,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                 .setFilePath(downloadFileFromDrive)
                                 .setParentFolderId(parentFolder.getId())
                                 .setParentFolderName(parentFolder.getName());
+                        //todo set md5 here ??
 
                         returnObject = Optional.of(file2Process);
                     }  else {
@@ -303,7 +308,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            mapAsyncProcess.put("updateFolder-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (ServiceException e) {
             throw new RuntimeException(e);
         }
@@ -371,6 +376,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                     optDoc.isPresent() == false) {
                         //new or updated file
                         remoteFiles.add(new File2Process(file)
+                                //todo : md5 was suppresed by mistake ?
+                                .setMd5(file.getMd5Checksum())
                                 .setParentFolderId(currentFolderId)
                                 .setParentFolderName(currentFolderName));
                     } else {
@@ -390,7 +397,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
                 Optional<EntityFile> optDoc = repositoryFile.findById(idFile(fileId));
                 if (optDoc.isPresent()) {
-                    return optDoc.get();
+                    return optDoc.get()
+                            //updapte md5
+                            .setMd5(f2p.getMd5());
                 } else {
                     return f2p.asEntity(authService.getConnectedUsername());
                 }

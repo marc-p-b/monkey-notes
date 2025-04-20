@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface RepositoryConfig extends JpaRepository<EntityConfig, EntityConfigId> {
     Optional<EntityConfig> findByConfigId(EntityConfigId configId);
+    void deleteByConfigId_Username(String username);
 }

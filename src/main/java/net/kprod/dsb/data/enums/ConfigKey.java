@@ -5,6 +5,8 @@ public enum ConfigKey {
     prompt,
     model,
     modelTimeout,
-    useDefaultPrompt;
+    useDefaultPrompt,
+    inputFolderId,
+    outputFolderId;
 
 }

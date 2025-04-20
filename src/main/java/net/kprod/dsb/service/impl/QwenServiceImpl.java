@@ -10,16 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-
 
 @Service
 public class QwenServiceImpl implements QwenService {
@@ -81,9 +77,10 @@ public class QwenServiceImpl implements QwenService {
 
             String respBody;
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
+
             long start = System.currentTimeMillis();
             try {
-                ResponseEntity<String> response = new RestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
+                ResponseEntity<String> response = createRestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
                 respBody = response.getBody();
             } catch (RuntimeException e) {
                 throw new ServiceException("Failed to execute Qwen API", e);
@@ -104,6 +101,14 @@ public class QwenServiceImpl implements QwenService {
             completionResponse = CompletionResponse.failed(fileId, e.getMessage());
         }
         return completionResponse;
+    }
+
+    public RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(120000); // milliseconds
+        factory.setReadTimeout(150000);   // milliseconds
+
+        return new RestTemplate(factory);
     }
 
     @Override

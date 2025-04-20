@@ -9,4 +9,5 @@ public interface PreferencesService {
     List<DtoConfig> listPreferences();
     DtoConfig getPreference(ConfigKey configKey);
     void setPreference(DtoConfig dtoConfig);
+    void resetPreference();
 }

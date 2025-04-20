@@ -5,10 +5,12 @@ import net.kprod.dsb.data.entity.EntityConfig;
 import net.kprod.dsb.data.entity.EntityConfigId;
 import net.kprod.dsb.data.enums.ConfigKey;
 import net.kprod.dsb.data.repository.RepositoryConfig;
+import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.PreferencesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,6 +19,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class PreferencesServiceImpl implements PreferencesService {
+
+    @Autowired
+    private AuthService authService;
+
     @Autowired
     private RepositoryConfig repositoryConfig;
 
@@ -28,19 +34,16 @@ public class PreferencesServiceImpl implements PreferencesService {
 
     @Override
     public List<DtoConfig> listPreferences() {
-
-        String username = "marc";
-
-        EntityConfigId entityConfigId = new EntityConfigId(username, ConfigKey.set);
+        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), ConfigKey.set);
 
         Optional<EntityConfig> optConfig = repositoryConfig.findByConfigId(entityConfigId);
 
         if(optConfig.isEmpty()) {
-            return initPreferences(username);
+            return initPreferences(authService.getConnectedUsername());
         } else {
             return Arrays.stream(ConfigKey.values())
                     .map(k -> {
-                        return getConfig(username, k);
+                        return getConfig(authService.getConnectedUsername(), k);
                     })
                     .filter(Optional::isPresent)
                     .map(Optional::get)
@@ -59,7 +62,10 @@ public class PreferencesServiceImpl implements PreferencesService {
                 new EntityConfig(new EntityConfigId(username, ConfigKey.set), "done"),
                 new EntityConfig(new EntityConfigId(username, ConfigKey.prompt), qwenPrompt),
                 new EntityConfig(new EntityConfigId(username, ConfigKey.model), qwenModel),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.useDefaultPrompt), "true"));
+                new EntityConfig(new EntityConfigId(username, ConfigKey.useDefaultPrompt), "true"),
+                new EntityConfig(new EntityConfigId(username, ConfigKey.inputFolderId), ""),
+                new EntityConfig(new EntityConfigId(username, ConfigKey.outputFolderId), "")
+        );
 
         repositoryConfig.saveAll(list);
 
@@ -76,5 +82,12 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Override
     public void setPreference(DtoConfig dtoConfig) {
 
+    }
+
+    @Override
+    @Transactional
+    public void resetPreference() {
+        repositoryConfig.deleteByConfigId_Username(authService.getConnectedUsername());
+        //this.initPreferences(authService.getConnectedUsername());
     }
 }

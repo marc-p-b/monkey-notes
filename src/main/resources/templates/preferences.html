@@ -8,7 +8,19 @@
 <h2>Preferences</h2>
 
 
+<form method="post" th:action="@{/form/preferences}">
+<ul>
+    <li th:each="pref : ${preferences}">
+        <label th:text="${pref.key}" th:for="${pref.key}" />
+        <input type="text" th:name="${pref.key}" th:value="${pref.value}" />
+    </li>
+    <input type="submit" value="save" />
+</ul>
+</form>
 
+<form th:action="@{/preferences/reset}">
+    <input type="submit" value="reset" />
+</form>
 
 </body>
 </html>

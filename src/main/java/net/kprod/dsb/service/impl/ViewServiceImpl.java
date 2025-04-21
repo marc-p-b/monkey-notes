@@ -10,10 +10,7 @@ import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
-import net.kprod.dsb.service.AuthService;
-import net.kprod.dsb.service.PdfService;
-import net.kprod.dsb.service.UtilsService;
-import net.kprod.dsb.service.ViewService;
+import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,14 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ViewServiceImpl implements ViewService {
-
     Logger LOG = LoggerFactory.getLogger(ViewServiceImpl.class);
-
-    @Value("${app.drive.folders.in}")
-    private String inboundFolderId;
-
-    @Value("${app.drive.folders.out}")
-    private String outFolderId;
 
     @Autowired
     private RepositoryFile repositoryFile;
@@ -51,6 +41,9 @@ public class ViewServiceImpl implements ViewService {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private PreferencesService preferencesService;
 
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
@@ -129,6 +122,14 @@ public class ViewServiceImpl implements ViewService {
 
     @Override
     public List<FileNode> listFolders() {
+
+        String inboundFolderId = null;
+        try {
+            inboundFolderId = preferencesService.getInputFolderId();
+        } catch (ServiceException e) {
+            LOG.warn("inbound folder id not set", e);
+            return Collections.emptyList();
+        }
 
         List<FileNode> folders = null;
         try {

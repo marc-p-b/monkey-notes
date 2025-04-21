@@ -33,22 +33,24 @@ public class PreferencesServiceImpl implements PreferencesService {
 
     @Override
     public List<DtoConfig> listPreferences() {
-        if(isParametersSet()) {
+        if(isParametersSet() == false) {
             return initPreferences(authService.getConnectedUsername());
         } else {
-            return Arrays.stream(ConfigKey.values())
+            List<DtoConfig> list = Arrays.stream(ConfigKey.values())
                     .map(k -> {
                         return getConfig(authService.getConnectedUsername(), k);
                     })
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .toList();
+            return list;
         }
     }
 
     private boolean isParametersSet() {
         EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), ConfigKey.set);
-        return repositoryConfig.findByConfigId(entityConfigId).isPresent();
+        Optional<EntityConfig> optEntity = repositoryConfig.findByConfigId(entityConfigId);
+        return optEntity.isPresent();
     }
 
     private Optional<DtoConfig> getConfig(String username, ConfigKey key) {
@@ -118,6 +120,5 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Transactional
     public void resetPreference() {
         repositoryConfig.deleteByConfigId_Username(authService.getConnectedUsername());
-        //this.initPreferences(authService.getConnectedUsername());
     }
 }

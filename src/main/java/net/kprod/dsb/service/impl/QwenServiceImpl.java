@@ -48,7 +48,8 @@ public class QwenServiceImpl implements QwenService {
             return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageURL + "(dry-run)");
         }
 
-        CompletionResponse completionResponse = null;
+        CompletionResponse completionResponse = new CompletionResponse(fileId);
+        long start = System.currentTimeMillis();
         try {
             JSONObject content1_url = new JSONObject();
 
@@ -78,7 +79,6 @@ public class QwenServiceImpl implements QwenService {
             String respBody;
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
 
-            long start = System.currentTimeMillis();
             try {
                 ResponseEntity<String> response = createRestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
                 respBody = response.getBody();
@@ -97,8 +97,10 @@ public class QwenServiceImpl implements QwenService {
             completionResponse = new CompletionResponse(fileId, took, usedModel, prompt_tokens, completion_tokens, content);
 
         } catch (Exception e) {
+            long took = System.currentTimeMillis() - start;
             LOG.error("Failed request model", e);
-            completionResponse = CompletionResponse.failed(fileId, e.getMessage());
+            //todo more info
+            completionResponse.failed(fileId, e.getMessage());
         }
         return completionResponse;
     }

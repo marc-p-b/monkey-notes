@@ -87,5 +87,12 @@ public class DtoTranscript {
         return this;
     }
 
+    public boolean isCompleted() {
+        return completed;
+    }
 
+    public DtoTranscript setCompleted(boolean completed) {
+        this.completed = completed;
+        return this;
+    }
 }

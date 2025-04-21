@@ -474,7 +474,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.info("Images converted {}", listCompletionResponse.size());
 
             Map<String, List<CompletionResponse>> mapCompleted = listCompletionResponse.stream()
-                .filter(CompletionResponse::isCompleted)
+                //.filter(CompletionResponse::isCompleted)
                 .collect(Collectors.groupingBy(CompletionResponse::getFileId));
 
             for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
@@ -510,12 +510,23 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                                 .setIdTranscriptPage(idTranscriptPage);
 
                     }
-                    entityTranscriptPage
-                        .setTranscript(completionResponse.getTranscript())
-                        .setAiModel(completionResponse.getAiModel())
-                        .setTranscriptTook(completionResponse.getTranscriptTook())
-                        .setTokensPrompt(completionResponse.getTokensPrompt())
-                        .setTokensResponse(completionResponse.getTokensCompletion());
+                    if(completionResponse.isCompleted()) {
+                        entityTranscriptPage
+                                .setTranscript(completionResponse.getTranscript())
+                                .setAiModel(completionResponse.getAiModel())
+                                .setTranscriptTook(completionResponse.getTranscriptTook())
+                                .setTokensPrompt(completionResponse.getTokensPrompt())
+                                .setTokensResponse(completionResponse.getTokensCompletion())
+                                .setCompleted(true);
+                    } else {
+                        entityTranscriptPage
+                                .setTranscript("Transcription failed")
+                                .setCompleted(false);
+                                //.setAiModel(completionResponse.getAiModel())
+                                //.setTranscriptTook(completionResponse.getTranscriptTook())
+                                //.setTokensPrompt(completionResponse.getTokensPrompt())
+                                //.setTokensResponse(completionResponse.getTokensCompletion());
+                    }
                     repositoryTranscriptPage.save(entityTranscriptPage);
                 }
 

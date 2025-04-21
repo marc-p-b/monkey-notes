@@ -16,6 +16,7 @@ public class EntityTranscriptPage {
     private int tokensPrompt;
     private int tokensResponse;
     private int version;
+    private boolean completed;
 
     public EntityTranscriptPage() {
         version = 1;
@@ -85,6 +86,15 @@ public class EntityTranscriptPage {
 
     public EntityTranscriptPage setVersion(int version) {
         this.version = version;
+        return this;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public EntityTranscriptPage setCompleted(boolean completed) {
+        this.completed = completed;
         return this;
     }
 }

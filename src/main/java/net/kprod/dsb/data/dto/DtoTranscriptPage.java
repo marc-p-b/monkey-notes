@@ -16,6 +16,7 @@ public class DtoTranscriptPage {
     private int version;
     private String aiModel;
     private URL imageUrl;
+    private boolean completed;
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
         DtoTranscriptPage dto = new DtoTranscriptPage()
@@ -28,7 +29,8 @@ public class DtoTranscriptPage {
                 .setAiModel(page.getAiModel())
                 .setTranscriptTook(page.getTranscriptTook())
                 .setTokensPrompt(page.getTokensPrompt())
-                .setTokensResponse(page.getTokensResponse());
+                .setTokensResponse(page.getTokensResponse())
+                .setCompleted(page.isCompleted());
         return dto;
     }
 
@@ -128,6 +130,15 @@ public class DtoTranscriptPage {
 
     public DtoTranscriptPage setAiModel(String aiModel) {
         this.aiModel = aiModel;
+        return this;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public DtoTranscriptPage setCompleted(boolean completed) {
+        this.completed = completed;
         return this;
     }
 }

@@ -20,16 +20,14 @@ public class CompletionResponse {
         this.transcript = transcript;
     }
 
-    private CompletionResponse(String fileId) {
+    public CompletionResponse(String fileId) {
         this.fileId = fileId;
     }
 
-    public static CompletionResponse failed(String fileId, String errorMessage) {
-        CompletionResponse failedResponse = new CompletionResponse(fileId);
-        failedResponse.fileId = fileId;
-        failedResponse.errorMessage = errorMessage;
-        failedResponse.completed = false;
-        return failedResponse;
+    public CompletionResponse failed(String fileId, String errorMessage) {
+        this.errorMessage = errorMessage;
+        this.completed = false;
+        return this;
     }
 
     public boolean isCompleted() {

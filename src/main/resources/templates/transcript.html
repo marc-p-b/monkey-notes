@@ -16,17 +16,17 @@
 
     <h3 th:text="'Page #'+ ${page.pageNumber}"></h3>
     <p>
-    <th:block th:utext="${page.transcriptHtml}"/>
+        <th:block th:utext="${page.transcriptHtml}"/>
     </p>
 
-    <form th:action="@{/form/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">
-        <input type="text" name="model" th:value="${config.model}"/>
-        <input type="text" name="prompt" th:value="${config.prompt}"/>
-        <input type="submit" value="update" />
-    </form>
+<!--    <form th:action="@{/form/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">-->
+<!--        <input type="text" name="model" th:value="${config.model}"/>-->
+<!--        <input type="text" name="prompt" th:value="${config.prompt}"/>-->
+<!--        <input type="submit" value="update" />-->
+<!--    </form>-->
 
-<!--    <a th:href="@{/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">force refresh</a> - -->
-    <a th:href="${page.imageUrl}"><span th:text="${iterStat.index}"></span></a>
+    <a th:href="@{/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">force update</a>
+    <a th:href="${page.imageUrl}">View page <span th:text="${iterStat.index}"></span></a>
 </th:block>
 
 

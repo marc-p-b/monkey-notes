@@ -1,6 +1,8 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.FileNode;
+import net.kprod.dsb.data.enums.ConfigKey;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.DriveService;
@@ -33,33 +35,20 @@ public class HomeController {
     @Autowired
     private DriveChangeManagerService driveChangeManagerService;
 
-    @Value("${app.drive.folders.in}")
-    private String folderIn;
-
-    @Autowired
-    private PreferencesService preferencesService;
-
     @GetMapping("/")
     public String home(Model model) {
-
         Optional<String> optAuthUrl = driveService.requireAuth();
 
         List<FileNode> listFiles = viewService.listFolders();
         model.addAttribute("fileNodes", listFiles);
         model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
-        model.addAttribute("inFolderId", folderIn);
+
         return "home";
     }
 
     @GetMapping("/transcript/{fileId}")
     public String viewTranscript(Model model, @PathVariable String fileId) throws IOException {
-        //return ResponseEntity.ok().body();
-
-        Map<String, String> map = preferencesService.listPreferences().stream()
-                .collect(Collectors.toMap(e -> e.getKey().name(), e -> e.getValue()));
-
         model.addAttribute("dtoTranscript", viewService.getTranscript(fileId));
-        model.addAttribute("config", map);
 
         return "transcript";
     }

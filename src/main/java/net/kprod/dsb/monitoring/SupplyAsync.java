@@ -1,6 +1,9 @@
 package net.kprod.dsb.monitoring;
 
 import net.kprod.dsb.ServiceException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.function.Supplier;
 
@@ -8,13 +11,14 @@ public class SupplyAsync implements Supplier {
         private MonitoringData monitorData;
         private AsyncRunnable runnable;
         private MonitoringService monitoringService;
+        private Authentication authentication;
 
     /**
      * Constructor
      * @param monitoringService
      * @param runnable
      */
-    public SupplyAsync(MonitoringService monitoringService, MonitoringData monitorData, AsyncRunnable runnable) throws ServiceException {
+    public SupplyAsync(MonitoringService monitoringService, MonitoringData monitorData, Authentication authentication, AsyncRunnable runnable) throws ServiceException {
         if(monitoringService == null ||
                 monitorData == null ||
                 runnable == null) {
@@ -24,6 +28,7 @@ public class SupplyAsync implements Supplier {
         this.monitoringService = monitoringService;
         this.monitorData = monitorData;
         this.runnable = runnable;
+        this.authentication = authentication;
     }
 
 
@@ -35,6 +40,10 @@ public class SupplyAsync implements Supplier {
     @Override
     public Object get() {
         monitoringService.keep(monitorData,"async");
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+
         long start = System.currentTimeMillis();
 
         try {

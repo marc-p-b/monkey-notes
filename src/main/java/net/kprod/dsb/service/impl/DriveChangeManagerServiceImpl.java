@@ -5,6 +5,7 @@ import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.data.entity.*;
+import net.kprod.dsb.data.enums.ConfigKey;
 import net.kprod.dsb.monitoring.*;
 import net.kprod.dsb.tasks.FlushTask;
 import net.kprod.dsb.tasks.RefreshWatchTask;
@@ -27,6 +28,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -62,12 +64,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.notify.path}")
     private String notifyPath;
 
-    @Value("${app.drive.folders.in}")
-    private String inboundFolderId;
-
-    @Value("${app.drive.folders.out}")
-    private String outFolderId;
-
     @Value("${app.erase-db:false}")
     private boolean eraseDb;
 
@@ -79,6 +75,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
+
+    @Value("${app.qwen.model}")
+    private String qwenModel;
+
+    @Value("${app.qwen.prompt}")
+    private String qwenPrompt;
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -126,6 +128,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private PreferencesService preferencesService;
+
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
     }
@@ -145,12 +150,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     void driveAuthCallBack() {
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
-            this.watch();
+
+            //todo had to fix issue with auth
+
+            //this.watch();
         }
     }
 
     public void updateAll() {
-        updateFolder(inboundFolderId);
+        try {
+            updateFolder(preferencesService.getInputFolderId());
+        } catch (ServiceException e) {
+            LOG.error("Failed to retrieve preferences", e);
+        }
     }
 
     @Override
@@ -162,6 +174,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
         LOG.info("Changes notified channel {}", channelId);
 
+        String inboundFolderId = "";
+        try {
+            inboundFolderId = preferencesService.getInputFolderId();
+        } catch (ServiceException e) {
+            LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
+            return;
+        }
 
         ChangeList changes = null;
         try {
@@ -212,8 +231,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
+        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
+        if(optAuth.isEmpty()) {
+            LOG.error("No authentication found");
+            return;
+        }
+
         try {
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    optAuth.get(),
                     () -> asyncProcessFlushed(setFlushedFileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("flushChanges-" + monitoringService.getCurrentMonitoringData().getId(), future);
@@ -295,8 +321,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Override
     public void updateFolder(String folderId) {
         LOG.info("Prepare Async (Update folder id {})", folderId);
+
+        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
+        if(optAuth.isEmpty()) {
+            LOG.error("No authentication found");
+            return;
+        }
+
         try {
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    optAuth.get(),
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("updateFolder-" + monitoringService.getCurrentMonitoringData().getId(), future);
@@ -521,16 +555,41 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 }
             }
         }
-
         return documentTitleDate;
-
     }
 
+    @Override
+    public void forcePageUpdate(String fileId, int pageNumber) {
+        String model = qwenModel;
+        String prompt = qwenPrompt;
+        boolean useDefaultPrompt = true;
+
+        try {
+            useDefaultPrompt = (boolean) preferencesService.getPreference(ConfigKey.useDefaultPrompt);
+            if (useDefaultPrompt == false) {
+                model = preferencesService.getPreference(ConfigKey.model).toString();
+                prompt = preferencesService.getPreference(ConfigKey.prompt).toString();
+            }
+        } catch (ServiceException e) {
+            LOG.error("Failed to get preference (use defaults) {}", e);
+        }
+
+        this.forcePageUpdate(fileId, pageNumber, model, prompt);
+    }
+
+    @Override
     public void forcePageUpdate(String fileId, int pageNumber, String model, String prompt) {
         LOG.info("Prepare Async (Force page update for {} page {})", fileId, pageNumber);
+        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
+        if(optAuth.isEmpty()) {
+            LOG.error("No authentication found");
+            return;
+        }
+
         try {
             URL imageURL = utilsService.imageURL(fileId, pageNumber);
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL, model, prompt));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
@@ -543,29 +602,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
 
+    @Override
     public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
-//        for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
-//
-//            //entry.getValue().whenComplete((result, e) -> { //this could be usefull ; when call, when complete firesup when future is completed
-//            if (entry.getValue().isDone()) {
-//                try {
-//                    AsyncResult asyncResult = entry.getValue().get();
-//                    switch (entry.getValue().get().getState()) {
-//                        case failed ->
-//                                LOG.error("Processing {} : failed", entry.getKey(), asyncResult.getException() != null ? asyncResult.getException().getMessage() : new RuntimeException("Failed to retrieve exception"));
-//                        case completed -> LOG.info("Processing {} : completed", entry.getKey());
-//                        default -> LOG.error("Processing {} : unknown state", entry.getKey()); // should not happen
-//                    }
-//                } catch (InterruptedException e2) {
-//                    throw new RuntimeException(e2);
-//                } catch (ExecutionException e2) {
-//                    throw new RuntimeException(e2);
-//                }
-//            } else {
-//                LOG.info("Processing {} : running", entry.getKey());
-//            }
-//        }
-
         return mapAsyncProcess;
     }
 
@@ -674,6 +712,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public String updateAncestorsFolders(String fileId) throws ServiceException {
+
+        String inboundFolderId = "";
+        try {
+            inboundFolderId = preferencesService.getInputFolderId();
+        } catch (ServiceException e) {
+            LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
+            return null;
+        }
+
         File file = driveUtilsService.getDriveFileDetails(fileId);
         List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
 

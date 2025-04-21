@@ -11,6 +11,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -34,12 +37,26 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails user = User.withDefaultPasswordEncoder()
+        UserDetails user1 = User.withDefaultPasswordEncoder()
                 .username("marc")
                 .password("outsoon4242")
                 .roles("USER")
                 .build();
 
-        return new InMemoryUserDetailsManager(user);
+        UserDetails user2 = User.withDefaultPasswordEncoder()
+                .username("marc-test")
+                .password("outsoon4242")
+                .roles("USER")
+                .build();
+
+        UserDetails user3 = User.withDefaultPasswordEncoder()
+                .username("celine")
+                .password("outsoon4242")
+                .roles("USER")
+                .build();
+
+        List<UserDetails> list = Arrays.asList(user1, user2, user3);
+
+        return new InMemoryUserDetailsManager(list);
     }
 }

@@ -10,11 +10,15 @@
     <a href="/processing">Processes</a>
 </div>
 
+<div>
+    <span th:text="${error}"></span>
+</div>
+
 <div th:if= "${authUrl != ''}"><a th:href="${authUrl}">authenticate</a></div>
 <div th:if= "${authUrl == ''}">
 
     <div>
-        <a th:href="@{/update/folder/{folderId}(folderId=${inFolderId})}">Update All</a>
+        <a href="/update/all">Update All</a>
     </div>
     <h2>File and Folder Structure</h2>
 

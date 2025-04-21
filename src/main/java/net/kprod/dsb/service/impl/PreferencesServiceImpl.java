@@ -1,5 +1,6 @@
 package net.kprod.dsb.service.impl;
 
+import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.DtoConfig;
 import net.kprod.dsb.data.entity.EntityConfig;
 import net.kprod.dsb.data.entity.EntityConfigId;
@@ -32,11 +33,7 @@ public class PreferencesServiceImpl implements PreferencesService {
 
     @Override
     public List<DtoConfig> listPreferences() {
-        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), ConfigKey.set);
-
-        Optional<EntityConfig> optConfig = repositoryConfig.findByConfigId(entityConfigId);
-
-        if(optConfig.isEmpty()) {
+        if(isParametersSet()) {
             return initPreferences(authService.getConnectedUsername());
         } else {
             return Arrays.stream(ConfigKey.values())
@@ -49,11 +46,15 @@ public class PreferencesServiceImpl implements PreferencesService {
         }
     }
 
+    private boolean isParametersSet() {
+        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), ConfigKey.set);
+        return repositoryConfig.findByConfigId(entityConfigId).isPresent();
+    }
+
     private Optional<DtoConfig> getConfig(String username, ConfigKey key) {
         Optional<EntityConfig> config = repositoryConfig.findByConfigId(new EntityConfigId(username, key));
         return config.isPresent() ? Optional.of(DtoConfig.fromEntity(config.get())) : Optional.empty();
     }
-
 
     private List<DtoConfig> initPreferences(String username) {
         List<EntityConfig> list = Arrays.asList(
@@ -73,8 +74,31 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     @Override
-    public DtoConfig getPreference(ConfigKey configKey) {
-        return null;
+    public Object getPreference(ConfigKey configKey) throws ServiceException {
+        if(isParametersSet() == false) {
+            throw new ServiceException("Preferences not set");
+        }
+
+        Optional<EntityConfig> optValue = repositoryConfig.findByConfigId(new EntityConfigId(authService.getConnectedUsername(), configKey));
+        if(optValue.isEmpty()) {
+            throw new ServiceException(configKey + " not set");
+        }
+        String value = optValue.get().getValue();
+
+        Object o = switch (configKey) {
+            case useDefaultPrompt -> Boolean.parseBoolean(value);
+            case modelTimeout -> Integer.parseInt(value);
+            default -> value;
+        };
+        return o;
+    }
+
+    public String getInputFolderId() throws ServiceException {
+        return this.getPreference(ConfigKey.inputFolderId).toString();
+    }
+
+    public String getOutputFolderId() throws ServiceException {
+        return this.getPreference(ConfigKey.outputFolderId).toString();
     }
 
     @Override

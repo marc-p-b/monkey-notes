@@ -29,6 +29,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -136,7 +138,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    void startup() {
+    void connect() {
         LOG.info("Starting up");
         Runnable runnable = new Runnable() {
             @Override
@@ -151,9 +153,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
 
-            //todo had to fix issue with auth
-
-            //this.watch();
+            this.watch();
         }
     }
 
@@ -166,13 +166,22 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public void getChanges(String channelId) {
+    public void changeNotified(String channelId) {
         //not from current channel watch
         if(channelId.equals(currentChannelId) == false) {
             LOG.debug("Rejected notified changes channel {}", channelId);
             return;
         }
-        LOG.info("Changes notified channel {}", channelId);
+
+        Authentication auth = mapChannelAuth.get(channelId);
+        if(auth == null) {
+            LOG.error("Rejected notified auth channel {} (No auth available)", channelId);
+            return;
+        }
+        LOG.info("Changes notified channel {} user {}", channelId, auth.getName());
+
+        SecurityContext context = SecurityContextHolder.getContext();
+        context.setAuthentication(auth);
 
         String inboundFolderId = "";
         try {
@@ -654,8 +663,17 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         watchChanges = false;
     }
 
+    //todo synchronized ?
+    private Map<String, Authentication> mapChannelAuth;
+
     public void watch() {
+
+        if(mapChannelAuth == null) {
+            mapChannelAuth = new HashMap<>();
+        }
+
         currentChannelId = UUID.randomUUID().toString();
+        mapChannelAuth.put(currentChannelId, authService.getLoggedAuthentication().get());
 
         OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
 
@@ -685,6 +703,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     public void renewWatch() throws IOException {
         LOG.info("renew watch");
+
+        //todo auth ?
 
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
         driveService.getDrive().channels().stop(responseChannel);

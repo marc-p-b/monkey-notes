@@ -37,6 +37,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
+        //todo for all user urls
         Optional<String> optAuthUrl = driveService.requireAuth();
 
         List<FileNode> listFiles = viewService.listFolders();

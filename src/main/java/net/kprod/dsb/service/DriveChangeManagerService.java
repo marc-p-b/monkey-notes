@@ -13,7 +13,7 @@ public interface DriveChangeManagerService {
     void watchStop() throws IOException;
     void watch();
     void renewWatch() throws IOException;
-    void getChanges(String channelId);
+    void changeNotified(String channelId);
     void flushChanges();
     Map<String, Object> getStatus();
     //CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);

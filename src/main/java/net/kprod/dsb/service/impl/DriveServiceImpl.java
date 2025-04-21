@@ -187,7 +187,7 @@ public class DriveServiceImpl implements DriveService {
                     .setApplicationName(APPLICATION_NAME)
                     .build();
 
-            //todo not nececerally required
+            // todo run once ?
             connectCallback.run();
 
             taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());

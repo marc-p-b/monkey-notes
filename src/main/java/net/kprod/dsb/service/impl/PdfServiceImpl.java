@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
@@ -34,11 +35,39 @@ import java.util.Map;
 public class PdfServiceImpl implements PdfService {
     private Logger LOG = LoggerFactory.getLogger(PdfService.class);
 
-    public static final int PDF2IMAGE_DPI = 150;
+    public static final int PDF2IMAGE_DPI = 72;
     public static final ImageType PDF2IMAGE_IMAGE_TYPE = ImageType.GRAY;
 
     @Autowired
     private UtilsService utilsService;
+
+    private BufferedImage resizeImage(BufferedImage originalImage) throws Exception {
+        // Load image
+
+        int maxWidth = 1200;
+        int maxHeight = 1000;
+
+        // Calculate new dimensions while preserving aspect ratio
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+
+        double widthRatio = (double) maxWidth / originalWidth;
+        double heightRatio = (double) maxHeight / originalHeight;
+        double ratio = Math.min(widthRatio, heightRatio);
+
+        int newWidth = (int) (originalWidth * ratio);
+        int newHeight = (int) (originalHeight * ratio);
+
+        // Resize image
+        Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+        BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+
+        Graphics2D g2d = resized.createGraphics();
+        g2d.drawImage(tmp, 0, 0, null);
+        g2d.dispose();
+
+        return resized;
+    }
 
     @Override
     public List<URL> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
@@ -54,10 +83,12 @@ public class PdfServiceImpl implements PdfService {
                 for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
                     BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, PDF2IMAGE_DPI, PDF2IMAGE_IMAGE_TYPE);
 
+                    BufferedImage resizedImage = resizeImage(image);
+
                     Path pathPage = utilsService.imagePath(fileId, (pageNumber + 1));
                     java.io.File outputFile = pathPage.toFile();
 
-                    ImageIO.write(image, "png", outputFile);
+                    ImageIO.write(resizedImage, "png", outputFile);
                     listImages.add(utilsService.imageURL(fileId, (pageNumber + 1)));
                     LOG.info("Page {} converted to image {}", pageNumber, pathPage);
                 }

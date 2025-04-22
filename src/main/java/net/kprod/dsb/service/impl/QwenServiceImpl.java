@@ -70,6 +70,7 @@ public class QwenServiceImpl implements QwenService {
             JSONObject requestBody = new JSONObject();
 
             requestBody.put("model", model);
+            requestBody.put("max_tokens", 5000);
             requestBody.put("messages", Arrays.asList(messages));
 
             HttpHeaders headers = new HttpHeaders();

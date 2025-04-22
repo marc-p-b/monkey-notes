@@ -16,9 +16,7 @@ public interface DriveChangeManagerService {
     void changeNotified(String channelId);
     void flushChanges();
     Map<String, Object> getStatus();
-    //CompletableFuture<AsyncResult> asyncProcessFiles(MonitoringData monitoringData, List<File2Process> list);
     String updateAncestorsFolders(String fileId) throws ServiceException;
     void forcePageUpdate(String fileId, int pageNumber);
-    void forcePageUpdate(String fileId, int pageNumber, String model, String prompt);
     Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess();
 }

@@ -1,15 +1,12 @@
 package net.kprod.dsb.controller;
 
-import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.FileNode;
-import net.kprod.dsb.data.enums.ConfigKey;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.PreferencesService;
 import net.kprod.dsb.service.ViewService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Controller
 public class HomeController {
@@ -34,6 +30,8 @@ public class HomeController {
 
     @Autowired
     private DriveChangeManagerService driveChangeManagerService;
+    @Autowired
+    private PreferencesService preferencesService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -43,6 +41,11 @@ public class HomeController {
         List<FileNode> listFiles = viewService.listFolders();
         model.addAttribute("fileNodes", listFiles);
         model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
+
+        //todo for all user urls
+        if(preferencesService.isParametersNotSet()) {
+            return "redirect:/preferences";
+        }
 
         return "home";
     }

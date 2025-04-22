@@ -6,5 +6,5 @@ import java.net.URL;
 
 public interface QwenService {
     CompletionResponse analyzeImage(String fileId, URL imageURL);
-    CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt);
+    //CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt);
 }

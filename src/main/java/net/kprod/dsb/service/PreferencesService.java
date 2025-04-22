@@ -1,17 +1,36 @@
 package net.kprod.dsb.service;
 
 import net.kprod.dsb.ServiceException;
-import net.kprod.dsb.data.dto.DtoConfig;
-import net.kprod.dsb.data.enums.ConfigKey;
+import net.kprod.dsb.data.dto.DtoConfigs;
 
-import java.util.List;
 import java.util.Map;
 
 public interface PreferencesService {
-    List<DtoConfig> listPreferences();
-    Object getPreference(ConfigKey configKey) throws ServiceException;
-    String getInputFolderId() throws ServiceException;
-    String getOutputFolderId() throws ServiceException;
+    DtoConfigs listPreferences();
+
     void setPreference(Map<String, String> formData);
     void resetPreference();
+
+    //boolean isSet() throws ServiceException;
+    //boolean isNotSet() throws ServiceException;
+    boolean isParametersSet();
+    boolean isParametersNotSet();
+
+    boolean useDefaultPrompt() throws ServiceException;
+    String getPrompt() throws ServiceException;
+
+    boolean useDefaultModel() throws ServiceException;
+    String getModel() throws ServiceException;
+
+    String getInputFolderId() throws ServiceException;
+    String getOutputFolderId() throws ServiceException;
+
+    boolean useDefaultAiConnectTimeout() throws ServiceException;
+    int getAiConnectTimeout() throws ServiceException;
+
+    boolean useDefaultAiReadTimeout() throws ServiceException;
+    int getAiReadTimeout() throws ServiceException;
+
+    boolean useDefaultModelMaxTokens() throws ServiceException;
+    int getModelMaxTokens() throws ServiceException;
 }

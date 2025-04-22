@@ -13,10 +13,37 @@
 
 <form method="post" th:action="@{/form/preferences}">
 <ul>
-    <li th:each="pref : ${preferences}">
-        <label th:text="${pref.key}" th:for="${pref.key}" />
-        <input type="text" th:name="${pref.key}" th:value="${pref.value}" />
-    </li>
+    <li><label th:text="useDefaultPrompt" th:for="useDefaultPrompt" />
+        <input type="text" th:name="useDefaultPrompt" th:value="${preferences.useDefaultPrompt}" /></li>
+
+    <li><label th:text="prompt" th:for="prompt" />
+        <input type="text" th:name="prompt" th:value="${preferences.prompt}" /></li>
+
+    <li><label th:text="useDefaultModel" th:for="useDefaultModel" />
+        <input type="text" th:name="useDefaultModel" th:value="${preferences.useDefaultModel}" /></li>
+    <li><label th:text="model" th:for="model" />
+        <input type="text" th:name="model" th:value="${preferences.model}" /></li>
+
+    <li><label th:text="inputFolderId" th:for="inputFolderId" />
+        <input type="text" th:name="inputFolderId" th:value="${preferences.inputFolderId}" /></li>
+    <li><label th:text="outputFolderId" th:for="outputFolderId" />
+        <input type="text" th:name="outputFolderId" th:value="${preferences.outputFolderId}" /></li>
+
+    <li><label th:text="useDefaultAiConnectTimeout" th:for="useDefaultAiConnectTimeout" />
+        <input type="text" th:name="useDefaultAiConnectTimeout" th:value="${preferences.useDefaultAiConnectTimeout}" /></li>
+    <li><label th:text="aiConnectTimeout" th:for="aiConnectTimeout" />
+        <input type="text" th:name="aiConnectTimeout" th:value="${preferences.aiConnectTimeout}" /></li>
+
+    <li><label th:text="useDefaultAiReadTimeout" th:for="useDefaultAiReadTimeout" />
+        <input type="text" th:name="useDefaultAiReadTimeout" th:value="${preferences.useDefaultAiReadTimeout}" /></li>
+    <li><label th:text="aiReadTimeout" th:for="aiReadTimeout" />
+        <input type="text" th:name="aiReadTimeout" th:value="${preferences.aiReadTimeout}" /></li>
+
+    <li><label th:text="modelMaxTokensDefault" th:for="useDefaultModelMaxTokens" />
+        <input type="text" th:name="useDefaultModelMaxTokens" th:value="${preferences.useDefaultModelMaxTokens}" /></li>
+    <li><label th:text="modelMaxTokens" th:for="modelMaxTokens" />
+        <input type="text" th:name="modelMaxTokens" th:value="${preferences.modelMaxTokens}" /></li>
+
     <input type="submit" value="save" />
 </ul>
 </form>

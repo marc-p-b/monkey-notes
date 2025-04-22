@@ -4,10 +4,12 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.CompletionResponse;
+import net.kprod.dsb.service.PreferencesService;
 import net.kprod.dsb.service.QwenService;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -27,20 +29,29 @@ public class QwenServiceImpl implements QwenService {
     @Value("${app.qwen.key}")
     private String qwenApiKey;
 
-    @Value("${app.qwen.model}")
-    private String qwenModel;
+    @Value("${app.defaults.qwen.model}")
+    private String defaultModel;
 
-    @Value("${app.qwen.prompt}")
-    private String qwenPrompt;
+    @Value("${app.defaults.qwen.prompt}")
+    private String defaultPrompt;
 
-    @Value("${app.url.self}")
-    private String appHost;
+//    @Value("${app.defaults.ai.connect-timeout}")
+//    private int defaultConnectionTimeout;
+//
+//    @Value("${app.defaults.ai.read-timeout}")
+//    private int defaultReadTimeout;
+//
+//    @Value("${app.defaults.qwen.max-tokens}")
+//    private int defaultMaxTokens;
 
     @Value("${app.dry-run:false}")
     private boolean dryRun;
 
-    @Override
-    public CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
+    @Autowired
+    private PreferencesService preferencesService;
+
+
+    private CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
         LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);
 
         if(dryRun) {
@@ -70,8 +81,15 @@ public class QwenServiceImpl implements QwenService {
             JSONObject requestBody = new JSONObject();
 
             requestBody.put("model", model);
-            requestBody.put("max_tokens", 5000);
             requestBody.put("messages", Arrays.asList(messages));
+
+            try {
+                if(preferencesService.useDefaultModelMaxTokens() == false) {
+                    requestBody.put("max_tokens", preferencesService.getModelMaxTokens());
+                }
+            } catch (ServiceException e) {
+                LOG.warn("ModelMaxTokens not set", e);
+            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -108,14 +126,38 @@ public class QwenServiceImpl implements QwenService {
 
     public RestTemplate createRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(120000); // milliseconds
-        factory.setReadTimeout(150000);   // milliseconds
+
+        try {
+            if (preferencesService.useDefaultAiConnectTimeout() == false) {
+                factory.setConnectTimeout(preferencesService.getAiConnectTimeout()); // milliseconds
+            }
+        } catch (ServiceException e) {
+            LOG.warn("AiConnectTimeout not set", e);
+        }
+        try {
+            if (preferencesService.useDefaultAiReadTimeout() == false) {
+                factory.setReadTimeout(preferencesService.getAiReadTimeout()); // milliseconds
+            }
+        } catch (ServiceException e) {
+            LOG.warn("AiReadTimeout not set", e);
+        }
 
         return new RestTemplate(factory);
     }
 
     @Override
     public CompletionResponse analyzeImage(String fileId, URL imageURL) {
-        return analyzeImage(fileId, imageURL, qwenModel, qwenPrompt);
+
+        String model2use = defaultModel;
+        String prompt2use = defaultPrompt;
+        try {
+            model2use = preferencesService.useDefaultModel() ? defaultModel : preferencesService.getModel();
+            prompt2use = preferencesService.useDefaultPrompt() ? defaultPrompt : preferencesService.getPrompt();
+
+        } catch (ServiceException e) {
+            LOG.warn("Model / Prompt not set", e);
+        }
+        return analyzeImage(fileId, imageURL, model2use, prompt2use);
+
     }
 }

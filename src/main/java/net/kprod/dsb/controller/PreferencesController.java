@@ -35,8 +35,9 @@ public class PreferencesController {
     }
 
     @PostMapping("/form/preferences")
-    public String savePreferences(@RequestParam Map<String, String> formData) {
+    public String savePreferences(Model model, @RequestParam Map<String, String> formData) {
         preferencesService.setPreference(formData);
+        model.addAttribute("preferences", preferencesService.listPreferences());
         return "preferences";
     }
 

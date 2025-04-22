@@ -1,23 +1,29 @@
 package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.ServiceException;
-import net.kprod.dsb.data.dto.DtoConfig;
+import net.kprod.dsb.data.dto.DtoConfigs;
 import net.kprod.dsb.data.entity.EntityConfig;
 import net.kprod.dsb.data.entity.EntityConfigId;
-import net.kprod.dsb.data.enums.ConfigKey;
+import net.kprod.dsb.data.enums.PreferenceKey;
 import net.kprod.dsb.data.repository.RepositoryConfig;
 import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.PreferencesService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class PreferencesServiceImpl implements PreferencesService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PreferencesServiceImpl.class);
 
     @Autowired
     private AuthService authService;
@@ -25,58 +31,124 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Autowired
     private RepositoryConfig repositoryConfig;
 
-    @Value("${app.qwen.model}")
-    private String qwenModel;
+    @Value("${app.defaults.qwen.model}")
+    private String dftQwenModel;
 
-    @Value("${app.qwen.prompt}")
-    private String qwenPrompt;
+    @Value("${app.defaults.qwen.prompt}")
+    private String dftQwenPrompt;
+
+    @Value("${app.defaults.qwen.max-tokens}")
+    private int dftQwenMaxTokens;
+
+    @Value("${app.defaults.ai.connect-timeout}")
+    private int dftAiConnectTimeout;
+
+    @Value("${app.defaults.ai.read-timeout}")
+    private int dftAiReadTimeout;
 
     @Override
-    public List<DtoConfig> listPreferences() {
+    public DtoConfigs listPreferences() {
+
         if(isParametersSet() == false) {
             return initPreferences(authService.getConnectedUsername());
         } else {
-            List<DtoConfig> list = Arrays.stream(ConfigKey.values())
-                    .map(k -> {
-                        return getConfig(authService.getConnectedUsername(), k);
-                    })
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .toList();
-            return list;
+            Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getConnectedUsername()).stream()
+                    .collect(Collectors.toMap(entityConfig -> entityConfig.getConfigId().getKey(), entityConfig -> entityConfig.getValue()));
+            return fromMap(map);
+
         }
     }
 
-    private boolean isParametersSet() {
-        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), ConfigKey.set);
+    private DtoConfigs fromMap(Map<String, String> map) {
+        DtoConfigs dtoConfigs = new DtoConfigs();
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+
+            try {
+
+                PreferenceKey key = PreferenceKey.valueOf(entry.getKey());
+                switch (key) {
+                    case prompt :
+                        dtoConfigs.setPrompt(entry.getValue());
+                        break;
+                    case model:
+                        dtoConfigs.setModel(entry.getValue());
+                        break;
+                    case inputFolderId:
+                        dtoConfigs.setInputFolderId(entry.getValue());
+                        break;
+                    case outputFolderId:
+                        dtoConfigs.setOutputFolderId(entry.getValue());
+                        break;
+                    case set:
+                        dtoConfigs.setSet(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case useDefaultPrompt:
+                        dtoConfigs.setUseDefaultPrompt(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case useDefaultModel:
+                        dtoConfigs.setUseDefaultModel(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case useDefaultAiConnectTimeout:
+                        dtoConfigs.setUseDefaultAiConnectTimeout(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case useDefaultAiReadTimeout:
+                        dtoConfigs.setUseDefaultAiReadTimeout(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case useDefaultModelMaxTokens:
+                        dtoConfigs.setUseDefaultModelMaxTokens(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case aiConnectTimeout:
+                        dtoConfigs.setAiConnectTimeout(Integer.parseInt(entry.getValue()));
+                        break;
+                    case aiReadTimeout:
+                        dtoConfigs.setAiReadTimeout(Integer.parseInt(entry.getValue()));
+                        break;
+                    case modelMaxTokens:
+                        dtoConfigs.setModelMaxTokens(Integer.parseInt(entry.getValue()));
+                        break;
+                }
+            } catch (IllegalArgumentException e) {
+                LOGGER.error("Unknown config key {}", entry.getKey());
+            }
+
+        }
+        return dtoConfigs;
+    }
+
+    public boolean isParametersSet() {
+        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), PreferenceKey.set);
         Optional<EntityConfig> optEntity = repositoryConfig.findByConfigId(entityConfigId);
         return optEntity.isPresent();
     }
 
-    private Optional<DtoConfig> getConfig(String username, ConfigKey key) {
-        Optional<EntityConfig> config = repositoryConfig.findByConfigId(new EntityConfigId(username, key));
-        return config.isPresent() ? Optional.of(DtoConfig.fromEntity(config.get())) : Optional.empty();
+    public boolean isParametersNotSet() {
+        return !isParametersSet();
     }
 
-    private List<DtoConfig> initPreferences(String username) {
-        List<EntityConfig> list = Arrays.asList(
-                new EntityConfig(new EntityConfigId(username, ConfigKey.set), "done"),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.prompt), qwenPrompt),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.model), qwenModel),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.useDefaultPrompt), "true"),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.inputFolderId), ""),
-                new EntityConfig(new EntityConfigId(username, ConfigKey.outputFolderId), "")
-        );
+    private DtoConfigs initPreferences(String username) {
 
+        DtoConfigs dtoConfigs = new DtoConfigs()
+                .setUseDefaultPrompt(true)
+                .setPrompt(dftQwenPrompt)
+                .setUseDefaultPrompt(true)
+                .setModel(dftQwenModel)
+                .setInputFolderId("")
+                .setOutputFolderId("")
+                .setUseDefaultAiConnectTimeout(true)
+                .setAiConnectTimeout(dftAiConnectTimeout)
+                .setUseDefaultAiReadTimeout(true)
+                .setAiReadTimeout(dftAiReadTimeout)
+                .setUseDefaultModelMaxTokens(true)
+                .setModelMaxTokens(dftQwenMaxTokens)
+                .setSet(false);
+
+        List<EntityConfig> list = dtoConfigs.toEntities(username);
         repositoryConfig.saveAll(list);
 
-        return list.stream()
-                .map(DtoConfig::fromEntity)
-                .collect(Collectors.toList());
+        return dtoConfigs;
     }
 
-    @Override
-    public Object getPreference(ConfigKey configKey) throws ServiceException {
+    private String getPreference(PreferenceKey configKey) throws ServiceException {
         if(isParametersSet() == false) {
             throw new ServiceException("Preferences not set");
         }
@@ -85,40 +157,80 @@ public class PreferencesServiceImpl implements PreferencesService {
         if(optValue.isEmpty()) {
             throw new ServiceException(configKey + " not set");
         }
-        String value = optValue.get().getValue();
-
-        Object o = switch (configKey) {
-            case useDefaultPrompt -> Boolean.parseBoolean(value);
-            case modelTimeout -> Integer.parseInt(value);
-            default -> value;
-        };
-        return o;
-    }
-
-    public String getInputFolderId() throws ServiceException {
-        return this.getPreference(ConfigKey.inputFolderId).toString();
-    }
-
-    public String getOutputFolderId() throws ServiceException {
-        return this.getPreference(ConfigKey.outputFolderId).toString();
+        return optValue.get().getValue();
     }
 
     @Override
     public void setPreference(Map<String, String> formData) {
-        List<DtoConfig> list = new ArrayList<>();
-        formData.forEach((k, v) -> {
-            list.add(new DtoConfig(authService.getConnectedUsername(), ConfigKey.valueOf(k), v));
-        });
-        list.add(new DtoConfig(authService.getConnectedUsername(), ConfigKey.set, "done"));
-        List<EntityConfig> listE = list.stream()
-                .map(DtoConfig::toEntity)
-                .toList();
-        repositoryConfig.saveAll(listE);
+        DtoConfigs dtoConfigs = fromMap(formData)
+            .setSet(true);
+        repositoryConfig.saveAll(dtoConfigs.toEntities(authService.getConnectedUsername()));
     }
 
     @Override
     @Transactional
     public void resetPreference() {
         repositoryConfig.deleteByConfigId_Username(authService.getConnectedUsername());
+    }
+
+
+    @Override
+    public String getPrompt() throws ServiceException {
+        return getPreference(PreferenceKey.prompt);
+    }
+
+    @Override
+    public String getModel() throws ServiceException {
+        return getPreference(PreferenceKey.model);
+    }
+
+    @Override
+    public boolean useDefaultPrompt() throws ServiceException {
+        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultPrompt));
+    }
+
+    @Override
+    public boolean useDefaultModel() throws ServiceException {
+        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultModel));
+    }
+
+    @Override
+    public String getInputFolderId() throws ServiceException {
+        return getPreference(PreferenceKey.inputFolderId);
+    }
+
+    @Override
+    public String getOutputFolderId() throws ServiceException {
+        return getPreference(PreferenceKey.outputFolderId);
+    }
+
+    @Override
+    public boolean useDefaultAiConnectTimeout() throws ServiceException {
+        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultAiReadTimeout));
+    }
+
+    @Override
+    public int getAiConnectTimeout() throws ServiceException {
+        return Integer.valueOf(getPreference(PreferenceKey.aiConnectTimeout));
+    }
+
+    @Override
+    public boolean useDefaultAiReadTimeout() throws ServiceException {
+        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultAiReadTimeout));
+    }
+
+    @Override
+    public int getAiReadTimeout() throws ServiceException {
+        return Integer.valueOf(getPreference(PreferenceKey.aiReadTimeout));
+    }
+
+    @Override
+    public boolean useDefaultModelMaxTokens() throws ServiceException {
+        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultModelMaxTokens));
+    }
+
+    @Override
+    public int getModelMaxTokens() throws ServiceException {
+        return Integer.valueOf(getPreference(PreferenceKey.modelMaxTokens));
     }
 }

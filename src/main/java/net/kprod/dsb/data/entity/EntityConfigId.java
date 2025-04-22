@@ -1,21 +1,19 @@
 package net.kprod.dsb.data.entity;
 
 import jakarta.persistence.Embeddable;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import net.kprod.dsb.data.enums.ConfigKey;
+import net.kprod.dsb.data.enums.PreferenceKey;
 
 @Embeddable
 public class EntityConfigId {
     private String username;
-    private ConfigKey key;
+    private String key;
 
     public EntityConfigId() {
     }
 
-    public EntityConfigId(String username, ConfigKey key) {
+    public EntityConfigId(String username, PreferenceKey key) {
         this.username = username;
-        this.key = key;
+        this.key = key.name();
     }
 
     public String getUsername() {
@@ -27,12 +25,11 @@ public class EntityConfigId {
         return this;
     }
 
-    @Enumerated(EnumType.STRING)
-    public ConfigKey getKey() {
+    public String getKey() {
         return key;
     }
 
-    public EntityConfigId setKey(ConfigKey key) {
+    public EntityConfigId setKey(String key) {
         this.key = key;
         return this;
     }

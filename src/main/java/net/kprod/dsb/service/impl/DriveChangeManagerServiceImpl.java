@@ -4,21 +4,23 @@ import com.google.api.services.drive.model.Change;
 import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
-import net.kprod.dsb.data.entity.*;
-import net.kprod.dsb.data.enums.ConfigKey;
-import net.kprod.dsb.monitoring.*;
-import net.kprod.dsb.tasks.FlushTask;
-import net.kprod.dsb.tasks.RefreshWatchTask;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.ChangedFile;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
+import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
+import net.kprod.dsb.monitoring.AsyncResult;
+import net.kprod.dsb.monitoring.MonitoringAsync;
+import net.kprod.dsb.monitoring.MonitoringService;
+import net.kprod.dsb.monitoring.SupplyAsync;
 import net.kprod.dsb.service.*;
+import net.kprod.dsb.tasks.FlushTask;
+import net.kprod.dsb.tasks.RefreshWatchTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +28,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -45,7 +46,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -78,11 +78,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
 
-    @Value("${app.qwen.model}")
-    private String qwenModel;
-
-    @Value("${app.qwen.prompt}")
-    private String qwenPrompt;
+//    @Value("${app.qwen.model}")
+//    private String qwenModel;
+//
+//    @Value("${app.qwen.prompt}")
+//    private String qwenPrompt;
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -578,27 +578,28 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return documentTitleDate;
     }
 
+//    @Override
+//    public void forcePageUpdate(String fileId, int pageNumber) {
+////        String model = qwenModel;
+////        String prompt = qwenPrompt;
+////        boolean useDefaultPrompt = true;
+////
+////        try {
+////            useDefaultPrompt = preferencesService.useDefaultPrompt();
+////            if (useDefaultPrompt == false) {
+////                model = preferencesService.getModel();
+////                prompt = preferencesService.getPrompt();
+////            }
+////        } catch (ServiceException e) {
+////            LOG.error("Failed to get preference (use defaults) {}", e);
+////        }
+////
+////        this.forcePageUpdate(fileId, pageNumber, model, prompt);
+//
+//    }
+
     @Override
     public void forcePageUpdate(String fileId, int pageNumber) {
-        String model = qwenModel;
-        String prompt = qwenPrompt;
-        boolean useDefaultPrompt = true;
-
-        try {
-            useDefaultPrompt = (boolean) preferencesService.getPreference(ConfigKey.useDefaultPrompt);
-            if (useDefaultPrompt == false) {
-                model = preferencesService.getPreference(ConfigKey.model).toString();
-                prompt = preferencesService.getPreference(ConfigKey.prompt).toString();
-            }
-        } catch (ServiceException e) {
-            LOG.error("Failed to get preference (use defaults) {}", e);
-        }
-
-        this.forcePageUpdate(fileId, pageNumber, model, prompt);
-    }
-
-    @Override
-    public void forcePageUpdate(String fileId, int pageNumber, String model, String prompt) {
         LOG.info("Prepare Async (Force page update for {} page {})", fileId, pageNumber);
         Optional<Authentication> optAuth = authService.getLoggedAuthentication();
         if(optAuth.isEmpty()) {
@@ -610,7 +611,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             URL imageURL = utilsService.imageURL(fileId, pageNumber);
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     optAuth.get(),
-                    () -> asyncForcePageUpdate(fileId, pageNumber, imageURL, model, prompt));
+                    () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (MalformedURLException e) {
@@ -628,9 +629,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @MonitoringAsync
-    private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL, String model, String prompt) {
+    private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL) {
         LOG.info("Processing : Force page update for {} page {}", fileId, pageNumber);
-        CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL, model, prompt);
+        CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL);
 
         if (completionResponse.isCompleted()) {
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(

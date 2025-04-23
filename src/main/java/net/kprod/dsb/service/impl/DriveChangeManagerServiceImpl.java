@@ -723,6 +723,31 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
+    public void cancelProcess(String id) {
+        if(mapAsyncProcess.get(id) == null) {
+            LOG.error("Process does not exists {}", id);
+            return;
+        }
+        LOG.info("Request process cancellation{}", id);
+        CompletableFuture future = mapAsyncProcess.get(id);
+        future.cancel(true);
+        mapAsyncProcess.remove(id);
+        LOG.info("Process cancelled {}", id);
+    }
+
+    @Override
+    public void forceUpdateTranscript(String fileId) {
+        LOG.info("Force update transcript {}", fileId);
+        Optional<EntityFile> optEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+        if(optEntityFile.isPresent()) {
+            EntityFile entityFile = optEntityFile.get();
+            entityFile.setMd5("");
+            repositoryFile.save(entityFile);
+            LOG.info("Clean MD5 {}, request update", fileId);
+        }
+    }
+
+    @Override
     public String updateAncestorsFolders(String fileId) throws ServiceException {
 
         String inboundFolderId = "";

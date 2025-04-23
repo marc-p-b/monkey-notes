@@ -14,7 +14,7 @@
 
 <ul>
     <li th:each="process : ${processes}">
-        <span th:text="${process}"></span>
+        <span th:text="${process.name}"/> : <span th:text="${process.status}"/>- <a th:href="@{/process/cancel/{id}(id=${process.id})}">cancel</a>
     </li>
 </ul>
 

@@ -110,6 +110,18 @@ public class DefaultController {
         return ResponseEntity.ok().headers(httpHeaders).body(b);
     }
 
+    @GetMapping("/process/cancel/{id}")
+    public ResponseEntity<String> processCancel(@PathVariable String id) {
+        driveChMgmtService.cancelProcess(id);
+        return ResponseEntity.ok().body("OK");
+    }
+
+    @GetMapping("/transcript/force-update/{fileId}")
+    public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
+        driveChMgmtService.forceUpdateTranscript(fileId);
+        return ResponseEntity.ok().body("OK");
+    }
+
     private static byte[] readFileToBytes(File file) throws IOException {
         byte[] bytes = new byte[(int) file.length()];
         FileInputStream fis = null;

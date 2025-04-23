@@ -1,6 +1,7 @@
 package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.ViewOptions;
+import net.kprod.dsb.data.dto.DtoProcess;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.dsb.monitoring.AsyncResult;
@@ -73,11 +74,12 @@ public class HomeController {
 
         //for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
 
-        List<String> list = mapAsyncProcess.entrySet().stream()
+        List<DtoProcess> list = mapAsyncProcess.entrySet().stream()
                 .map(e -> {
                     String processName = e.getKey();
                     CompletableFuture<AsyncResult> future = e.getValue();
                     String status = "unknown";
+                    DtoProcess p = new DtoProcess(processName, processName);
                     if (future.isDone()) {
                         try {
                             AsyncResult asyncResult = future.get();
@@ -92,8 +94,9 @@ public class HomeController {
                     } else {
                         status = "running";
                     }
-                    return new StringBuilder().append(processName).append(": ").append(status).toString();
-
+                    //return new StringBuilder().append(processName).append(": ").append(status).toString();
+                    p.setStatus(status);
+                    return p;
                 })
                 .toList();
         model.addAttribute("processes", list);

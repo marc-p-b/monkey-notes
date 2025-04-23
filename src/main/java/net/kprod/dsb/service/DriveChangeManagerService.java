@@ -19,4 +19,6 @@ public interface DriveChangeManagerService {
     String updateAncestorsFolders(String fileId) throws ServiceException;
     void forcePageUpdate(String fileId, int pageNumber);
     Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess();
+    void cancelProcess(String id);
+    void forceUpdateTranscript(String fileId);
 }

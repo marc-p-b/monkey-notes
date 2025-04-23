@@ -70,4 +70,19 @@ public class CompletionResponse {
     public String getTranscript() {
         return transcript;
     }
+
+    public CompletionResponse setAiModel(String aiModel) {
+        this.aiModel = aiModel;
+        return this;
+    }
+
+    public CompletionResponse setTokensPrompt(int tokensPrompt) {
+        this.tokensPrompt = tokensPrompt;
+        return this;
+    }
+
+    public CompletionResponse setTranscriptTook(long transcriptTook) {
+        this.transcriptTook = transcriptTook;
+        return this;
+    }
 }

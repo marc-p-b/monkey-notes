@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Optional;
 
 @Service
 public class QwenServiceImpl implements QwenService {
@@ -41,13 +42,21 @@ public class QwenServiceImpl implements QwenService {
     @Autowired
     private PreferencesService preferencesService;
 
-
     private CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
         LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);
 
         if(dryRun) {
             LOG.warn("Qwen request dry run");
             return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageURL + "(dry-run)");
+        }
+
+        Optional<Integer> optMaxTokens = Optional.empty();
+        try {
+            if(preferencesService.useDefaultModelMaxTokens() == false) {
+                optMaxTokens = Optional.of(preferencesService.getModelMaxTokens());
+            }
+        } catch (ServiceException e) {
+            LOG.warn("ModelMaxTokens not set", e);
         }
 
         CompletionResponse completionResponse = new CompletionResponse(fileId);
@@ -74,12 +83,8 @@ public class QwenServiceImpl implements QwenService {
             requestBody.put("model", model);
             requestBody.put("messages", Arrays.asList(messages));
 
-            try {
-                if(preferencesService.useDefaultModelMaxTokens() == false) {
-                    requestBody.put("max_tokens", preferencesService.getModelMaxTokens());
-                }
-            } catch (ServiceException e) {
-                LOG.warn("ModelMaxTokens not set", e);
+            if(optMaxTokens.isPresent()) {
+                requestBody.put("max_tokens", optMaxTokens.get());
             }
 
             HttpHeaders headers = new HttpHeaders();
@@ -107,10 +112,10 @@ public class QwenServiceImpl implements QwenService {
             completionResponse = new CompletionResponse(fileId, took, usedModel, prompt_tokens, completion_tokens, content);
 
         } catch (Exception e) {
-            long took = System.currentTimeMillis() - start;
             LOG.error("Failed request model", e);
-            //todo more info
-            completionResponse.failed(fileId, e.getMessage());
+            completionResponse = completionResponse.failed(fileId, e.getMessage())
+                    .setAiModel(model)
+                    .setTranscriptTook(System.currentTimeMillis() - start);
         }
         return completionResponse;
     }

@@ -35,15 +35,6 @@ public class QwenServiceImpl implements QwenService {
     @Value("${app.defaults.qwen.prompt}")
     private String defaultPrompt;
 
-//    @Value("${app.defaults.ai.connect-timeout}")
-//    private int defaultConnectionTimeout;
-//
-//    @Value("${app.defaults.ai.read-timeout}")
-//    private int defaultReadTimeout;
-//
-//    @Value("${app.defaults.qwen.max-tokens}")
-//    private int defaultMaxTokens;
-
     @Value("${app.dry-run:false}")
     private boolean dryRun;
 

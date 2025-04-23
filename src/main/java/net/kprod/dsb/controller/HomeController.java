@@ -1,6 +1,8 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.data.ViewOptions;
 import net.kprod.dsb.data.dto.FileNode;
+import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.DriveService;
@@ -52,7 +54,14 @@ public class HomeController {
 
     @GetMapping("/transcript/{fileId}")
     public String viewTranscript(Model model, @PathVariable String fileId) throws IOException {
-        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId));
+        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, ViewOptions.all()));
+
+        return "transcript";
+    }
+
+    @GetMapping("/transcript/{fileId}/failed")
+    public String viewTranscriptFailedPages(Model model, @PathVariable String fileId) throws IOException {
+        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, new ViewOptions().setCompletionStatus(ViewOptionsCompletionStatus.failed)));
 
         return "transcript";
     }

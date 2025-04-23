@@ -39,6 +39,7 @@
             <span th:if="${not file.folder}">
                 <span th:if="${file.dtoTranscript}">(<span th:text="${file.dtoTranscript.pageCount}"></span> pages)</span>
                 <a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">view</a> -
+                <a th:href="@{/transcript/{id}/failed(id=${file.dtoFile.fileId})}">view failed</a> -
                 <a th:href="@{/transcript/pdf/{id}(id=${file.dtoFile.fileId})}">get pdf</a>
             </span>
             <ul th:if="${file.folder}">

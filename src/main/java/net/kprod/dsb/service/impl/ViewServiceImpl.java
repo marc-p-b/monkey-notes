@@ -1,12 +1,14 @@
 package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.data.ViewOptions;
 import net.kprod.dsb.data.dto.DtoFile;
 import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.DtoTranscriptPage;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.FileType;
+import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
@@ -14,7 +16,6 @@ import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -63,13 +64,13 @@ public class ViewServiceImpl implements ViewService {
     }
 
     @Override
-    public DtoTranscript getTranscript(String fileId) {
+    public DtoTranscript getTranscript(String fileId, ViewOptions viewOptions) {
         IdFile idFile = idFile(fileId);
 
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(idFile);
         Optional<EntityFile> optFile = repositoryFile.findById(idFile);
         if (optDoc.isPresent() && optFile.isPresent()) {
-            DtoTranscript dtoTranscript = buildDtoTranscript(optDoc.get(), optFile.get().getParentFolderId());
+            DtoTranscript dtoTranscript = buildDtoTranscript(optDoc.get(), viewOptions);
             return dtoTranscript;
         }
         //todo error
@@ -90,7 +91,7 @@ public class ViewServiceImpl implements ViewService {
 
                 Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getIdFile());
                 if(optTranscript.isPresent()) {
-                    dtoTranscript = buildDtoTranscript(optTranscript.get(), dir.getParentFolderId());
+                    dtoTranscript = buildDtoTranscript(optTranscript.get(), ViewOptions.all());
                 } else {
                     LOG.warn("No transcript found for id {}", child.getIdFile());
                     //todo NO transcript / error
@@ -164,19 +165,22 @@ public class ViewServiceImpl implements ViewService {
 
                     Optional<EntityFile> f = repositoryFile.findById(t.getIdFile());
 
-                    String parentFolderId = f.isPresent() ? f.get().getParentFolderId() : folderId;
+                    //String parentFolderId = f.isPresent() ? f.get().getParentFolderId() : folderId;
 
-                    return buildDtoTranscript(t, parentFolderId);
+                    return buildDtoTranscript(t, ViewOptions.all());
                 })
                 .toList();
     }
 
-    private DtoTranscript buildDtoTranscript(EntityTranscript t, String parentFolderId) {
+
+
+
+
+    private DtoTranscript buildDtoTranscript(EntityTranscript t, ViewOptions viewOptions) {
         List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
+
         for(int n = 1; n <= t.getPageCount(); n++) {
             //todo optimize ? include in all requests ? // remove n ?
-
-            ;
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), t.getIdFile().getFileId(), n));
                         listPages.add(optPage);
@@ -208,13 +212,19 @@ public class ViewServiceImpl implements ViewService {
             })
             .toList();
 
+        if (viewOptions.getCompletionStatus() == ViewOptionsCompletionStatus.failed) {
+            listP = listP.stream()
+                    .filter(p -> !p.isCompleted())
+                    .toList();
+        }
+
         dtoTranscript.setPages(listP);
         return dtoTranscript;
     }
 
     @Override
     public File createTranscriptPdf(String fileId) throws IOException {
-        return pdfService.createTranscriptPdf(fileId, Collections.singletonList(getTranscript(fileId)));
+        return pdfService.createTranscriptPdf(fileId, Collections.singletonList(getTranscript(fileId, ViewOptions.all())));
     }
 
     @Override

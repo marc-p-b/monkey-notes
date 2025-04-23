@@ -14,10 +14,7 @@ import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
-import net.kprod.dsb.monitoring.AsyncResult;
-import net.kprod.dsb.monitoring.MonitoringAsync;
-import net.kprod.dsb.monitoring.MonitoringService;
-import net.kprod.dsb.monitoring.SupplyAsync;
+import net.kprod.dsb.monitoring.*;
 import net.kprod.dsb.service.*;
 import net.kprod.dsb.tasks.FlushTask;
 import net.kprod.dsb.tasks.RefreshWatchTask;
@@ -77,12 +74,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
-
-//    @Value("${app.qwen.model}")
-//    private String qwenModel;
-//
-//    @Value("${app.qwen.prompt}")
-//    private String qwenPrompt;
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -175,10 +166,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         Authentication auth = mapChannelAuth.get(channelId);
         if(auth == null) {
-            LOG.error("Rejected notified auth channel {} (No auth available)", channelId);
+            LOG.debug("Rejected notified auth channel {} (No auth available)", channelId);
             return;
         }
-        LOG.info("Changes notified channel {} user {}", channelId, auth.getName());
+        LOG.debug("Changes notified channel {} user {}", channelId, auth.getName());
 
         SecurityContext context = SecurityContextHolder.getContext();
         context.setAuthentication(auth);
@@ -201,27 +192,30 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if(!changes.isEmpty()) {
             for (Change change : changes.getChanges()) {
-                ChangedFile changedFile = new ChangedFile(change);
+                ChangedFile changedFile = new ChangedFile(change, auth);
 
                 String fileId = change.getFileId();
 
                 if(change.getFile() != null) {
-                    LOG.info(" Change fileId {} name {}", fileId, change.getFile().getName());
+                    String filename = change.getFile().getName();
+                    LOG.debug("Change fileId {} name {}", fileId, filename);
 
+                    //TODO this limits change accetation ONLY to known files
                     if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
                         if(mapScheduled.containsKey(fileId)) {
-                            LOG.info("already got a change for file {}", fileId);
+                            LOG.debug("already got a change for file {}", fileId);
                             mapScheduled.get(fileId).getFuture().cancel(true);
                         }
-                        LOG.info(" > accept file change {}", fileId);
+                        LOG.info("Accepted file change id {} name {}", fileId, filename);
                         //todo refresh is deactivated inside task
                         futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
                         changedFile.setFuture(futureFlush);
                         mapScheduled.put(fileId, changedFile);
 
-                    } else {
-                        LOG.info("rejected file {}", fileId);
                     }
+//                    else {
+//                        LOG.info("rejected file {}", fileId);
+//                    }
                 } else {
                     LOG.warn("No file with this id found {}", fileId);
                 }
@@ -234,22 +228,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Prepare Async (flushChanges)");
 
         long now = System.currentTimeMillis();
-        Set<String> setFlushedFileId = mapScheduled.entrySet().stream()
+        Map<Authentication, Set<String>> mapAuth2SetFlushedFileId =
+                mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion
                 .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-
-        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
-        if(optAuth.isEmpty()) {
-            LOG.error("No authentication found");
-            return;
-        }
+                //regroup by user
+                .collect(Collectors.groupingBy(e->e.getValue().getAuth(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
         try {
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
-                    optAuth.get(),
-                    () -> asyncProcessFlushed(setFlushedFileId));
+                    () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             mapAsyncProcess.put("flushChanges-" + monitoringService.getCurrentMonitoringData().getId(), future);
         } catch (ServiceException e) {
@@ -258,8 +246,20 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     }
 
-    public void asyncProcessFlushed(Set<String> setFlushedFileId) {
+    public void asyncProcessFlushed(Map<Authentication, Set<String>> mapAuth2SetFlushedFileId) {
+        for(Map.Entry<Authentication, Set<String>> e: mapAuth2SetFlushedFileId.entrySet()) {
+            Authentication auth = e.getKey();
+            Set<String> setFlushedFileId = e.getValue();
+            LOG.info("Processing user {} flushed files {}", auth.getName(), setFlushedFileId.size());
 
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(auth);
+            SecurityContextHolder.setContext(context);
+            asyncProcessFlushedByUser(e.getValue());
+        }
+    }
+
+    public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
         List<File2Process> files2Process = setFlushedFileId.stream()
                 .map(fileId -> {
                     Change change = mapScheduled.get(fileId).getChange();
@@ -338,7 +338,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
 
         try {
-            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+            SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                     optAuth.get(),
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
@@ -578,26 +578,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return documentTitleDate;
     }
 
-//    @Override
-//    public void forcePageUpdate(String fileId, int pageNumber) {
-////        String model = qwenModel;
-////        String prompt = qwenPrompt;
-////        boolean useDefaultPrompt = true;
-////
-////        try {
-////            useDefaultPrompt = preferencesService.useDefaultPrompt();
-////            if (useDefaultPrompt == false) {
-////                model = preferencesService.getModel();
-////                prompt = preferencesService.getPrompt();
-////            }
-////        } catch (ServiceException e) {
-////            LOG.error("Failed to get preference (use defaults) {}", e);
-////        }
-////
-////        this.forcePageUpdate(fileId, pageNumber, model, prompt);
-//
-//    }
-
     @Override
     public void forcePageUpdate(String fileId, int pageNumber) {
         LOG.info("Prepare Async (Force page update for {} page {})", fileId, pageNumber);
@@ -609,7 +589,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         try {
             URL imageURL = utilsService.imageURL(fileId, pageNumber);
-            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+            SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                     optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);

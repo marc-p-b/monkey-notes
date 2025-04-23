@@ -1,6 +1,7 @@
 package net.kprod.dsb.data;
 
 import com.google.api.services.drive.model.Change;
+import org.springframework.security.core.Authentication;
 
 import java.util.concurrent.ScheduledFuture;
 
@@ -8,9 +9,11 @@ public class ChangedFile {
         private Change change;
         ScheduledFuture<?> future;
         private long timestamp;
+        private Authentication auth;
 
-        public ChangedFile(Change change) {
+        public ChangedFile(Change change, Authentication authentication) {
                 this.change = change;
+                this.auth = authentication;
                 timestamp = System.currentTimeMillis();
         }
 
@@ -29,6 +32,10 @@ public class ChangedFile {
         public ChangedFile setFuture(ScheduledFuture<?> future) {
                 this.future = future;
                 return this;
+        }
+
+        public Authentication getAuth() {
+                return auth;
         }
 
         @Override

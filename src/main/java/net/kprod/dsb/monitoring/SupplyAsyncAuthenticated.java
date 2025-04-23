@@ -7,26 +7,28 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.function.Supplier;
 
-public class SupplyAsync implements Supplier {
+public class SupplyAsyncAuthenticated implements Supplier {
         private MonitoringData monitorData;
         private AsyncRunnable runnable;
         private MonitoringService monitoringService;
-
+        private Authentication authentication;
 
     /**
      * Constructor
      * @param monitoringService
      * @param runnable
      */
-    public SupplyAsync(MonitoringService monitoringService, MonitoringData monitorData, AsyncRunnable runnable) throws ServiceException {
+    public SupplyAsyncAuthenticated(MonitoringService monitoringService, MonitoringData monitorData, Authentication authentication, AsyncRunnable runnable) throws ServiceException {
         if(monitoringService == null ||
                 monitorData == null ||
                 runnable == null) {
+            //FIXME
             throw new ServiceException("All parameters must be defined");
         }
         this.monitoringService = monitoringService;
         this.monitorData = monitorData;
         this.runnable = runnable;
+        this.authentication = authentication;
     }
 
 
@@ -38,6 +40,9 @@ public class SupplyAsync implements Supplier {
     @Override
     public Object get() {
         monitoringService.keep(monitorData,"async");
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
         long start = System.currentTimeMillis();
 

@@ -6,8 +6,9 @@
 <body>
 
 <div>
-    <a href="/">Home</a>
-
+    <a href="/">Home</a> -
+    <a th:href="@{/transcript/force-update/{id}(id=${dtoTranscript.fileId})}">force udpate</a> -
+    <a th:href="@{/transcript/pdf/{id}(id=${dtoTranscript.fileId})}">get pdf</a>
 </div>
 
 <h2 th:text="${dtoTranscript.title}"></h2>
@@ -18,12 +19,6 @@
     <p>
         <th:block th:utext="${page.transcriptHtml}"/>
     </p>
-
-<!--    <form th:action="@{/form/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">-->
-<!--        <input type="text" name="model" th:value="${config.model}"/>-->
-<!--        <input type="text" name="prompt" th:value="${config.prompt}"/>-->
-<!--        <input type="submit" value="update" />-->
-<!--    </form>-->
 
     <a th:href="@{/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">force update</a>
     <a th:href="${page.imageUrl}">View page <span th:text="${page.pageNumber}"></span></a>

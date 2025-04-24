@@ -736,7 +736,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public void forceUpdateTranscript(String fileId) {
+    public void requestForceTranscriptUpdate(String fileId) {
         LOG.info("Force update transcript {}", fileId);
         Optional<EntityFile> optEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
         if(optEntityFile.isPresent()) {
@@ -744,6 +744,51 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             entityFile.setMd5("");
             repositoryFile.save(entityFile);
             LOG.info("Clean MD5 {}, request update", fileId);
+            forceTranscriptUpdate(fileId);
+        }
+    }
+
+    @Override
+    public void forceTranscriptUpdate(String fileId) {
+        LOG.info("Prepare Async (Force transcript update for id {} )", fileId);
+        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
+        if(optAuth.isEmpty()) {
+            LOG.error("No authentication found");
+            return;
+        }
+
+        try {
+            SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    optAuth.get(),
+                    () -> asyncForceTranscriptUpdate(fileId));
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+            mapAsyncProcess.put("runAsyncForceTranscriptUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+        } catch (ServiceException e) {
+            LOG.error("Failed to prepare runAsyncForceTranscriptUpdate", e);
+        }
+    }
+
+    @MonitoringAsync
+    private void asyncForceTranscriptUpdate(String fileId) {
+        try {
+            File file = driveUtilsService.getDriveFileDetails(fileId);
+
+            File fileParent = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
+
+            Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
+
+            File2Process file2Process = new File2Process(file)
+                    .setFilePath(downloadFileFromDrive)
+                    .setParentFolderId(fileParent.getId())
+                    .setParentFolderName(fileParent.getName());
+
+            //Path targetFolder = utilsService.downloadDir(file2Process.getFileId());
+            //Path downloadFilePath = driveUtilsService.downloadFileFromDrive(file2Process.getFileId(), file2Process.getFileName(), targetFolder);
+            //file2Process.setFilePath(downloadFilePath);
+
+            runListAsyncProcess(List.of(file2Process));
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
         }
     }
 

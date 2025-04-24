@@ -2,7 +2,6 @@ package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.DriveChangeManagerService;
-import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.ViewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,15 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Controller
 public class DefaultController {
@@ -118,7 +114,7 @@ public class DefaultController {
 
     @GetMapping("/transcript/force-update/{fileId}")
     public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
-        driveChMgmtService.forceUpdateTranscript(fileId);
+        driveChMgmtService.requestForceTranscriptUpdate(fileId);
         return ResponseEntity.ok().body("OK");
     }
 

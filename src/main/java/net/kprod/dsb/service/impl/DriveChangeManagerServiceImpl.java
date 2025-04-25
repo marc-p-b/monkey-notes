@@ -552,28 +552,32 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         Matcher m1 = titleDatePattern.matcher(f2p.getFileName());
 
         OffsetDateTime documentTitleDate = null;
-        if (m1.find()) {
-            try {
-                LocalDate ld = LocalDate.parse(m1.group(), DateTimeFormatter.ofPattern("yyMMdd"));
-                ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
-                documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
-            } catch (DateTimeParseException e) {
-                //  todo
-                LOG.warn("Could not parse date in file title {}", m1.group(1), e);
-            }
-        } else if (f2p.getParentFolderName() != null) {
-            Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
-
-            if(m2.find()) {
+        try {
+            if (m1.find()) {
                 try {
-                    LocalDate ld = LocalDate.parse(m2.group(), DateTimeFormatter.ofPattern("yyMMdd"));
+                    LocalDate ld = LocalDate.parse(m1.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
                     ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
                     documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
                 } catch (DateTimeParseException e) {
                     //  todo
-                    LOG.warn("Could not parse date in parent title {}", m1.group(1), e);
+                    LOG.warn("Could not parse date in file title {}", m1.group(1), e);
+                }
+            } else if (f2p.getParentFolderName() != null) {
+                Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
+
+                if (m2.find()) {
+                    try {
+                        LocalDate ld = LocalDate.parse(m2.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
+                        ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
+                        documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
+                    } catch (DateTimeParseException e) {
+                        //  todo
+                        LOG.warn("Could not parse date in parent title {}", m1.group(1), e);
+                    }
                 }
             }
+        } catch (Exception e) {
+            LOG.error("Could not identify date in file {}", f2p.getFileId(), e);
         }
         return documentTitleDate;
     }
@@ -832,4 +836,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         //todo return dto instead
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }
+
+
 }

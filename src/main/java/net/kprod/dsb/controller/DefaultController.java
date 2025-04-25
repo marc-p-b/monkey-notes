@@ -118,6 +118,12 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
+//    @GetMapping("/delete/folder/{fileId}")
+//    public ResponseEntity<String> deleteFolder(@PathVariable String fileId) {
+//        viewService.deleteFolder(fileId);
+//        return ResponseEntity.ok().body("OK");
+//    }
+
     private static byte[] readFileToBytes(File file) throws IOException {
         byte[] bytes = new byte[(int) file.length()];
         FileInputStream fis = null;

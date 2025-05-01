@@ -8,6 +8,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 @Service
 public class UtilsServiceImpl implements UtilsService {
 
+    public static final int BUFFER_FILE_READ = 8192;
     private Logger LOG = LoggerFactory.getLogger(UtilsService.class);
 
     @Value("${app.paths.transcripts-pdf}")
@@ -103,5 +105,17 @@ public class UtilsServiceImpl implements UtilsService {
             }
         }
 
+    }
+
+    @Override
+    public void efficientStreamFile(File file, OutputStream outputStream) throws IOException {
+        try (InputStream inputStream = new FileInputStream(file)) {
+            byte[] buffer = new byte[BUFFER_FILE_READ];
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+        }
     }
 }

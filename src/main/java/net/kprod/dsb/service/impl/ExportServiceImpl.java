@@ -11,7 +11,6 @@ import net.kprod.dsb.data.repository.RepositoryTranscript;
 import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
 import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.ExportService;
-import net.kprod.dsb.service.ImageService;
 import net.kprod.dsb.service.UtilsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +25,8 @@ import java.util.zip.ZipOutputStream;
 
 @Service
 public class ExportServiceImpl implements ExportService {
+    public static final String EXPORT_DATABASE_JSON_NAME = "db.json";
+    public static final int EXPORT_IMAGE_READ_BUFFER = 1024;
 
     @Autowired
     private RepositoryFile repositoryFile;
@@ -41,9 +42,6 @@ public class ExportServiceImpl implements ExportService {
 
     @Autowired
     private AuthService authService;
-
-    @Autowired
-    private ImageService imageService;
 
     @Autowired
     private UtilsService utilsService;
@@ -71,7 +69,7 @@ public class ExportServiceImpl implements ExportService {
                 addImage(fileId, pageNumber, zipOut);
             }
 
-            ZipEntry jsonEntry = new ZipEntry("db.json");
+            ZipEntry jsonEntry = new ZipEntry(EXPORT_DATABASE_JSON_NAME);
             zipOut.putNextEntry(jsonEntry);
 
             byte[] jsonBytes = mapper.writeValueAsBytes(dtoExport);
@@ -82,7 +80,7 @@ public class ExportServiceImpl implements ExportService {
     }
 
     private void addImage(String fileId, int pageNumber, ZipOutputStream zipOut) throws IOException {
-        byte[] buffer = new byte[1024];
+        byte[] buffer = new byte[EXPORT_IMAGE_READ_BUFFER];
         File file = utilsService.imagePath(fileId, pageNumber).toFile();
 
         try (FileInputStream fis = new FileInputStream(file)) {

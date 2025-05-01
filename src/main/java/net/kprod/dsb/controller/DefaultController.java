@@ -1,13 +1,10 @@
 package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.dto.FileNode;
-import net.kprod.dsb.service.DriveChangeManagerService;
-import net.kprod.dsb.service.ExportService;
-import net.kprod.dsb.service.ViewService;
+import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +14,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +23,19 @@ public class DefaultController {
     private Logger LOG = LoggerFactory.getLogger(DefaultController.class);
 
     @Autowired
+    private ExportService exportService;
+
+    @Autowired
     private DriveChangeManagerService driveChMgmtService;
 
     @Autowired
     private ViewService viewService;
+
+    @Autowired
+    private UtilsService utilsService;
+
+    @Autowired
+    private DriveUtilsService driveUtilsService;
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
@@ -54,14 +59,20 @@ public class DefaultController {
         return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
     }
 
-    @GetMapping("/transcript/pdf/{fileId}")
-    public ResponseEntity<byte[]> getTranscriptPdf(@PathVariable String fileId) throws IOException {
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.set(HttpHeaders.CONTENT_TYPE, "application/pdf");
-        httpHeaders.set(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("").build().toString());
+    @GetMapping(value = "/transcript/pdf/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> getTranscriptPdf(@PathVariable String fileId) throws IOException {
+        File file = viewService.createTranscriptPdf(fileId);
 
-        byte[] b = readFileToBytes(viewService.createTranscriptPdf(fileId));
-        return ResponseEntity.ok().headers(httpHeaders).body(b);
+        StreamingResponseBody stream = outputStream -> {
+            utilsService.efficientStreamFile(file, outputStream);
+        };
+
+        String docName = driveUtilsService.getFileName(fileId) + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + docName)
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(file.length())
+                .body(stream);
     }
 
     @GetMapping("/flush")
@@ -82,12 +93,6 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-//    @GetMapping("/form/update/transcript/{fileId}/{pageNumber}")
-//    public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestParam String model, @RequestParam String prompt) {
-//        driveChMgmtService.forcePageUpdate(fileId, pageNumber, model, prompt);
-//        return ResponseEntity.ok().body("OK");
-//    }
-
     @GetMapping("/update/transcript/{fileId}/{pageNumber}")
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
         driveChMgmtService.forcePageUpdate(fileId, pageNumber);
@@ -99,15 +104,22 @@ public class DefaultController {
         return ResponseEntity.ok().body(viewService.listFolders());
     }
 
-    @GetMapping("/folder/pdf/{folderId}")
-    public ResponseEntity<byte[]> getFolderPdf(@PathVariable String folderId) throws IOException {
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.set(HttpHeaders.CONTENT_TYPE, "application/pdf");
-        httpHeaders.set(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("").build().toString());
+    @GetMapping(value = "/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> getFolderPdf(@PathVariable String folderId) throws IOException {
+        File file = viewService.createTranscriptPdfFromFolder(folderId);
 
-        byte[] b = readFileToBytes(viewService.createTranscriptPdfFromFolder(folderId));
-        return ResponseEntity.ok().headers(httpHeaders).body(b);
+        StreamingResponseBody stream = outputStream -> {
+            utilsService.efficientStreamFile(file, outputStream);
+        };
+
+        String docName = driveUtilsService.getFileName(folderId) + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + docName)
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(file.length())
+                .body(stream);
     }
+
 
     @GetMapping("/process/cancel/{id}")
     public ResponseEntity<String> processCancel(@PathVariable String id) {
@@ -121,18 +133,8 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-//    @GetMapping("/delete/folder/{fileId}")
-//    public ResponseEntity<String> deleteFolder(@PathVariable String fileId) {
-//        viewService.deleteFolder(fileId);
-//        return ResponseEntity.ok().body("OK");
-//    }
-
-    @Autowired
-    private ExportService exportService;
-
-
     @GetMapping(value = "/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> downloadReport() throws IOException {
+    public ResponseEntity<StreamingResponseBody> exportUserData() throws IOException {
 
         StreamingResponseBody stream = outputStream -> {
             exportService.export(outputStream);
@@ -142,23 +144,5 @@ public class DefaultController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=local-files.zip")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(stream);
-
     }
-
-
-    //todo use more efficient buffered reader
-    private static byte[] readFileToBytes(File file) throws IOException {
-        byte[] bytes = new byte[(int) file.length()];
-        FileInputStream fis = null;
-        try {
-            fis = new FileInputStream(file);
-            fis.read(bytes);
-        } finally {
-            if (fis != null) {
-                fis.close();
-            }
-        }
-        return bytes;
-    }
-
 }

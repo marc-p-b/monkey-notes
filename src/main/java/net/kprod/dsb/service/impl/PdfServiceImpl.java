@@ -33,6 +33,8 @@ import java.util.Map;
 
 @Service
 public class PdfServiceImpl implements PdfService {
+    public static final int RESIZE_IMAGE_MAX_WIDTH = 1200;
+    public static final int RESIZE_IMAGE_MAX_HEIGHT = 1000;
     private Logger LOG = LoggerFactory.getLogger(PdfService.class);
 
     public static final int PDF2IMAGE_DPI = 72;
@@ -42,10 +44,8 @@ public class PdfServiceImpl implements PdfService {
     private UtilsService utilsService;
 
     private BufferedImage resizeImage(BufferedImage originalImage) throws Exception {
-        // Load image
-
-        int maxWidth = 1200;
-        int maxHeight = 1000;
+        int maxWidth = RESIZE_IMAGE_MAX_WIDTH;
+        int maxHeight = RESIZE_IMAGE_MAX_HEIGHT;
 
         // Calculate new dimensions while preserving aspect ratio
         int originalWidth = originalImage.getWidth();

@@ -14,4 +14,5 @@ public interface RepositoryFile extends JpaRepository<EntityFile, IdFile> {
     Optional<EntityFile> findByNameAndTypeIs(String name, FileType type);
     List<EntityFile> findAllByParentFolderIdAndTypeIs(String parentFolderId, FileType type);
     List<EntityFile> findAllByParentFolderId(String parentFolderId);
+    List<EntityFile> findAllByIdFile_Username(String username);
 }

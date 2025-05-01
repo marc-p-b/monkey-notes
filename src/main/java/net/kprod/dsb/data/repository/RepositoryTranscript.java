@@ -11,4 +11,5 @@ import java.util.Set;
 @Repository
 public interface RepositoryTranscript extends JpaRepository<EntityTranscript, IdFile> {
     List<EntityTranscript> findAllByIdFileIn(Set<IdFile> idFiles);
+    List<EntityTranscript> findAllByIdFile_Username(String username);
 }

@@ -245,6 +245,7 @@ public class PdfServiceImpl implements PdfService {
             //contentStream.endText();
             //contentStream.close();
 
+            //todo here use a stream
             file = new java.io.File("/tmp/",  fileId + ".pdf");
             doc.save(file);
         }

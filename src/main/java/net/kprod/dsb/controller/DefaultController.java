@@ -2,16 +2,19 @@ package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.DriveChangeManagerService;
+import net.kprod.dsb.service.ExportService;
 import net.kprod.dsb.service.ViewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -124,6 +127,26 @@ public class DefaultController {
 //        return ResponseEntity.ok().body("OK");
 //    }
 
+    @Autowired
+    private ExportService exportService;
+
+
+    @GetMapping(value = "/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> downloadReport() throws IOException {
+
+        StreamingResponseBody stream = outputStream -> {
+            exportService.export(outputStream);
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=local-files.zip")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(stream);
+
+    }
+
+
+    //todo use more efficient buffered reader
     private static byte[] readFileToBytes(File file) throws IOException {
         byte[] bytes = new byte[(int) file.length()];
         FileInputStream fis = null;

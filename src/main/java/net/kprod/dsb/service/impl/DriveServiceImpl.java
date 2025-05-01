@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -33,7 +35,7 @@ public class DriveServiceImpl implements DriveService {
     public static final String STORED_CREDENTIAL_NAME = "dsb-gdrive-credential";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
-    private static final long TOKEN_REFRESH_INTERVAL = 3500;
+    //private static final long TOKEN_REFRESH_INTERVAL = 3500;
     private static final String APPLICATION_NAME = "Drive Notepad Sync";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
@@ -51,6 +53,9 @@ public class DriveServiceImpl implements DriveService {
 
     @Value("${app.oauth-callback.path}")
     private String oauthCallbackPath;
+
+    @Value("${app.drive.auth.refresh-token}")
+    private long tokenRefreshInterval;
 
     private static final Set<String> SCOPES = Set.of(
             DriveScopes.DRIVE,
@@ -176,6 +181,8 @@ public class DriveServiceImpl implements DriveService {
     }
 
     private void getDriveConnection() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if(googleDrive == null) {
             LOG.info("Connecting to Google Drive");
             try {
@@ -187,17 +194,17 @@ public class DriveServiceImpl implements DriveService {
                     .setApplicationName(APPLICATION_NAME)
                     .build();
 
-            // todo run once ?
             connectCallback.run();
 
-            taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
+            taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
         } else {
             LOG.info("Already connected to Google Drive");
         }
     }
 
     public void refreshToken()  {
-        LOG.info("Refresh token");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        LOG.info("Refresh token for user {}", authentication.getName());
 
         //credential.setRefreshToken(refreshToken);
         try {
@@ -206,7 +213,7 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Refresh token failed", e);
         }
 
-        taskScheduler.schedule(new RefreshTokenTask(ctx), OffsetDateTime.now().plusSeconds(TOKEN_REFRESH_INTERVAL).toInstant());
+        taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
 
         this.getDriveConnection();
         LOG.info("Credential refreshed, gdrive connected {}", googleDrive != null  ? "yes" : "no");

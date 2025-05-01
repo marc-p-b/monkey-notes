@@ -31,7 +31,7 @@ public class DefaultController {
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
-        driveChMgmtService.watch();
+        driveChMgmtService.watch(true);
         return ResponseEntity.ok().body("watch started");
     }
 

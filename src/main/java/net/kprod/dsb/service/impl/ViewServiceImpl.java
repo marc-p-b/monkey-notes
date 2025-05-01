@@ -146,15 +146,12 @@ public class ViewServiceImpl implements ViewService {
         }
 
         List<FileNode> folders = null;
-        try {
-            EntityFile folder = repositoryFile.findById(idFile(inboundFolderId)).orElseThrow(() -> new ServiceException("inbound folder not found"));
-            folders = listFileNodesRecurs(folder);
-        } catch (ServiceException e) {
-            LOG.error("Error listing folders", e);
+        Optional<EntityFile> optFolder = repositoryFile.findById(idFile(inboundFolderId));
+        if(optFolder.isEmpty()) {
             return Collections.emptyList();
         }
+        folders = listFileNodesRecurs(optFolder.get());
 
-        // todo do this in recurs ? (does not work)
         return folders;
     }
 

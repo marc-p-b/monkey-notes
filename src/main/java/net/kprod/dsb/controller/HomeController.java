@@ -41,14 +41,15 @@ public class HomeController {
         //todo for all user urls
         Optional<String> optAuthUrl = driveService.requireAuth();
 
-        List<FileNode> listFiles = viewService.listFolders();
-        model.addAttribute("fileNodes", listFiles);
-        model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
-
         //todo for all user urls
         if(preferencesService.isParametersNotSet()) {
             return "redirect:/preferences";
         }
+
+        List<FileNode> listFiles = viewService.listFolders();
+        model.addAttribute("fileNodes", listFiles);
+        model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
+
 
         return "home";
     }

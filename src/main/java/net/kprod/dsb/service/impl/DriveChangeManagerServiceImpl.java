@@ -63,9 +63,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.notify.path}")
     private String notifyPath;
 
-    @Value("${app.erase-db:false}")
-    private boolean eraseDb;
-
     @Value("${app.changes.expiration}")
     private long changesWatchExpiration;
 
@@ -74,6 +71,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
+
+    //todo synchronized ?
+    private Map<String, Authentication> mapChannelAuth;
+    private Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -143,8 +144,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     void driveAuthCallBack() {
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
-
-            this.watch();
+            //todo adapt to multiuser
+            this.watch(!watchChanges); //if watchChanges is false, this is the first callback ; need to force
         }
     }
 
@@ -577,6 +578,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 }
             }
         } catch (Exception e) {
+            //todo why ??
             LOG.error("Could not identify date in file {}", f2p.getFileId(), e);
         }
         return documentTitleDate;
@@ -605,12 +607,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
 
-    @Override
-    public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
-        return mapAsyncProcess;
-    }
 
     @MonitoringAsync
     private void asyncForcePageUpdate(String fileId, int pageNumber, URL imageURL) {
@@ -659,17 +656,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         watchChanges = false;
     }
 
-    //todo synchronized ?
-    private Map<String, Authentication> mapChannelAuth;
-
-    public void watch() {
-
-        if(mapChannelAuth == null) {
-            mapChannelAuth = new HashMap<>();
+    public void watch(boolean renewOrForced) {
+        if(renewOrForced == false) {
+            return;
         }
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        Authentication authentication = securityContext.getAuthentication();
+        LOG.info("watch changes for user {}", authentication.getName());
 
+        //todo this cannot be multi user
+        LOG.info("watch channel was id {}", currentChannelId);
         currentChannelId = UUID.randomUUID().toString();
-        mapChannelAuth.put(currentChannelId, authService.getLoggedAuthentication().get());
+        LOG.info("watch channel is now id {}", currentChannelId);
 
         OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
 
@@ -691,21 +689,24 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         long now = System.currentTimeMillis();
         long exp = responseChannel.getExpiration();
 
+        if(mapChannelAuth == null) {
+            mapChannelAuth = new HashMap<>();
+        }
+        mapChannelAuth.put(currentChannelId, authentication);
+
         LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
 
-        taskScheduler.schedule(new RefreshWatchTask(ctx), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant());
+        taskScheduler.schedule(new RefreshWatchTask(ctx, authentication), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant());
         watchChanges = true;
     }
 
     public void renewWatch() throws IOException {
         LOG.info("renew watch");
 
-        //todo auth ?
-
         LOG.info("stop watch channel id {}", responseChannel.getResourceId());
         driveService.getDrive().channels().stop(responseChannel);
 
-        this.watch();
+        this.watch(true);
     }
 
     @Override
@@ -837,5 +838,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }
 
+    @Override
+    public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
+        return mapAsyncProcess;
+    }
 
 }

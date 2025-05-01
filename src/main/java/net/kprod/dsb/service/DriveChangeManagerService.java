@@ -11,7 +11,7 @@ public interface DriveChangeManagerService {
     void updateAll();
     void updateFolder(String folderId);
     void watchStop() throws IOException;
-    void watch();
+    void watch(boolean renewOrForce);
     void renewWatch() throws IOException;
     void changeNotified(String channelId);
     void flushChanges();

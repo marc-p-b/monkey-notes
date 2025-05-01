@@ -11,9 +11,11 @@ import java.io.IOException;
 
 public class RefreshWatchTask implements Runnable{
 	private ApplicationContext ctx;
+	private Authentication auth;
 
-	public RefreshWatchTask(ApplicationContext ctx){
+	public RefreshWatchTask(ApplicationContext ctx, Authentication auth){
 		this.ctx = ctx;
+		this.auth = auth;
 	}
 
 	@Override
@@ -21,6 +23,7 @@ public class RefreshWatchTask implements Runnable{
 		DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
 
 		SecurityContext context = SecurityContextHolder.getContext();
+		context.setAuthentication(auth);
 
 		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
 		monitoringService.start("RefreshWatchTask", "run");

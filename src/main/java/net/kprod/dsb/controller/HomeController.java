@@ -38,17 +38,17 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
-        //todo for all user urls
-        Optional<String> optAuthUrl = driveService.requireAuth();
-
-        //todo for all user urls
-        if(preferencesService.isParametersNotSet()) {
-            return "redirect:/preferences";
-        }
-
-        List<FileNode> listFiles = viewService.listFolders();
-        //model.addAttribute("fileNodes", listFiles);
-        model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
+//        //todo for all user urls
+//        Optional<String> optAuthUrl = driveService.requireAuth();
+//
+//        //todo for all user urls
+//        if(preferencesService.isParametersNotSet()) {
+//            return "redirect:/preferences";
+//        }
+//
+//        List<FileNode> listFiles = viewService.listFolders();
+//        //model.addAttribute("fileNodes", listFiles);
+//        model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
 
 
         return "home";

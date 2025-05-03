@@ -13,6 +13,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
@@ -51,6 +54,13 @@ public class DefaultController {
         } else {
             return  ResponseEntity.ok(new DtoGoogleDriveConnect());
         }
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile file) {
+
+
+        return ResponseEntity.ok("OK");
     }
 
     @GetMapping("/watch/start")

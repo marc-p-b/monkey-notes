@@ -47,7 +47,7 @@ public class HomeController {
         }
 
         List<FileNode> listFiles = viewService.listFolders();
-        model.addAttribute("fileNodes", listFiles);
+        //model.addAttribute("fileNodes", listFiles);
         model.addAttribute("authUrl", optAuthUrl.isPresent() ? optAuthUrl.get() : "");
 
 

@@ -6,6 +6,7 @@
 <body>
 
 <div>
+    <a href="/">Monkey Notes</a>
     <a href="/preferences">Preferences</a>
     <a href="/processing">Processes</a>
 </div>
@@ -22,34 +23,107 @@
     </div>
     <h2>File and Folder Structure</h2>
 
-    <ul>
-        <li th:each="fileNode : ${fileNodes}">
-            <span th:if="${fileNode.folder}"><a th:href="@{/folder/pdf/{id}(id=${fileNode.dtoFile.fileId})}"><span th:text="${fileNode.name}"></span></a></span>
-            <ul th:if="${fileNode.folder}">
-                <a th:href="@{/update/folder/{folderId}(folderId=${fileNode.dtoFile.fileId})}">Refresh</a>
-                <li th:replace="~{::subTree(${fileNode.children})}">
-                </li>
-            </ul>
-        </li>
-    </ul>
+    <div id="auth-box">
+        <!-- Folder tree will be rendered here -->
+    </div>
 
-    <th:block th:fragment="subTree(children)">
-        <li th:each="file : ${children}">
-            <span th:text="${file.name}"></span>
-            <span th:if="${not file.folder}">
-                <span th:if="${file.dtoTranscript}">(<span th:text="${file.dtoTranscript.pageCount}"></span> pages)</span>
-                <a th:href="@{/transcript/{id}(id=${file.dtoFile.fileId})}">view transcript</a> -
-                <a th:href="@{/transcript/{id}/failed(id=${file.dtoFile.fileId})}">view failed</a> -
-                <a th:href="@{/transcript/force-update/{id}(id=${file.dtoFile.fileId})}">force udpate</a> -
-                <a th:href="@{/transcript/pdf/{id}(id=${file.dtoFile.fileId})}">get pdf</a>
-            </span>
-            <ul th:if="${file.folder}">
-                <li th:replace="~{::subTree(${file.children})}"></li>
-            </ul>
-        </li>
-    </th:block>
-</div>
+    <div id="folder-container">
+        <!-- Folder tree will be rendered here -->
+    </div>
 
+<script>
+    async function ready() {
+
+        const response = await fetch('/authGoogleDrive');
+        const authJson = await response.json();
+
+        if(authJson.connected) {
+            fetchAndRenderTree();
+        } else {
+            const container = document.getElementById('auth-box');
+
+            const authLink = document.createElement('a');
+            authLink.href = authJson.url;
+            authLink.textContent = "connect to google drive"
+            container.appendChild(authLink);
+
+        }
+
+
+    }
+
+    async function fetchAndRenderTree() {
+        const response = await fetch('/folder/list');
+        const fileNodes = await response.json();
+        const container = document.getElementById('folder-container');
+        container.appendChild(buildTree(fileNodes));
+    }
+
+    function buildTree(nodes) {
+        const ul = document.createElement('ul');
+
+        nodes.forEach(node => {
+            const li = document.createElement('li');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = node.name;
+
+
+            if (node.folder) {
+                const folderLink = document.createElement('a');
+                folderLink.href = `/folder/pdf/${node.dtoFile.fileId}`;
+                folderLink.textContent = node.name;
+                li.appendChild(folderLink);
+
+                const refreshLink = document.createElement('a');
+                refreshLink.href = `/update/folder/${node.dtoFile.fileId}`;
+                refreshLink.textContent = 'Refresh';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(refreshLink);
+
+                if (node.children && node.children.length > 0) {
+                    li.appendChild(buildTree(node.children));
+                }
+            } else {
+                li.appendChild(nameSpan);
+                if (node.dtoTranscript) {
+                    const pagesSpan = document.createElement('span');
+                    pagesSpan.textContent = `(${node.dtoTranscript.pageCount} pages)`;
+                    li.appendChild(document.createTextNode(' - '));
+                    li.appendChild(pagesSpan);
+                }
+
+                const transcriptLink = document.createElement('a');
+                transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
+                transcriptLink.textContent = 'view transcript';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(transcriptLink);
+
+                const failedLink = document.createElement('a');
+                failedLink.href = `/transcript/${node.dtoFile.fileId}/failed`;
+                failedLink.textContent = 'view failed';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(failedLink);
+
+                const forceUpdateLink = document.createElement('a');
+                forceUpdateLink.href = `/transcript/force-update/${node.dtoFile.fileId}`;
+                forceUpdateLink.textContent = 'force update';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(forceUpdateLink);
+
+                const pdfLink = document.createElement('a');
+                pdfLink.href = `/transcript/pdf/${node.dtoFile.fileId}`;
+                pdfLink.textContent = 'get pdf';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(pdfLink);
+            }
+
+            ul.appendChild(li);
+        });
+        return ul;
+    }
+
+    document.addEventListener('DOMContentLoaded', ready);
+</script>
 
 </body>
 </html>

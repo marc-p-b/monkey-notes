@@ -1,5 +1,6 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.data.dto.DtoGoogleDriveConnect;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -17,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Controller
 public class DefaultController {
@@ -36,6 +39,19 @@ public class DefaultController {
 
     @Autowired
     private DriveUtilsService driveUtilsService;
+
+    @Autowired
+    private DriveService driveService;
+
+    @GetMapping("/authGoogleDrive")
+    public ResponseEntity<DtoGoogleDriveConnect> auth() {
+        Optional<String> optAuthUrl = driveService.requireAuth();
+        if (optAuthUrl.isPresent()) {
+            return  ResponseEntity.ok(DtoGoogleDriveConnect.disconnected(optAuthUrl.get()));
+        } else {
+            return  ResponseEntity.ok(new DtoGoogleDriveConnect());
+        }
+    }
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {

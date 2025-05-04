@@ -1,5 +1,9 @@
 package net.kprod.dsb.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import net.kprod.dsb.data.dto.DtoExport;
 import net.kprod.dsb.data.dto.DtoGoogleDriveConnect;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.*;
@@ -20,9 +24,16 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Controller
 public class DefaultController {
@@ -50,18 +61,20 @@ public class DefaultController {
     public ResponseEntity<DtoGoogleDriveConnect> auth() {
         Optional<String> optAuthUrl = driveService.requireAuth();
         if (optAuthUrl.isPresent()) {
-            return  ResponseEntity.ok(DtoGoogleDriveConnect.disconnected(optAuthUrl.get()));
+            return ResponseEntity.ok(DtoGoogleDriveConnect.disconnected(optAuthUrl.get()));
         } else {
-            return  ResponseEntity.ok(new DtoGoogleDriveConnect());
+            return ResponseEntity.ok(new DtoGoogleDriveConnect());
         }
     }
 
     @PostMapping("/import")
-    public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile multipartFile) {
 
-
+        exportService.importUserData(multipartFile);
         return ResponseEntity.ok("OK");
     }
+
+
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {

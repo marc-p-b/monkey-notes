@@ -11,6 +11,12 @@ public class EntityConfigId {
     public EntityConfigId() {
     }
 
+    public static EntityConfigId createConfigId(String username, String key) {
+        return new EntityConfigId()
+                .setUsername(username)
+                .setKey(key);
+    }
+
     public EntityConfigId(String username, PreferenceKey key) {
         this.username = username;
         this.key = key.name();

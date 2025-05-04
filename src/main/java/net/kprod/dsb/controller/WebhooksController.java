@@ -2,6 +2,7 @@ package net.kprod.dsb.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import net.kprod.dsb.service.*;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,17 +48,20 @@ public class WebhooksController {
     }
 
 
-    @GetMapping(value = "/image/{fileId}/{imageNum}",produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/image/{fileId}/{imageNum}")
     public ResponseEntity<StreamingResponseBody> getImageWithMediaType(@PathVariable String fileId, @PathVariable int imageNum) throws IOException {
 
         File file = utilsService.imagePath(fileId, imageNum).toFile();
+
 
         StreamingResponseBody stream = outputStream -> {
             imageService.efficientStreamImage(fileId, imageNum, outputStream);
         };
 
+        //todo adaptative to image type if necessary
         return ResponseEntity.ok()
             .contentLength(file.length())
+            .contentType(MediaType.IMAGE_JPEG)
             .body(stream);
 
     }

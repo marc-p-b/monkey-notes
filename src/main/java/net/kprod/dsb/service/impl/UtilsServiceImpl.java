@@ -96,6 +96,7 @@ public class UtilsServiceImpl implements UtilsService {
             return path;
 
         } else {
+            //TODO : forbid folder creation when not necessary
             if(path.toFile().mkdir()) {
                 LOG.info("created folder {}", fileId);
                 return path;

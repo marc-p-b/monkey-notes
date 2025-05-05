@@ -67,33 +67,42 @@
 
         nodes.forEach(node => {
             const li = document.createElement('li');
+
             const nameSpan = document.createElement('span');
             nameSpan.textContent = node.name;
 
-
             if (node.folder) {
-                const folderLink = document.createElement('a');
-                folderLink.href = `/folder/pdf/${node.dtoFile.fileId}`;
-                folderLink.textContent = node.name;
-                li.appendChild(folderLink);
+                li.appendChild(nameSpan);
 
                 const refreshLink = document.createElement('a');
                 refreshLink.href = `/update/folder/${node.dtoFile.fileId}`;
-                refreshLink.textContent = 'Refresh';
+                refreshLink.textContent = 'refresh';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(refreshLink);
+
+                const folderPdf = document.createElement('a');
+                folderPdf.href = `/folder/pdf/${node.dtoFile.fileId}`;
+                folderPdf.textContent = 'get pdf';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(folderPdf);
+
+                const agentLink = document.createElement('a');
+                agentLink.href = `/agent/${node.dtoFile.fileId}`;
+                agentLink.textContent = 'agent';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(agentLink);
 
                 if (node.children && node.children.length > 0) {
                     li.appendChild(buildTree(node.children));
                 }
             } else {
                 li.appendChild(nameSpan);
-                if (node.dtoTranscript) {
+//                if (node.dtoTranscript) {
                     const pagesSpan = document.createElement('span');
                     pagesSpan.textContent = `(${node.dtoTranscript.pageCount} pages)`;
                     li.appendChild(document.createTextNode(' - '));
                     li.appendChild(pagesSpan);
-                }
+//                }
 
                 const transcriptLink = document.createElement('a');
                 transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
@@ -118,6 +127,13 @@
                 pdfLink.textContent = 'get pdf';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(pdfLink);
+
+                const agentLink = document.createElement('a');
+                agentLink.href = `/agent/${node.dtoFile.fileId}`;
+                agentLink.textContent = 'agent';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(agentLink);
+
             }
 
             ul.appendChild(li);

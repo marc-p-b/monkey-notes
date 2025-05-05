@@ -46,6 +46,9 @@ public class ViewServiceImpl implements ViewService {
     @Autowired
     private PreferencesService preferencesService;
 
+    @Autowired
+    private UtilsService utilsService;
+
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
     }
@@ -76,9 +79,6 @@ public class ViewServiceImpl implements ViewService {
         //todo error
         return null;
     }
-
-    @Autowired
-    private UtilsService utilsService;
 
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
@@ -121,18 +121,18 @@ public class ViewServiceImpl implements ViewService {
         return files;
     }
 
-    private List<DtoFile> listAllFilesAndFoldersRecurs(EntityFile dir) {
-        DtoFile directory = DtoFile.fromEntity(dir);
-        List<DtoFile> files = new ArrayList<>();
-        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
-        for (EntityFile child : childen) {
-            files.add(DtoFile.fromEntity(child));
-            if(child.getType() == FileType.folder) {
-                files.addAll(listAllFilesRecurs(child));
-            }
-        }
-        return files;
-    }
+//    private List<DtoFile> listAllFilesAndFoldersRecurs(EntityFile dir) {
+//        DtoFile directory = DtoFile.fromEntity(dir);
+//        List<DtoFile> files = new ArrayList<>();
+//        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
+//        for (EntityFile child : childen) {
+//            files.add(DtoFile.fromEntity(child));
+//            if(child.getType() == FileType.folder) {
+//                files.addAll(listAllFilesRecurs(child));
+//            }
+//        }
+//        return files;
+//    }
 
     @Override
     public List<FileNode> listFolders() {
@@ -155,7 +155,7 @@ public class ViewServiceImpl implements ViewService {
         return folders;
     }
 
-    private List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
+    public List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
         Optional<EntityFile> optFolder = repositoryFile.findById(idFile(folderId));
 
         if(!optFolder.isPresent()) {
@@ -168,8 +168,6 @@ public class ViewServiceImpl implements ViewService {
                 })
                 .collect(Collectors.toSet());
 
-
-        //return repositoryTranscript.findAllByFileIdIn(setTranscriptId).stream()
         return repositoryTranscript.findAllByIdFileIn(setTranscriptId).stream()
                 .map(t -> {
 
@@ -181,10 +179,6 @@ public class ViewServiceImpl implements ViewService {
                 })
                 .toList();
     }
-
-
-
-
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, ViewOptions viewOptions) {
         List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();

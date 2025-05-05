@@ -11,15 +11,74 @@
 
 <h2>Ask agent</h2>
 
-<form method="post" action="/agent/ask">
-    <textarea name="question"></textarea>
-    <input type="hidden" name="fileId" th:value="${fileId}"/>
-    <input type="submit" value="ask" />
+<div id="conversation">
+</div>
+
+<form id="formQuestion">
+    <textarea name="question" id="textAreaQuestion"></textarea>
+    <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
+    <input type="hidden" name="threadId" id="inputThreadId"/>
 </form>
 
-<p>
-    <th:block th:utext="${response}"/>
-</p>
+<button id="buttonSend">send</button>
+
+<script>
+
+    document.getElementById("buttonSend").addEventListener("click", function() {
+        let question = document.getElementById("textAreaQuestion").value;
+        let fileId = document.getElementById("inputFileId").value;
+        let threadId = document.getElementById("inputThreadId").value;
+
+        const formData = new FormData();
+        formData.append('question', question);
+        formData.append('fileId', fileId);
+        formData.append('threadId', threadId);
+
+        fetch('/agent/ask', {
+            method: 'POST',
+            body: formData,
+        })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+
+
+    });
+
+    //let streamLink = /*[[${streamLink}]]*/ '';
+
+    //action="/agent/ask"
+
+    // if(streamLink != '') {
+    //     console.log("received a stream link, waiting for result");
+    //
+    //     const eventSource = new EventSource(streamLink);
+    //     let pRes = document.getElementById('result');
+    //
+    //     eventSource.onmessage = (event) => {
+    //         let data = event.data;
+    //
+    //         if(data=='waiting') {
+    //             console.log("waiting...");
+    //         } else {
+    //             console.log("done !");
+    //             pRes.append(data);
+    //         }
+    //
+    //         console.log("Result received:", event.data);
+    //         //
+    //         // pRes.append(event.data);
+    //
+    //
+    //
+    //     };
+    // } else {
+    //     console.log("no link received");
+    //
+    // }
+
+</script>
+
 
 </body>
 </html>

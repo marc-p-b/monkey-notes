@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
@@ -33,7 +35,9 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -184,4 +188,80 @@ public class DefaultController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(stream);
     }
+
+    @Autowired
+    private AgentService agentService;
+
+    @PostMapping("/agent/ask")
+    public String agent(Model model, @RequestParam Map<String, String> formData) {
+        String question = formData.get("question");
+        String fileId = formData.get("fileId");
+
+        //String folderId = "1A-Tvm0Vm9FI50TFVnbUVyDz3FnaEtibN";
+
+        String streamLink = agentService.newConversation(fileId, question);
+
+        model.addAttribute("streamLink", streamLink);
+        return "agent";
+    }
+
+    private SseEmitter emitter;
+    private Long lastId = 0L;
+
+    @GetMapping("/subscribe/{threadId}/{runId}")
+    public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
+        this.emitter = new SseEmitter(600000L);
+//        this.emitter.send(SseEmitter.event()
+//                .name("message")
+//                .id("" + lastId++)
+//                .data("init"));
+
+        startPolling(threadId, runId);
+        return this.emitter;
+    }
+
+    @Scheduled(fixedRate = 30000)
+    public void heartbeat() throws IOException {
+        this.emitter.send(SseEmitter.event()
+                .name("message")
+                .id("" + ++lastId)
+                .data("heartbeat"));
+    }
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    private void startPolling(String threadId, String runId) {
+        LOG.info("Starting polling thread " + threadId + " for run " + runId);
+        final Runnable pollTask = () -> {
+            try {
+
+                LOG.info("polling");
+                boolean completed = agentService.getRunStatus(threadId, runId);
+
+                String result = agentService.getLastResponse(threadId);
+
+                if(completed) {
+                    LOG.info("completed !");
+
+                    scheduler.shutdown();
+                    this.emitter.send(SseEmitter.event()
+                            .name("message")
+                            .id("" + lastId++)
+                            .data(result));
+                } else {
+                    LOG.info("still running");
+
+                    this.emitter.send(SseEmitter.event()
+                            .name("message")
+                            .id("" + lastId++)
+                            .data("waiting"));
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        scheduler.scheduleAtFixedRate(pollTask, 0, 5, TimeUnit.SECONDS);
+    }
+
 }

@@ -1,11 +1,5 @@
 package net.kprod.dsb.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.gson.Gson;
-import net.kprod.dsb.ServiceException;
-import net.kprod.dsb.data.ViewOptions;
 import net.kprod.dsb.data.dto.*;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
@@ -16,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,20 +20,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 @Controller
 public class DefaultController {
@@ -63,6 +44,9 @@ public class DefaultController {
 
     @Autowired
     private DriveService driveService;
+
+    private SseEmitter emitter;
+    private Long lastId = 0L;
 
     @GetMapping("/authGoogleDrive")
     public ResponseEntity<DtoGoogleDriveConnect> auth() {
@@ -192,29 +176,37 @@ public class DefaultController {
     @Autowired
     private AgentService agentService;
 
-    @PostMapping("/agent/ask")
-    public String agent(Model model, @RequestParam Map<String, String> formData) {
-        String question = formData.get("question");
-        String fileId = formData.get("fileId");
+    public class DtoURL {
+        private String url;
 
-        //String folderId = "1A-Tvm0Vm9FI50TFVnbUVyDz3FnaEtibN";
+        public DtoURL(String url) {
+            this.url = url;
+        }
 
-        String streamLink = agentService.newConversation(fileId, question);
-
-        model.addAttribute("streamLink", streamLink);
-        return "agent";
+        public String getUrl() {
+            return url;
+        }
     }
 
-    private SseEmitter emitter;
-    private Long lastId = 0L;
+    @PostMapping("/agent/ask")
+    public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
+        String question = formData.get("question");
+        String fileId = formData.get("fileId");
+        boolean forceNewAssistant = Boolean.parseBoolean(formData.get("forceNewAssistant"));
+        boolean forceNewThread = Boolean.parseBoolean(formData.get("forceNewThread"));
+
+        DtoAgent dtoAgent = agentService.getOrCreateAssistant(fileId, false);
+        agentService.addMessage(dtoAgent.getThreadId(), question);
+        String runId = agentService.createRun(dtoAgent);
+        String streamLink = "/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
+
+        return ResponseEntity.ok().body(new DtoURL(streamLink));
+    }
+
 
     @GetMapping("/subscribe/{threadId}/{runId}")
     public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
         this.emitter = new SseEmitter(600000L);
-//        this.emitter.send(SseEmitter.event()
-//                .name("message")
-//                .id("" + lastId++)
-//                .data("init"));
 
         startPolling(threadId, runId);
         return this.emitter;
@@ -227,7 +219,8 @@ public class DefaultController {
                 .id("" + ++lastId)
                 .data("heartbeat"));
     }
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private void startPolling(String threadId, String runId) {
         LOG.info("Starting polling thread " + threadId + " for run " + runId);
@@ -237,12 +230,13 @@ public class DefaultController {
                 LOG.info("polling");
                 boolean completed = agentService.getRunStatus(threadId, runId);
 
-                String result = agentService.getLastResponse(threadId);
-
                 if(completed) {
                     LOG.info("completed !");
+                    String result = agentService.getLastResponse(threadId);
 
                     scheduler.shutdown();
+                    scheduler = Executors.newScheduledThreadPool(1);
+
                     this.emitter.send(SseEmitter.event()
                             .name("message")
                             .id("" + lastId++)

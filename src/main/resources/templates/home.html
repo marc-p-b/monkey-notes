@@ -74,6 +74,12 @@
             if (node.folder) {
                 li.appendChild(nameSpan);
 
+                const transcriptLink = document.createElement('a');
+                transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
+                transcriptLink.textContent = 'view';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(transcriptLink);
+
                 const refreshLink = document.createElement('a');
                 refreshLink.href = `/update/folder/${node.dtoFile.fileId}`;
                 refreshLink.textContent = 'refresh';
@@ -82,7 +88,7 @@
 
                 const folderPdf = document.createElement('a');
                 folderPdf.href = `/folder/pdf/${node.dtoFile.fileId}`;
-                folderPdf.textContent = 'get pdf';
+                folderPdf.textContent = 'pdf';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(folderPdf);
 
@@ -106,7 +112,7 @@
 
                 const transcriptLink = document.createElement('a');
                 transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
-                transcriptLink.textContent = 'view transcript';
+                transcriptLink.textContent = 'view';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(transcriptLink);
 
@@ -124,7 +130,7 @@
 
                 const pdfLink = document.createElement('a');
                 pdfLink.href = `/transcript/pdf/${node.dtoFile.fileId}`;
-                pdfLink.textContent = 'get pdf';
+                pdfLink.textContent = 'pdf';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(pdfLink);
 

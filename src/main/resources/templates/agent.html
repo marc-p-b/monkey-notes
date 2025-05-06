@@ -23,11 +23,17 @@
 <button id="buttonSend">send</button>
 
 <script>
-
     document.getElementById("buttonSend").addEventListener("click", function() {
         let question = document.getElementById("textAreaQuestion").value;
         let fileId = document.getElementById("inputFileId").value;
         let threadId = document.getElementById("inputThreadId").value;
+
+        let conversationBox = document.getElementById('conversation');
+
+        let pQ = document.createElement("p")
+        pQ.textContent = question;
+        conversationBox.appendChild(pQ);
+
 
         const formData = new FormData();
         formData.append('question', question);
@@ -38,44 +44,35 @@
             method: 'POST',
             body: formData,
         })
-            .then(response => response.json())
-            .then(data => console.log(data))
-            .catch(error => console.error('Error:', error));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // parse JSON from body
+            })
+            .then(data => {
+                const eventSource = new EventSource(data.url);
+
+
+                eventSource.onmessage = (event) => {
+                    let data = event.data;
+
+                    if (data == 'waiting') {
+                        console.log("waiting...");
+                    } else {
+                        console.log("done !");
+
+                        let pR = document.createElement("p")
+                        pR.textContent = data;
+                        conversationBox.appendChild(pR);
+                    }
+                };
+
+            })
+        .catch(error => console.error('Error:', error));
 
 
     });
-
-    //let streamLink = /*[[${streamLink}]]*/ '';
-
-    //action="/agent/ask"
-
-    // if(streamLink != '') {
-    //     console.log("received a stream link, waiting for result");
-    //
-    //     const eventSource = new EventSource(streamLink);
-    //     let pRes = document.getElementById('result');
-    //
-    //     eventSource.onmessage = (event) => {
-    //         let data = event.data;
-    //
-    //         if(data=='waiting') {
-    //             console.log("waiting...");
-    //         } else {
-    //             console.log("done !");
-    //             pRes.append(data);
-    //         }
-    //
-    //         console.log("Result received:", event.data);
-    //         //
-    //         // pRes.append(event.data);
-    //
-    //
-    //
-    //     };
-    // } else {
-    //     console.log("no link received");
-    //
-    // }
 
 </script>
 

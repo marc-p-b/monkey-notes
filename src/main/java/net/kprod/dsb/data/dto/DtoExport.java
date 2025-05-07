@@ -1,6 +1,6 @@
 package net.kprod.dsb.data.dto;
 
-import net.kprod.dsb.data.entity.EntityConfig;
+import net.kprod.dsb.data.entity.EntityPreferences;
 import net.kprod.dsb.data.entity.EntityFile;
 import net.kprod.dsb.data.entity.EntityTranscript;
 import net.kprod.dsb.data.entity.EntityTranscriptPage;
@@ -11,7 +11,7 @@ public class DtoExport {
     private List<EntityFile> files;
     private List<EntityTranscript> transcripts;
     private List<EntityTranscriptPage> pages;
-    private List<EntityConfig> preferences;
+    private List<EntityPreferences> preferences;
 
     public List<EntityFile> getFiles() {
         return files;
@@ -40,11 +40,11 @@ public class DtoExport {
         return this;
     }
 
-    public List<EntityConfig> getPreferences() {
+    public List<EntityPreferences> getPreferences() {
         return preferences;
     }
 
-    public DtoExport setPreferences(List<EntityConfig> preferences) {
+    public DtoExport setPreferences(List<EntityPreferences> preferences) {
         this.preferences = preferences;
         return this;
     }

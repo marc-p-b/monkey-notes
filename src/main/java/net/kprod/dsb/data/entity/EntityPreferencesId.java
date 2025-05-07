@@ -4,20 +4,20 @@ import jakarta.persistence.Embeddable;
 import net.kprod.dsb.data.enums.PreferenceKey;
 
 @Embeddable
-public class EntityConfigId {
+public class EntityPreferencesId {
     private String username;
     private String key;
 
-    public EntityConfigId() {
+    public EntityPreferencesId() {
     }
 
-    public static EntityConfigId createConfigId(String username, String key) {
-        return new EntityConfigId()
+    public static EntityPreferencesId createConfigId(String username, String key) {
+        return new EntityPreferencesId()
                 .setUsername(username)
                 .setKey(key);
     }
 
-    public EntityConfigId(String username, PreferenceKey key) {
+    public EntityPreferencesId(String username, PreferenceKey key) {
         this.username = username;
         this.key = key.name();
     }
@@ -26,7 +26,7 @@ public class EntityConfigId {
         return username;
     }
 
-    public EntityConfigId setUsername(String user) {
+    public EntityPreferencesId setUsername(String user) {
         this.username = user;
         return this;
     }
@@ -35,7 +35,7 @@ public class EntityConfigId {
         return key;
     }
 
-    public EntityConfigId setKey(String key) {
+    public EntityPreferencesId setKey(String key) {
         this.key = key;
         return this;
     }

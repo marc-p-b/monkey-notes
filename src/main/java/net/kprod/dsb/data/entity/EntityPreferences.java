@@ -3,25 +3,25 @@ package net.kprod.dsb.data.entity;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 
-@Entity
-public class EntityConfig {
-    private EntityConfigId configId;
+@Entity(name="preferences")
+public class EntityPreferences {
+    private EntityPreferencesId configId;
     private String value;
 
-    public EntityConfig() {
+    public EntityPreferences() {
     }
 
-    public EntityConfig(EntityConfigId configId, String value) {
+    public EntityPreferences(EntityPreferencesId configId, String value) {
         this.configId = configId;
         this.value = value;
     }
 
     @EmbeddedId
-    public EntityConfigId getConfigId() {
+    public EntityPreferencesId getConfigId() {
         return configId;
     }
 
-    public EntityConfig setConfigId(EntityConfigId configId) {
+    public EntityPreferences setConfigId(EntityPreferencesId configId) {
         this.configId = configId;
         return this;
     }
@@ -30,7 +30,7 @@ public class EntityConfig {
         return value;
     }
 
-    public EntityConfig setValue(String value) {
+    public EntityPreferences setValue(String value) {
         this.value = value;
         return this;
     }

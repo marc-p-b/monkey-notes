@@ -1,7 +1,7 @@
 package net.kprod.dsb.data.dto;
 
-import net.kprod.dsb.data.entity.EntityConfig;
-import net.kprod.dsb.data.entity.EntityConfigId;
+import net.kprod.dsb.data.entity.EntityPreferences;
+import net.kprod.dsb.data.entity.EntityPreferencesId;
 import net.kprod.dsb.data.enums.PreferenceKey;
 
 import java.util.Arrays;
@@ -27,26 +27,26 @@ public class DtoConfigs {
     private boolean useDefaultModelMaxTokens;
     private int modelMaxTokens;
 
-    public List<EntityConfig> toEntities(String username) {
-        List<EntityConfig> list = Arrays.asList(
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.set), Boolean.toString(set)),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.prompt), prompt),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.useDefaultModel), Boolean.toString(useDefaultModel)),
+    public List<EntityPreferences> toEntities(String username) {
+        List<EntityPreferences> list = Arrays.asList(
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.set), Boolean.toString(set)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.prompt), prompt),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultModel), Boolean.toString(useDefaultModel)),
 
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.model), model),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.useDefaultPrompt), Boolean.toString(useDefaultPrompt)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.model), model),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultPrompt), Boolean.toString(useDefaultPrompt)),
 
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.inputFolderId), inputFolderId),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.outputFolderId), outputFolderId),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.inputFolderId), inputFolderId),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.outputFolderId), outputFolderId),
 
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.useDefaultAiConnectTimeout), Boolean.toString(useDefaultAiConnectTimeout)),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.aiConnectTimeout), Integer.toString(aiConnectTimeout)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultAiConnectTimeout), Boolean.toString(useDefaultAiConnectTimeout)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.aiConnectTimeout), Integer.toString(aiConnectTimeout)),
 
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.useDefaultAiReadTimeout), Boolean.toString(useDefaultAiReadTimeout)),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.aiReadTimeout), Integer.toString(aiReadTimeout)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultAiReadTimeout), Boolean.toString(useDefaultAiReadTimeout)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.aiReadTimeout), Integer.toString(aiReadTimeout)),
 
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.useDefaultModelMaxTokens), Boolean.toString(useDefaultModelMaxTokens)),
-                new EntityConfig(new EntityConfigId(username, PreferenceKey.modelMaxTokens), Integer.toString(modelMaxTokens))
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultModelMaxTokens), Boolean.toString(useDefaultModelMaxTokens)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.modelMaxTokens), Integer.toString(modelMaxTokens))
         );
         return list;
     }

@@ -3,7 +3,7 @@ package net.kprod.dsb.data.entity;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 
-@Entity
+@Entity(name="agent")
 public class EntityAgent {
     @EmbeddedId
     private IdFile idFile;

@@ -2,8 +2,8 @@ package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.dto.DtoConfigs;
-import net.kprod.dsb.data.entity.EntityConfig;
-import net.kprod.dsb.data.entity.EntityConfigId;
+import net.kprod.dsb.data.entity.EntityPreferences;
+import net.kprod.dsb.data.entity.EntityPreferencesId;
 import net.kprod.dsb.data.enums.PreferenceKey;
 import net.kprod.dsb.data.repository.RepositoryConfig;
 import net.kprod.dsb.service.AuthService;
@@ -116,8 +116,8 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     public boolean isParametersSet() {
-        EntityConfigId entityConfigId = new EntityConfigId(authService.getConnectedUsername(), PreferenceKey.set);
-        Optional<EntityConfig> optEntity = repositoryConfig.findByConfigId(entityConfigId);
+        EntityPreferencesId entityConfigId = new EntityPreferencesId(authService.getConnectedUsername(), PreferenceKey.set);
+        Optional<EntityPreferences> optEntity = repositoryConfig.findByConfigId(entityConfigId);
         return optEntity.isPresent();
     }
 
@@ -142,7 +142,7 @@ public class PreferencesServiceImpl implements PreferencesService {
                 .setModelMaxTokens(dftQwenMaxTokens)
                 .setSet(false);
 
-        List<EntityConfig> list = dtoConfigs.toEntities(username);
+        List<EntityPreferences> list = dtoConfigs.toEntities(username);
         repositoryConfig.saveAll(list);
 
         return dtoConfigs;
@@ -153,7 +153,7 @@ public class PreferencesServiceImpl implements PreferencesService {
             throw new ServiceException("Preferences not set");
         }
 
-        Optional<EntityConfig> optValue = repositoryConfig.findByConfigId(new EntityConfigId(authService.getConnectedUsername(), configKey));
+        Optional<EntityPreferences> optValue = repositoryConfig.findByConfigId(new EntityPreferencesId(authService.getConnectedUsername(), configKey));
         if(optValue.isEmpty()) {
             throw new ServiceException(configKey + " not set");
         }

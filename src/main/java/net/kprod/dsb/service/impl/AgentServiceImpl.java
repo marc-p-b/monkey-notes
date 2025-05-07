@@ -15,10 +15,10 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -35,9 +35,8 @@ import java.util.stream.Collectors;
 public class AgentServiceImpl implements AgentService {
     private Logger LOG = LoggerFactory.getLogger(AgentServiceImpl.class);
 
-    private static final String OPENAI_API_KEY = "";
-    private static final String OPENAI_API_URL = "";
-    public static final int AGENT_RESPONSE_WAIT_TIMEOUT = 2000;
+    @Value("${app.openai.api}")
+    private String openAiApiKey;
 
     @Autowired
     private ViewService viewService;
@@ -109,7 +108,7 @@ public class AgentServiceImpl implements AgentService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        headers.setBearerAuth(OPENAI_API_KEY);
+        headers.setBearerAuth(openAiApiKey);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", fileAsResource); // 'file' is the param name expected by the server
@@ -185,7 +184,7 @@ public class AgentServiceImpl implements AgentService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(OPENAI_API_KEY);
+        headers.setBearerAuth(openAiApiKey);
         headers.add("OpenAI-Beta", "assistants=v2");
 
         RestTemplate restTemplate = new RestTemplate();
@@ -206,7 +205,7 @@ public class AgentServiceImpl implements AgentService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(OPENAI_API_KEY);
+        headers.setBearerAuth(openAiApiKey);
         headers.add("OpenAI-Beta", "assistants=v2");
 
         RestTemplate restTemplate = new RestTemplate();
@@ -220,10 +219,10 @@ public class AgentServiceImpl implements AgentService {
         return lastResponse;
     }
 
-    private static String openAiPostRequest(String path, JSONObject jsonObject) {
+    private String openAiPostRequest(String path, JSONObject jsonObject) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(OPENAI_API_KEY);
+        headers.setBearerAuth(openAiApiKey);
         headers.add("OpenAI-Beta", "assistants=v2");
 
         //todo can we avoid toString ? (unless we got a conversion issue

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import net.kprod.dsb.data.dto.DtoExport;
-import net.kprod.dsb.data.entity.EntityConfigId;
+import net.kprod.dsb.data.entity.EntityPreferencesId;
 import net.kprod.dsb.data.entity.EntityTranscriptPage;
 import net.kprod.dsb.data.entity.IdFile;
 import net.kprod.dsb.data.entity.IdTranscriptPage;
@@ -182,7 +182,7 @@ public class ExportServiceImpl implements ExportService {
                     });
             dtoExport.getPreferences()
                     .forEach(f -> {
-                        f.setConfigId(EntityConfigId.createConfigId(connectedUsername, f.getConfigId().getKey()));
+                        f.setConfigId(EntityPreferencesId.createConfigId(connectedUsername, f.getConfigId().getKey()));
                     });
 
             repositoryTranscriptPage.deleteAll();

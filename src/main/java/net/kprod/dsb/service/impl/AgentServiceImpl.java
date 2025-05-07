@@ -19,16 +19,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,7 +51,10 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private AuthService authService;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private SseEmitter emitter;
+    private Long lastId = 0L;
+
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
     public DtoAgent getOrCreateAssistant(String fileId, boolean forceCreate) {
@@ -82,8 +89,11 @@ public class AgentServiceImpl implements AgentService {
         String vectorId = createKnowledgeVector(knowledgeFileId);
 
         String name = "doc assistant with fileId " + fileId;
-        String instructions = "Tu es un assistant qui répond aux questions en se basant sur le document fourni.";
-        String model = "gpt-4-turbo";
+        //String instructions = "Tu es un assistant de conseil syndical d'une copropriété. Le document joint \"copro-knowledge.txt\" provient de notes manuscrites transformés par OCR. on s'y refère en parlant de \"NOTES\".";
+        String instructions = "Tu es un assistant qui répond à des questions concernant des notes prises pendant des réunions. " +
+                "Le document joint \"knowledge.txt\" provient de notes manuscrites transformés par OCR. on s'y refère en parlant de \"NOTES\".";
+
+        String model = "gpt-4o-mini";
 
         String assistantId = createAssistant(name, instructions, model, vectorId);
         String threadId = createThread();
@@ -236,6 +246,54 @@ public class AgentServiceImpl implements AgentService {
         DocumentContext context = JsonPath.parse(response.getBody());
         String id = context.read("$.id");
         return id;
+    }
+
+    public SseEmitter threadRunPolling(String threadId, String runId) {
+        LOG.info("Starting polling thread " + threadId + " for run " + runId);
+        this.emitter = new SseEmitter(600000L);
+
+        final Runnable pollTask = () -> {
+            try {
+
+                LOG.info("polling");
+                boolean completed = this.getRunStatus(threadId, runId);
+
+                if(completed) {
+                    LOG.info("completed !");
+                    String result = this.getLastResponse(threadId);
+
+                    scheduler.shutdown();
+                    scheduler = Executors.newScheduledThreadPool(1);
+
+                    this.emitter.send(SseEmitter.event()
+                            .name("message")
+                            .id("" + lastId++)
+                            .data(result));
+                } else {
+                    LOG.info("still running");
+
+                    this.emitter.send(SseEmitter.event()
+                            .name("message")
+                            .id("" + lastId++)
+                            .data("waiting"));
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        scheduler.scheduleAtFixedRate(pollTask, 0, 5, TimeUnit.SECONDS);
+        return emitter;
+    }
+
+    //todo when no polling is active ?
+    @Scheduled(fixedRate = 30000)
+    public void heartbeat() throws IOException {
+        this.emitter.send(SseEmitter.event()
+                .name("message")
+                .id("" + ++lastId)
+                .data("heartbeat"));
     }
 
 

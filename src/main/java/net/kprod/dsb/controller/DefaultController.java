@@ -21,7 +21,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
 
 @Controller
 public class DefaultController {
@@ -45,8 +44,8 @@ public class DefaultController {
     @Autowired
     private DriveService driveService;
 
-    private SseEmitter emitter;
-    private Long lastId = 0L;
+    @Autowired
+    private AgentService agentService;
 
     @GetMapping("/authGoogleDrive")
     public ResponseEntity<DtoGoogleDriveConnect> auth() {
@@ -173,20 +172,7 @@ public class DefaultController {
                 .body(stream);
     }
 
-    @Autowired
-    private AgentService agentService;
 
-    public class DtoURL {
-        private String url;
-
-        public DtoURL(String url) {
-            this.url = url;
-        }
-
-        public String getUrl() {
-            return url;
-        }
-    }
 
     @PostMapping("/agent/ask")
     public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
@@ -206,56 +192,7 @@ public class DefaultController {
 
     @GetMapping("/subscribe/{threadId}/{runId}")
     public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
-        this.emitter = new SseEmitter(600000L);
-
-        startPolling(threadId, runId);
-        return this.emitter;
-    }
-
-    @Scheduled(fixedRate = 30000)
-    public void heartbeat() throws IOException {
-        this.emitter.send(SseEmitter.event()
-                .name("message")
-                .id("" + ++lastId)
-                .data("heartbeat"));
-    }
-
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-    private void startPolling(String threadId, String runId) {
-        LOG.info("Starting polling thread " + threadId + " for run " + runId);
-        final Runnable pollTask = () -> {
-            try {
-
-                LOG.info("polling");
-                boolean completed = agentService.getRunStatus(threadId, runId);
-
-                if(completed) {
-                    LOG.info("completed !");
-                    String result = agentService.getLastResponse(threadId);
-
-                    scheduler.shutdown();
-                    scheduler = Executors.newScheduledThreadPool(1);
-
-                    this.emitter.send(SseEmitter.event()
-                            .name("message")
-                            .id("" + lastId++)
-                            .data(result));
-                } else {
-                    LOG.info("still running");
-
-                    this.emitter.send(SseEmitter.event()
-                            .name("message")
-                            .id("" + lastId++)
-                            .data("waiting"));
-                }
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        };
-
-        scheduler.scheduleAtFixedRate(pollTask, 0, 5, TimeUnit.SECONDS);
+        return agentService.threadRunPolling(threadId, runId);
     }
 
 }

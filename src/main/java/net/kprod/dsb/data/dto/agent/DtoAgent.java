@@ -1,4 +1,4 @@
-package net.kprod.dsb.data.dto;
+package net.kprod.dsb.data.dto.agent;
 
 import net.kprod.dsb.data.entity.EntityAgent;
 import net.kprod.dsb.data.entity.IdFile;

@@ -1,7 +1,9 @@
 package net.kprod.dsb.controller;
 
-import net.kprod.dsb.data.dto.DtoAgent;
+import net.kprod.dsb.data.dto.agent.DtoAgent;
 import net.kprod.dsb.data.dto.DtoURL;
+import net.kprod.dsb.data.dto.agent.DtoAgentPrepare;
+import net.kprod.dsb.data.dto.agent.DtoAssistantOptions;
 import net.kprod.dsb.service.AgentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -31,43 +34,20 @@ public class AgentController {
     @Value("${app.openai.assistant.defaults.instructions}")
     private String defaultInstructions;
 
-    public class DtoAssistantOptions {
-        private boolean forceNew;
-        private String model;
-        private String instructions;
-
-        public boolean isForceNew() {
-            return forceNew;
-        }
-
-        public DtoAssistantOptions setForceNew(boolean forceNew) {
-            this.forceNew = forceNew;
-            return this;
-        }
-
-        public String getModel() {
-            return model;
-        }
-
-        public DtoAssistantOptions setModel(String model) {
-            this.model = model;
-            return this;
-        }
-
-        public String getInstructions() {
-            return instructions;
-        }
-
-        public DtoAssistantOptions setInstructions(String instructions) {
-            this.instructions = instructions;
-            return this;
-        }
+    @GetMapping("/agent/prepare/{fileId}")
+    public ResponseEntity<DtoAgentPrepare> agentPrepare(@PathVariable String fileId) {
+        return ResponseEntity.ok(agentService.prepareAssistant(fileId));
     }
 
     @PostMapping("/agent/ask")
     public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
         String question = formData.get("question");
         String fileId = formData.get("fileId");
+
+            agentPrepare(fileId);
+
+
+
         boolean forceNewAssistant = Boolean.parseBoolean(formData.get("forceNewAssistant"));
         boolean forceNewThread = Boolean.parseBoolean(formData.get("forceNewThread"));
         String newAssistantInstructions = formData.get("newAssistantInstructions");

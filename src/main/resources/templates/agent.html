@@ -23,6 +23,21 @@
 <button id="buttonSend">send</button>
 
 <script>
+
+//    fetch('/agent/prepare/', {
+//        method: 'POST',
+//        body: formData,
+//    })
+//        .then(response => {
+//            if (!response.ok) {
+//                throw new Error('Network response was not ok');
+//            }
+//            return response.json();
+//        })
+//        .then(data => {
+//        })
+//        .catch(error => console.error('Error:', error));
+
     document.getElementById("buttonSend").addEventListener("click", function() {
         let question = document.getElementById("textAreaQuestion").value;
         let fileId = document.getElementById("inputFileId").value;
@@ -33,7 +48,6 @@
         let pQ = document.createElement("p")
         pQ.textContent = question;
         conversationBox.appendChild(pQ);
-
 
         const formData = new FormData();
         formData.append('question', question);
@@ -52,8 +66,6 @@
             })
             .then(data => {
                 const eventSource = new EventSource(data.url);
-
-
                 eventSource.onmessage = (event) => {
                     let data = event.data;
 
@@ -67,15 +79,9 @@
                         conversationBox.appendChild(pR);
                     }
                 };
-
             })
         .catch(error => console.error('Error:', error));
-
-
     });
-
 </script>
-
-
 </body>
 </html>

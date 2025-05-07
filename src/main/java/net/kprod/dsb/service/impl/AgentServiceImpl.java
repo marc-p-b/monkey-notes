@@ -2,8 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import net.kprod.dsb.controller.AgentController;
-import net.kprod.dsb.data.dto.DtoAgent;
+import net.kprod.dsb.data.dto.agent.*;
 import net.kprod.dsb.data.dto.DtoTranscriptPage;
 import net.kprod.dsb.data.entity.EntityAgent;
 import net.kprod.dsb.data.entity.IdFile;
@@ -29,13 +28,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Service
 public class AgentServiceImpl implements AgentService {
@@ -59,7 +55,7 @@ public class AgentServiceImpl implements AgentService {
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
-    public DtoAgent getOrCreateAssistant(String fileId, AgentController.DtoAssistantOptions options) {
+    public DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options) {
         if(options.isForceNew() == true) {
             return this.newAssistant(fileId, options);
         } else {
@@ -73,7 +69,22 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
-    public DtoAgent newAssistant(String fileId, AgentController.DtoAssistantOptions options) {
+    public DtoAgentPrepare prepareAssistant(String fileId) {
+
+        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+        if(optAgent.isPresent()) {
+            DtoAgentPrepare agentPrepare = this.getAssistant(optAgent.get().getAssistantId());
+            List<DtoAgentMessage> listMessages = this.getThreadMessages(optAgent.get().getThreadId());
+            agentPrepare.setMessages(listMessages);
+            LOG.info("");
+            return agentPrepare;
+        } else {
+            return new DtoAgentPrepare();
+        }
+    }
+
+    @Override
+    public DtoAgent newAssistant(String fileId, DtoAssistantOptions options) {
         LOG.info("New agent based on fileId {}", fileId);
 
         List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
@@ -161,6 +172,68 @@ public class AgentServiceImpl implements AgentService {
 
         String assistantId = openAiPostRequest("/v1/assistants", jsonObject);
         return assistantId;
+    }
+
+    private DtoAgentPrepare getAssistant(String assistantId) {
+        String path = "/v1/assistants/" + assistantId;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(openAiApiKey);
+        headers.add("OpenAI-Beta", "assistants=v2");
+
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.openai.com" + path; // Replace with actual URL
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+
+        if(response.getStatusCode() == HttpStatus.OK) {
+            DocumentContext context = JsonPath.parse(response.getBody());
+            DtoAgentPrepare dtoAgentPrepare = new DtoAgentPrepare()
+                    .setExists(true)
+                    .setModel(context.read("$.model"));
+            return dtoAgentPrepare;
+        } else {
+            return new DtoAgentPrepare();
+        }
+    }
+
+    private List<DtoAgentMessage> getThreadMessages(String threadId) {
+        String path = "/v1/threads/" + threadId + "/messages";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(openAiApiKey);
+        headers.add("OpenAI-Beta", "assistants=v2");
+
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.openai.com" + path; // Replace with actual URL
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+
+        List<DtoAgentMessage> listMessages = new ArrayList<>();
+        if(response.getStatusCode() == HttpStatus.OK) {
+
+            //todo better json parsing
+
+            List<String> roles = JsonPath.read(response.getBody(), "$.data[*].role");
+            List<String> contents = JsonPath.read(response.getBody(), "$.data[*].content[0].text.value");
+            for(int i = 0; i < roles.size(); i++) {
+
+                DtoAgentMessage dtoAgentMessage = new DtoAgentMessage()
+                        .setMessageDir(MessageDir.valueOf(roles.get(i)))
+                        .setContent(contents.get(i));
+
+                listMessages.add(dtoAgentMessage);
+
+            }
+
+        }
+
+
+        return listMessages;
     }
 
     @Override

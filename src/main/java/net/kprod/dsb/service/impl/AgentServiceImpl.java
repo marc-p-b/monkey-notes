@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import net.kprod.dsb.controller.AgentController;
 import net.kprod.dsb.data.dto.DtoAgent;
 import net.kprod.dsb.data.dto.DtoTranscriptPage;
 import net.kprod.dsb.data.entity.EntityAgent;
@@ -29,6 +30,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,51 +53,50 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private AuthService authService;
 
+    //make this multiuser
     private SseEmitter emitter;
     private Long lastId = 0L;
-
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
-    public DtoAgent getOrCreateAssistant(String fileId, boolean forceCreate) {
-        if(forceCreate == true) {
-            return this.newAssistant(fileId);
+    public DtoAgent getOrCreateAssistant(String fileId, AgentController.DtoAssistantOptions options) {
+        if(options.isForceNew() == true) {
+            return this.newAssistant(fileId, options);
         } else {
             Optional<EntityAgent> agent = repositoryAgent.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
             if(agent.isPresent()) {
                 return DtoAgent.of(agent.get());
             } else {
-                return this.newAssistant(fileId);
+                return this.newAssistant(fileId, options);
             }
         }
     }
 
     @Override
-    public DtoAgent newAssistant(String fileId) {
+    public DtoAgent newAssistant(String fileId, AgentController.DtoAssistantOptions options) {
         LOG.info("New agent based on fileId {}", fileId);
 
-        String knowledge = viewService.listTranscriptFromFolderRecurs(fileId)
+        List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
                 .stream()
-                .map(t -> new StringBuilder()
-                        .append("\ntitle:").append(t.getTitle())
-                        .append(", date:").append(t.getDocumented_at())
-                        .append(", content:").append(t.getPages().stream()
-                                .map(DtoTranscriptPage::getTranscript)
-                                .collect(Collectors.joining("\n")))
-                        .toString())
-                .collect(Collectors.joining("\n"));
+                .map(t -> {
+                    return new JSONObject()
+                            .put("title", t.getTitle())
+                            .put("date", t.getDocumented_at())
+                            .put("pages", t.getPages().stream()
+                                    .map(DtoTranscriptPage::getTranscript)
+                                    .toList());
+                })
+                .toList();
 
-        String knowledgeFileId = uploadKnowledgeFile(knowledge);
+        JSONObject jsonObject = new JSONObject()
+                .put("documents", jsonList);
+
+        String knowledgeFileId = uploadKnowledgeFile(jsonObject.toString());
         String vectorId = createKnowledgeVector(knowledgeFileId);
 
-        String name = "doc assistant with fileId " + fileId;
-        //String instructions = "Tu es un assistant de conseil syndical d'une copropriété. Le document joint \"copro-knowledge.txt\" provient de notes manuscrites transformés par OCR. on s'y refère en parlant de \"NOTES\".";
-        String instructions = "Tu es un assistant qui répond à des questions concernant des notes prises pendant des réunions. " +
-                "Le document joint \"knowledge.txt\" provient de notes manuscrites transformés par OCR. on s'y refère en parlant de \"NOTES\".";
-
-        String model = "gpt-4o-mini";
-
-        String assistantId = createAssistant(name, instructions, model, vectorId);
+        //add title
+        String name = "knowledge fileId " + fileId;
+        String assistantId = createAssistant(name, options.getInstructions(), options.getModel(), vectorId);
         String threadId = createThread();
         LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
 
@@ -112,7 +113,7 @@ public class AgentServiceImpl implements AgentService {
         Resource fileAsResource = new ByteArrayResource(knowledge.getBytes(StandardCharsets.UTF_8)) {
             @Override
             public String getFilename() {
-                return "knowledge.txt";
+                return "knowledge.json";
             }
         };
 

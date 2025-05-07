@@ -19,13 +19,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Controller
-public class HomeController {
+public class ViewsController {
 
     @Autowired
     private ViewService viewService;
 
     @Autowired
     private DriveChangeManagerService driveChangeManagerService;
+
+    //todo remove this when moved from thymeleaf
 
     @GetMapping("/")
     public String home(Model model) {

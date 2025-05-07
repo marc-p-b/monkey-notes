@@ -1,6 +1,7 @@
 package net.kprod.dsb.controller;
 
-import net.kprod.dsb.data.dto.*;
+import net.kprod.dsb.data.dto.DtoGoogleDriveConnect;
+import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,26 +9,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Controller
 public class DefaultController {
     private Logger LOG = LoggerFactory.getLogger(DefaultController.class);
-
-    @Autowired
-    private ExportService exportService;
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
@@ -44,9 +42,6 @@ public class DefaultController {
     @Autowired
     private DriveService driveService;
 
-    @Autowired
-    private AgentService agentService;
-
     @GetMapping("/authGoogleDrive")
     public ResponseEntity<DtoGoogleDriveConnect> auth() {
         Optional<String> optAuthUrl = driveService.requireAuth();
@@ -55,13 +50,6 @@ public class DefaultController {
         } else {
             return ResponseEntity.ok(new DtoGoogleDriveConnect());
         }
-    }
-
-    @PostMapping("/import")
-    public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile multipartFile) {
-
-        exportService.importUserData(multipartFile);
-        return ResponseEntity.ok("OK");
     }
 
     @GetMapping("/watch/start")
@@ -147,52 +135,10 @@ public class DefaultController {
                 .body(stream);
     }
 
-    @GetMapping("/process/cancel/{id}")
-    public ResponseEntity<String> processCancel(@PathVariable String id) {
-        driveChMgmtService.cancelProcess(id);
-        return ResponseEntity.ok().body("OK");
-    }
-
     @GetMapping("/transcript/force-update/{fileId}")
     public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
         driveChMgmtService.requestForceTranscriptUpdate(fileId);
         return ResponseEntity.ok().body("OK");
-    }
-
-    @GetMapping(value = "/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> exportUserData() throws IOException {
-
-        StreamingResponseBody stream = outputStream -> {
-            exportService.export(outputStream);
-        };
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=local-files.zip")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(stream);
-    }
-
-
-
-    @PostMapping("/agent/ask")
-    public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
-        String question = formData.get("question");
-        String fileId = formData.get("fileId");
-        boolean forceNewAssistant = Boolean.parseBoolean(formData.get("forceNewAssistant"));
-        boolean forceNewThread = Boolean.parseBoolean(formData.get("forceNewThread"));
-
-        DtoAgent dtoAgent = agentService.getOrCreateAssistant(fileId, false);
-        agentService.addMessage(dtoAgent.getThreadId(), question);
-        String runId = agentService.createRun(dtoAgent);
-        String streamLink = "/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
-
-        return ResponseEntity.ok().body(new DtoURL(streamLink));
-    }
-
-
-    @GetMapping("/subscribe/{threadId}/{runId}")
-    public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
-        return agentService.threadRunPolling(threadId, runId);
     }
 
 }

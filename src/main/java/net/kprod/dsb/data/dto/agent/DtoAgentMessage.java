@@ -1,8 +1,11 @@
 package net.kprod.dsb.data.dto.agent;
 
+import java.time.OffsetDateTime;
+
 public class DtoAgentMessage {
         private MessageDir messageDir;
         private String content;
+        private OffsetDateTime createdAt;
 
         public MessageDir getMessageDir() {
             return messageDir;
@@ -21,4 +24,13 @@ public class DtoAgentMessage {
             this.content = content;
             return this;
         }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
     }
+
+    public DtoAgentMessage setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+        return this;
+    }
+}

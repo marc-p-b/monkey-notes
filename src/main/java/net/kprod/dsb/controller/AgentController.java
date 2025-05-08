@@ -43,15 +43,10 @@ public class AgentController {
     public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
         String question = formData.get("question");
         String fileId = formData.get("fileId");
-
-            agentPrepare(fileId);
-
-
-
-        boolean forceNewAssistant = Boolean.parseBoolean(formData.get("forceNewAssistant"));
-        boolean forceNewThread = Boolean.parseBoolean(formData.get("forceNewThread"));
-        String newAssistantInstructions = formData.get("newAssistantInstructions");
-        String newAssistantModel = formData.get("newAssistantModel");
+        String newAssistantInstructions = formData.get("instructions");
+        String newAssistantModel = formData.get("model");
+        String resetStr = formData.get("reset");
+        boolean reset = resetStr != null ? resetStr.equals("on") : false;
 
         if(newAssistantModel == null || newAssistantModel.isEmpty()) {
             newAssistantModel = defaultModelName;
@@ -62,7 +57,7 @@ public class AgentController {
         }
 
         DtoAssistantOptions dtoOptions = new DtoAssistantOptions()
-                .setForceNew(forceNewAssistant)
+                .setForceNew(reset)
                 .setModel(newAssistantModel)
                 .setInstructions(newAssistantInstructions);
 

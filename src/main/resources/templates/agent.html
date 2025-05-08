@@ -2,6 +2,8 @@
 <head>
     <title>Monkey notes</title>
 
+    <link href="/css/form.css" rel="stylesheet" />
+
 </head>
 <body>
 
@@ -14,74 +16,99 @@
 <div id="conversation">
 </div>
 
-<form id="formQuestion">
+<form id="formAgent">
+    <label for="textAreaQuestion">Question</label>
     <textarea name="question" id="textAreaQuestion"></textarea>
-    <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
+    <label for="inputResetId">Reset</label>
+    <input type="checkbox" name="reset" id="inputResetId"/>
+    <label for="selectModelId">Model</label>
+    <select name="selectModel" id="selectModelId">
+        <option value="default">default</option>
+        <option value="gpt-4o">gpt 4o</option>
+        <option value="gpt-4o-mini">gtp 4o mini</option>
+    </select>
+    <label for="textAreaInstructionsId">Instructions</label>
+    <textarea name="instructions" id="textAreaInstructionsId"></textarea>
     <input type="hidden" name="threadId" id="inputThreadId"/>
+    <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
 </form>
 
 <button id="buttonSend">send</button>
 
+<script th:inline="javascript">
+
+let fileId = /*[[${fileId}]]*/ {};
+
+</script>
+
 <script>
 
-//    fetch('/agent/prepare/', {
-//        method: 'POST',
-//        body: formData,
-//    })
-//        .then(response => {
-//            if (!response.ok) {
-//                throw new Error('Network response was not ok');
-//            }
-//            return response.json();
-//        })
-//        .then(data => {
-//        })
-//        .catch(error => console.error('Error:', error));
-
-    document.getElementById("buttonSend").addEventListener("click", function() {
-        let question = document.getElementById("textAreaQuestion").value;
-        let fileId = document.getElementById("inputFileId").value;
-        let threadId = document.getElementById("inputThreadId").value;
-
-        let conversationBox = document.getElementById('conversation');
-
-        let pQ = document.createElement("p")
-        pQ.textContent = question;
-        conversationBox.appendChild(pQ);
-
-        const formData = new FormData();
-        formData.append('question', question);
-        formData.append('fileId', fileId);
-        formData.append('threadId', threadId);
-
-        fetch('/agent/ask', {
-            method: 'POST',
-            body: formData,
+    document.addEventListener("DOMContentLoaded", function() {
+        fetch('/agent/prepare/' + fileId, {
+            method: 'GET'
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json(); // parse JSON from body
-            })
-            .then(data => {
-                const eventSource = new EventSource(data.url);
-                eventSource.onmessage = (event) => {
-                    let data = event.data;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
 
-                    if (data == 'waiting') {
-                        console.log("waiting...");
-                    } else {
-                        console.log("done !");
+            if(data.exists) {
+                let conversationBox = document.getElementById('conversation');
 
-                        let pR = document.createElement("p")
-                        pR.textContent = data;
-                        conversationBox.appendChild(pR);
-                    }
-                };
-            })
+                data.messages.forEach(function (message, index) {
+                    let pM = document.createElement("p")
+                    pM.textContent = 'from ' + message.messageDir + ' @ ' + message.createdAt + ' : ' + message.content;
+                    conversationBox.appendChild(pM);
+                });
+            }
+        })
         .catch(error => console.error('Error:', error));
+
+        document.getElementById("buttonSend").addEventListener("click", function() {
+            let question = document.getElementById("textAreaQuestion").value;
+            let conversationBox = document.getElementById('conversation');
+
+            let pQ = document.createElement("p")
+            pQ.textContent = question;
+            conversationBox.appendChild(pQ);
+
+            let form = document.getElementById("formAgent");
+            const formData = new FormData(form);
+
+            fetch('/agent/ask', {
+                method: 'POST',
+                body: formData,
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json(); // parse JSON from body
+                })
+                .then(data => {
+
+                    const eventSource = new EventSource(data.url);
+                    eventSource.onmessage = (event) => {
+                        let data = event.data;
+
+                        if (data == 'waiting') {
+                            console.log("waiting...");
+                        } else {
+                            console.log("done !");
+
+                            let pR = document.createElement("p")
+                            pR.textContent = data;
+                            conversationBox.appendChild(pR);
+                        }
+                    };
+                })
+                .catch(error => console.error('Error:', error));
+        });
     });
+
 </script>
 </body>
 </html>

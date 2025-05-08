@@ -28,6 +28,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -75,7 +79,15 @@ public class AgentServiceImpl implements AgentService {
         if(optAgent.isPresent()) {
             DtoAgentPrepare agentPrepare = this.getAssistant(optAgent.get().getAssistantId());
             List<DtoAgentMessage> listMessages = this.getThreadMessages(optAgent.get().getThreadId());
-            agentPrepare.setMessages(listMessages);
+
+            listMessages.add(new DtoAgentMessage()
+                    .setCreatedAt(agentPrepare.getCreatedAt())
+                    .setMessageDir(MessageDir.system)
+                    .setContent(agentPrepare.getInstructions()));
+
+            agentPrepare.setMessages(listMessages.stream()
+                    .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
+                    .toList());
             LOG.info("");
             return agentPrepare;
         } else {
@@ -190,9 +202,18 @@ public class AgentServiceImpl implements AgentService {
 
         if(response.getStatusCode() == HttpStatus.OK) {
             DocumentContext context = JsonPath.parse(response.getBody());
+
+            //todo long ?
+            long createAtInt = context.read("$.created_at", Long.class);
+            OffsetDateTime odt = Instant.ofEpochSecond(createAtInt)
+                    .atZone(ZoneId.of("Europe/Paris")).toOffsetDateTime();
+
             DtoAgentPrepare dtoAgentPrepare = new DtoAgentPrepare()
                     .setExists(true)
-                    .setModel(context.read("$.model"));
+                    .setModel(context.read("$.model"))
+                    .setInstructions(context.read("$.instructions"))
+                    .setCreatedAt(odt);
+
             return dtoAgentPrepare;
         } else {
             return new DtoAgentPrepare();
@@ -220,11 +241,17 @@ public class AgentServiceImpl implements AgentService {
 
             List<String> roles = JsonPath.read(response.getBody(), "$.data[*].role");
             List<String> contents = JsonPath.read(response.getBody(), "$.data[*].content[0].text.value");
+
+            List<Integer> createdAt = JsonPath.read(response.getBody(), "$.data[*].created_at");
             for(int i = 0; i < roles.size(); i++) {
+
+                OffsetDateTime odt = Instant.ofEpochSecond(createdAt.get(i))
+                        .atZone(ZoneId.of("Europe/Paris")).toOffsetDateTime();
 
                 DtoAgentMessage dtoAgentMessage = new DtoAgentMessage()
                         .setMessageDir(MessageDir.valueOf(roles.get(i)))
-                        .setContent(contents.get(i));
+                        .setContent(contents.get(i))
+                        .setCreatedAt(odt);
 
                 listMessages.add(dtoAgentMessage);
 

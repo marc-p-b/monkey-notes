@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class AgentServiceImpl implements AgentService {
+    public static final String KNOWLEDGE_JSON_FILENAME = "knowledge.json";
     private Logger LOG = LoggerFactory.getLogger(AgentServiceImpl.class);
 
     @Value("${app.openai.api}")
@@ -136,7 +137,7 @@ public class AgentServiceImpl implements AgentService {
         Resource fileAsResource = new ByteArrayResource(knowledge.getBytes(StandardCharsets.UTF_8)) {
             @Override
             public String getFilename() {
-                return "knowledge.json";
+                return KNOWLEDGE_JSON_FILENAME;
             }
         };
 

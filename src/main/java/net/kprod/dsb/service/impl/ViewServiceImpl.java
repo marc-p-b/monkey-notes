@@ -121,19 +121,6 @@ public class ViewServiceImpl implements ViewService {
         return files;
     }
 
-//    private List<DtoFile> listAllFilesAndFoldersRecurs(EntityFile dir) {
-//        DtoFile directory = DtoFile.fromEntity(dir);
-//        List<DtoFile> files = new ArrayList<>();
-//        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
-//        for (EntityFile child : childen) {
-//            files.add(DtoFile.fromEntity(child));
-//            if(child.getType() == FileType.folder) {
-//                files.addAll(listAllFilesRecurs(child));
-//            }
-//        }
-//        return files;
-//    }
-
     @Override
     public List<FileNode> listFolders() {
 
@@ -235,31 +222,4 @@ public class ViewServiceImpl implements ViewService {
     public File createTranscriptPdfFromFolder(String folderId) throws IOException {
         return pdfService.createTranscriptPdf(folderId, listTranscriptFromFolderRecurs(folderId));
     }
-
-//    @Override
-//    public void deleteFolder(String folderId) {
-//        Optional<EntityFile> optParent = repositoryFile.findById(idFile(folderId));
-//        if(optParent.isEmpty()) {
-//            return;
-//        }
-//        List<DtoFile> listFiles = listAllFilesAndFoldersRecurs(optParent.get());
-//
-//        for(DtoFile d : listFiles) {
-//
-//            if(d.getType() == FileType.folder) {
-//
-//            } else if(d.getType() == FileType.transcript) {
-//
-//                Optional<EntityTranscript> optEntityTranscript = repositoryTranscript.findById(IdFile.createIdFile(authService.getConnectedUsername(), d.getFileId()));
-//                        //todo user protect
-//                List<EntityTranscriptPage> listTranscriptPage = repositoryTranscriptPage.listAllByIdTranscriptPage_FileId(d.getFileId());
-//                LOG.info("Will delete transcript page {}", d.getFileId());
-//            }
-//
-//
-//        }
-//
-//        LOG.info(listFiles.toString());
-//
-//    }
 }

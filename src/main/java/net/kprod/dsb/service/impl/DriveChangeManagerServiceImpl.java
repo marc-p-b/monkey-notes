@@ -9,7 +9,9 @@ import net.kprod.dsb.data.ChangedFile;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
+import net.kprod.dsb.data.dto.AsyncProcess;
 import net.kprod.dsb.data.entity.*;
+import net.kprod.dsb.data.enums.AsyncProcessName;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.repository.RepositoryFile;
 import net.kprod.dsb.data.repository.RepositoryTranscript;
@@ -74,7 +76,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     //todo synchronized ?
     private Map<String, Authentication> mapChannelAuth;
-    private Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
+    //private Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = new HashMap<>();
+    private Map<String, AsyncProcess> mapAsyncProcess2 = new HashMap<>();
+
+
 
     private String lastPageToken = null;
     private String resourceId = null;
@@ -240,10 +245,33 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            mapAsyncProcess.put("flushChanges-" + monitoringService.getCurrentMonitoringData().getId(), future);
+
+
+            // register async process
+            //mapAsyncProcess.put("flushChanges-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            long items = mapAuth2SetFlushedFileId.values().stream()
+                    .flatMap(s->s.stream())
+                    .count();
+            String desc = new StringBuilder().append("flushing ").append(items).append(" items").toString();
+            registersyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
+
         } catch (ServiceException e) {
             LOG.error("Failed preparing flushChanges async", e);
         }
+
+    }
+
+    private void registersyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
+
+        String id = monitoringData.getId();
+        AsyncProcess asyncProcess = new AsyncProcess()
+                .setId(id)
+                .setFuture(future)
+                .setName(name.name())
+                .setCreatedAt(OffsetDateTime.now())
+                .setDescription(description);
+
+        mapAsyncProcess2.put(id, asyncProcess);
 
     }
 
@@ -343,7 +371,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     optAuth.get(),
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            mapAsyncProcess.put("updateFolder-" + monitoringService.getCurrentMonitoringData().getId(), future);
+
+            //mapAsyncProcess.put("updateFolder-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            registersyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + folderId, future);
+
+
         } catch (ServiceException e) {
             LOG.info("Failed to prepare updateFolder async", e);
         }
@@ -599,7 +631,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            //mapAsyncProcess.put("runAsyncForcePageUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            String desc = new StringBuilder().append("forced update file ").append(fileId).append(" page ").append(pageNumber).toString();
+            registersyncProcess(AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
         } catch (ServiceException e) {
@@ -729,14 +763,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public void cancelProcess(String id) {
-        if(mapAsyncProcess.get(id) == null) {
+        if(mapAsyncProcess2.get(id) == null) {
             LOG.error("Process does not exists {}", id);
             return;
         }
         LOG.info("Request process cancellation{}", id);
-        CompletableFuture future = mapAsyncProcess.get(id);
+        //CompletableFuture future = mapAsyncProcess2.get(id);
+        CompletableFuture future = mapAsyncProcess2.get(id).getFuture();
         future.cancel(true);
-        mapAsyncProcess.remove(id);
+        mapAsyncProcess2.remove(id);
         LOG.info("Process cancelled {}", id);
     }
 
@@ -767,7 +802,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     optAuth.get(),
                     () -> asyncForceTranscriptUpdate(fileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            mapAsyncProcess.put("runAsyncForceTranscriptUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+            //mapAsyncProcess.put("runAsyncForceTranscriptUpdate-" + monitoringService.getCurrentMonitoringData().getId(), future);
+
+            registersyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(), "update transcript " + fileId, future);
+
+
         } catch (ServiceException e) {
             LOG.error("Failed to prepare runAsyncForceTranscriptUpdate", e);
         }
@@ -839,8 +878,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess() {
-        return mapAsyncProcess;
+    public Map<String, AsyncProcess> getMapAsyncProcess() {
+        return mapAsyncProcess2;
     }
 
 }

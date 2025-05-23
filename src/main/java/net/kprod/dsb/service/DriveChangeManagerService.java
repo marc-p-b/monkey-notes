@@ -1,6 +1,7 @@
 package net.kprod.dsb.service;
 
 import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.data.dto.AsyncProcess;
 import net.kprod.dsb.monitoring.AsyncResult;
 
 import java.io.IOException;
@@ -18,7 +19,8 @@ public interface DriveChangeManagerService {
     Map<String, Object> getStatus();
     String updateAncestorsFolders(String fileId) throws ServiceException;
     void forcePageUpdate(String fileId, int pageNumber);
-    Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess();
+    //Map<String, CompletableFuture<AsyncResult>> getMapAsyncProcess();
+    Map<String, AsyncProcess> getMapAsyncProcess();
     void cancelProcess(String id);
     void requestForceTranscriptUpdate(String fileId);
     void forceTranscriptUpdate(String fileId);

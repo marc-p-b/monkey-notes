@@ -1,6 +1,7 @@
 package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.ViewOptions;
+import net.kprod.dsb.data.dto.AsyncProcess;
 import net.kprod.dsb.data.dto.DtoProcess;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.dsb.monitoring.AsyncResult;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -59,16 +62,28 @@ public class ViewsController {
     @GetMapping("/processing")
     public String viewProcessing(Model model) throws IOException {
 
-        Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = driveChangeManagerService.getMapAsyncProcess();
+        //Map<String, CompletableFuture<AsyncResult>> mapAsyncProcess = driveChangeManagerService.getMapAsyncProcess();
+        Map<String, AsyncProcess> mapAsyncProcess = driveChangeManagerService.getMapAsyncProcess();
 
         //for (Map.Entry<String, CompletableFuture<AsyncResult>> entry : mapAsyncProcess.entrySet()) {
 
         List<DtoProcess> list = mapAsyncProcess.entrySet().stream()
                 .map(e -> {
-                    String processName = e.getKey();
-                    CompletableFuture<AsyncResult> future = e.getValue();
+                    AsyncProcess asyncProcess = e.getValue();
+                    String processName = asyncProcess.getName();
+                    CompletableFuture<AsyncResult> future = asyncProcess.getFuture();
                     String status = "unknown";
-                    DtoProcess p = new DtoProcess(processName, processName);
+                    DtoProcess p = new DtoProcess(e.getKey(), processName);
+
+                    Duration d = Duration.between(OffsetDateTime.now(), asyncProcess.getCreatedAt());
+                    p.setDescription(asyncProcess.getDescription());
+                    String strDuration = new StringBuilder()
+                            .append(d.toHoursPart()).append("h ")
+                            .append(d.toMinutesPart()).append("m ")
+                            .append(d.toSecondsPart()).append("s ").toString();
+                    p.setDuration(strDuration);
+
+
                     if (future.isDone()) {
                         try {
                             AsyncResult asyncResult = future.get();

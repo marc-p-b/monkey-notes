@@ -4,6 +4,8 @@ public class DtoProcess {
     String id;
     String name;
     String status;
+    String description;
+    String duration;
 
     public DtoProcess(String processId, String processName) {
         this.id = processId;
@@ -34,6 +36,24 @@ public class DtoProcess {
 
     public DtoProcess setName(String name) {
         this.name = name;
+        return this;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public DtoProcess setDescription(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public String getDuration() {
+        return duration;
+    }
+
+    public DtoProcess setDuration(String duration) {
+        this.duration = duration;
         return this;
     }
 }

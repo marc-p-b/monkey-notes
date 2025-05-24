@@ -56,4 +56,15 @@ public class DtoProcess {
         this.duration = duration;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "DtoProcess{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", status='" + status + '\'' +
+                ", description='" + description + '\'' +
+                ", duration='" + duration + '\'' +
+                '}';
+    }
 }

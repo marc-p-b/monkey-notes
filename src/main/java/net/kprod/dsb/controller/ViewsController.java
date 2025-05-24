@@ -75,7 +75,7 @@ public class ViewsController {
                     String status = "unknown";
                     DtoProcess p = new DtoProcess(e.getKey(), processName);
 
-                    Duration d = Duration.between(OffsetDateTime.now(), asyncProcess.getCreatedAt());
+                    Duration d = Duration.between(asyncProcess.getCreatedAt(), OffsetDateTime.now());
                     p.setDescription(asyncProcess.getDescription());
                     String strDuration = new StringBuilder()
                             .append(d.toHoursPart()).append("h ")
@@ -103,6 +103,7 @@ public class ViewsController {
                     return p;
                 })
                 .toList();
+
         model.addAttribute("processes", list);
         return "processing";
     }

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
@@ -142,6 +143,7 @@ public class ViewServiceImpl implements ViewService {
         return folders;
     }
 
+    @Override
     public List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId) {
         Optional<EntityFile> optFolder = repositoryFile.findById(idFile(folderId));
 
@@ -221,5 +223,41 @@ public class ViewServiceImpl implements ViewService {
     @Override
     public File createTranscriptPdfFromFolder(String folderId) throws IOException {
         return pdfService.createTranscriptPdf(folderId, listTranscriptFromFolderRecurs(folderId));
+    }
+
+    //delete transcript or folder
+    @Override
+    @Transactional
+    public void delete(String fileId) {
+
+        Optional<EntityFile> t = repositoryFile.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+
+        if(t.isEmpty()) {
+            LOG.error("No file found for id {}", fileId);
+            return;
+        }
+
+        EntityFile entityFile = t.get();
+        if(entityFile.getType().equals(FileType.folder)) {
+            //folder
+            List<DtoTranscript> listTranscripts = listTranscriptFromFolderRecurs(fileId);
+            LOG.info("Delete {} items from database", listTranscripts.size());
+            for(DtoTranscript dtoTranscript : listTranscripts) {
+                deleteFromDb(dtoTranscript.getFileId(), false);
+            }
+            deleteFromDb(fileId, true);
+        } else  {
+            deleteFromDb(fileId, false);
+        }
+    }
+
+    private void deleteFromDb(String fileId, boolean isFolder) {
+        LOG.info("Delete {} from database", fileId);
+        IdFile idFile = IdFile.createIdFile(authService.getConnectedUsername(), fileId);
+        repositoryTranscript.deleteById(idFile);
+        repositoryFile.deleteById(idFile);
+        if(isFolder == false) {
+            repositoryTranscriptPage.deleteByIdTranscriptPage_FileId(fileId);
+        }
     }
 }

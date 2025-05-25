@@ -71,6 +71,7 @@
             const nameSpan = document.createElement('span');
             nameSpan.textContent = node.name;
 
+
             if (node.folder) {
                 li.appendChild(nameSpan);
 
@@ -92,15 +93,13 @@
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(folderPdf);
 
-                const agentLink = document.createElement('a');
-                agentLink.href = `/agent/${node.dtoFile.fileId}`;
-                agentLink.textContent = 'agent';
-                li.appendChild(document.createTextNode(' - '));
-                li.appendChild(agentLink);
+                // const delLink = document.createElement('a');
+                // delLink.href = `/delete/${node.dtoFile.fileId}`;
+                // delLink.textContent = 'delete';
+                // li.appendChild(document.createTextNode(' - '));
+                // li.appendChild(delLink);
 
-                if (node.children && node.children.length > 0) {
-                    li.appendChild(buildTree(node.children));
-                }
+
             } else {
                 li.appendChild(nameSpan);
                 const pagesSpan = document.createElement('span');
@@ -132,13 +131,30 @@
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(pdfLink);
 
-                const agentLink = document.createElement('a');
-                agentLink.href = `/agent/${node.dtoFile.fileId}`;
-                agentLink.textContent = 'agent';
-                li.appendChild(document.createTextNode(' - '));
-                li.appendChild(agentLink);
+
+
 
             }
+
+            const agentLink = document.createElement('a');
+            agentLink.href = `/agent/${node.dtoFile.fileId}`;
+            agentLink.textContent = 'agent';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(agentLink);
+
+            const delLink = document.createElement('a');
+            delLink.href = `/delete/${node.dtoFile.fileId}`;
+            delLink.textContent = 'delete';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(delLink);
+
+            if (node.folder && node.children && node.children.length > 0) {
+                li.appendChild(buildTree(node.children));
+            }
+
+
+
+
 
             ul.appendChild(li);
         });

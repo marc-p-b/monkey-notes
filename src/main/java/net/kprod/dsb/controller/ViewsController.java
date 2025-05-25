@@ -8,6 +8,7 @@ import net.kprod.dsb.monitoring.AsyncResult;
 import net.kprod.dsb.service.DriveChangeManagerService;
 import net.kprod.dsb.service.ViewService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -116,6 +117,12 @@ public class ViewsController {
 
         return "agent";
 
+    }
+
+    @GetMapping("/delete/{fileId}")
+    public ResponseEntity<String> delete(@PathVariable String fileId) throws IOException {
+        viewService.delete(fileId);
+        return ResponseEntity.ok("OK");
     }
 
 }

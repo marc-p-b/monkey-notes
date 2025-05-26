@@ -15,46 +15,17 @@
     <span th:text="${error}"></span>
 </div>
 
-<!--<div th:if= "${authUrl != ''}"><a th:href="${authUrl}">authenticate</a></div>-->
-<!--<div th:if= "${authUrl == ''}">-->
-
 <div>
     <div>
         <a href="/update/all">Update All</a>
     </div>
     <h2>File and Folder Structure</h2>
 
-    <div id="auth-box">
-        <!-- Folder tree will be rendered here -->
-    </div>
-
     <div id="folder-container">
-        <!-- Folder tree will be rendered here -->
     </div>
+</div>
 
 <script>
-    async function ready() {
-
-        const response = await fetch('/authGoogleDrive');
-        const authJson = await response.json();
-
-        //TODO add preferences link
-
-        if(authJson.connected) {
-            fetchAndRenderTree();
-        } else {
-            const container = document.getElementById('auth-box');
-
-            const authLink = document.createElement('a');
-            authLink.href = authJson.url;
-            authLink.textContent = "connect to google drive"
-            container.appendChild(authLink);
-
-        }
-
-
-    }
-
     async function fetchAndRenderTree() {
         const response = await fetch('/folder/list');
         const fileNodes = await response.json();
@@ -70,17 +41,9 @@
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = node.name;
-
+            li.appendChild(nameSpan);
 
             if (node.folder) {
-                li.appendChild(nameSpan);
-
-                // const transcriptLink = document.createElement('a');
-                // transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
-                // transcriptLink.textContent = 'view';
-                // li.appendChild(document.createTextNode(' - '));
-                // li.appendChild(transcriptLink);
-
                 const refreshLink = document.createElement('a');
                 refreshLink.href = `/update/folder/${node.dtoFile.fileId}`;
                 refreshLink.textContent = 'refresh';
@@ -93,15 +56,7 @@
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(folderPdf);
 
-                // const delLink = document.createElement('a');
-                // delLink.href = `/delete/${node.dtoFile.fileId}`;
-                // delLink.textContent = 'delete';
-                // li.appendChild(document.createTextNode(' - '));
-                // li.appendChild(delLink);
-
-
             } else {
-                li.appendChild(nameSpan);
                 const pagesSpan = document.createElement('span');
                 pagesSpan.textContent = `(${node.dtoTranscript.pageCount} pages)`;
                 li.appendChild(document.createTextNode(' - '));
@@ -130,10 +85,6 @@
                 pdfLink.textContent = 'pdf';
                 li.appendChild(document.createTextNode(' - '));
                 li.appendChild(pdfLink);
-
-
-
-
             }
 
             const agentLink = document.createElement('a');
@@ -152,16 +103,12 @@
                 li.appendChild(buildTree(node.children));
             }
 
-
-
-
-
             ul.appendChild(li);
         });
         return ul;
     }
 
-    document.addEventListener('DOMContentLoaded', ready);
+    document.addEventListener('DOMContentLoaded', fetchAndRenderTree);
 </script>
 
 </body>

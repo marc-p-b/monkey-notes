@@ -39,19 +39,6 @@ public class DefaultController {
     @Autowired
     private DriveUtilsService driveUtilsService;
 
-    @Autowired
-    private DriveService driveService;
-
-    @GetMapping("/authGoogleDrive")
-    public ResponseEntity<DtoGoogleDriveConnect> auth() {
-        Optional<String> optAuthUrl = driveService.requireAuth();
-        if (optAuthUrl.isPresent()) {
-            return ResponseEntity.ok(DtoGoogleDriveConnect.disconnected(optAuthUrl.get()));
-        } else {
-            return ResponseEntity.ok(new DtoGoogleDriveConnect());
-        }
-    }
-
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
         driveChMgmtService.watch(true);

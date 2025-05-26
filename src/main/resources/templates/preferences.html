@@ -11,7 +11,11 @@
     <a href="/export">Export your data</a>
 </div>
 
-<form method="post" th:action="@{/form/preferences}">
+<div id="auth-box">
+</div>
+
+
+<form method="post" th:action="@{/preferences/form}">
 <ul>
     <li><label th:text="useDefaultPrompt" th:for="useDefaultPrompt" />
         <input type="text" th:name="useDefaultPrompt" th:value="${preferences.useDefaultPrompt}" /></li>
@@ -51,6 +55,33 @@
 <form th:action="@{/preferences/reset}">
     <input type="submit" value="reset" />
 </form>
+
+<script>
+    async function ready() {
+
+        console.log("drive ?");
+
+        const response = await fetch('/preferences/authGoogleDrive');
+        const authJson = await response.json();
+
+        //TODO add preferences link
+
+        if(authJson.connected == false) {
+            console.log("drive !!");
+            const container = document.getElementById('auth-box');
+
+            const authLink = document.createElement('a');
+            authLink.href = authJson.url;
+            authLink.textContent = "connect to google drive is required"
+            container.appendChild(authLink);
+
+            console.log(authLink);
+
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', ready);
+</script>
 
 </body>
 </html>

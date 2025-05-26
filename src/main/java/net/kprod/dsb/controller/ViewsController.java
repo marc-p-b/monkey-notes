@@ -31,18 +31,8 @@ public class ViewsController {
     @Autowired
     private DriveChangeManagerService driveChangeManagerService;
 
-    //todo remove this when moved from thymeleaf
-
     @GetMapping("/")
     public String home(Model model) {
-//        //todo for all user urls
-//        Optional<String> optAuthUrl = driveService.requireAuth();
-//
-//        //todo for all user urls
-//        if(preferencesService.isParametersNotSet()) {
-//            return "redirect:/preferences";
-//        }
-//
         return "home";
     }
 

@@ -142,11 +142,8 @@ public class ExportServiceImpl implements ExportService {
                         try (OutputStream os = Files.newOutputStream(destPath)) {
                             zis.transferTo(os);
                         }
-
                     }
-
                     zis.closeEntry();
-
                 }
             }
             dbLoad(databaseBytes);

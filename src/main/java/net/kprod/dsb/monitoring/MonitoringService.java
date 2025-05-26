@@ -31,31 +31,8 @@ public interface MonitoringService {
 
     /**
      * Return current monitorData object
+     *
      * @return monitorData
      */
     MonitoringData getCurrentMonitoringData();
-
-    /**
-     * Create error response
-     *
-     * @param parentException  origin exception before rewriting
-     * @param serviceException exception
-     * @return created response entity
-     */
-//    ResponseEntity<ResponseException> createErrorResponse(Exception parentException, HttpServiceException serviceException);
-//
-//    /**
-//     * Transform exception to a {@link ResponseException}
-//     * @param exception origin exception before rewriting
-//     * @return response exception object
-//     */
-//    ResponseException processException(Exception exception);
-//
-//    /**
-//     * Transform exception to a {@link ResponseException}
-//     * @param parentException origin exception before rewriting
-//     * @param optFinalException optional final exception
-//     * @return response exception object
-//     */
-//    ResponseException processException(Exception parentException, Optional<HttpServiceException> optFinalException);
 }

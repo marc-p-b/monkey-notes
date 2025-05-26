@@ -55,7 +55,6 @@ public class PreferencesServiceImpl implements PreferencesService {
             Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getConnectedUsername()).stream()
                     .collect(Collectors.toMap(entityConfig -> entityConfig.getConfigId().getKey(), entityConfig -> entityConfig.getValue()));
             return fromMap(map);
-
         }
     }
 
@@ -110,7 +109,6 @@ public class PreferencesServiceImpl implements PreferencesService {
             } catch (IllegalArgumentException e) {
                 LOGGER.error("Unknown config key {}", entry.getKey());
             }
-
         }
         return dtoConfigs;
     }

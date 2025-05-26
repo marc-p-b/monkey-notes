@@ -1,6 +1,5 @@
 package net.kprod.dsb.service;
 
-import net.kprod.dsb.controller.AgentController;
 import net.kprod.dsb.data.dto.agent.DtoAgent;
 import net.kprod.dsb.data.dto.agent.DtoAgentPrepare;
 import net.kprod.dsb.data.dto.agent.DtoAssistantOptions;

@@ -37,7 +37,6 @@ public class File2Process {
                 .setName(fileName)
                 .setMd5(md5)
                 .setParentFolderId(parentFolderId);
-                //.setParentFolderName(parentFolderName);
 
     }
 

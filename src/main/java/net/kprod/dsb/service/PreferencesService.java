@@ -11,8 +11,6 @@ public interface PreferencesService {
     void setPreference(Map<String, String> formData);
     void resetPreference();
 
-    //boolean isSet() throws ServiceException;
-    //boolean isNotSet() throws ServiceException;
     boolean isParametersSet();
     boolean isParametersNotSet();
 

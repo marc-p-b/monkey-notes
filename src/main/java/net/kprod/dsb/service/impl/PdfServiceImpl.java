@@ -201,10 +201,7 @@ public class PdfServiceImpl implements PdfService {
                             pageNumber++;
                             lines.clear();
                         }
-
-
                     }
-
                 }
                 if(docNumber++ < listDtoTranscript.size()-1) {
                     //add page break
@@ -213,8 +210,6 @@ public class PdfServiceImpl implements PdfService {
                     lines.clear();
                 }
             }
-
-
             pages.put(pageNumber, new ArrayList<>(lines));
 
             contentStream.beginText();

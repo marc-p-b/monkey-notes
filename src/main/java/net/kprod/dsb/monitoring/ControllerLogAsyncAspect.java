@@ -28,6 +28,8 @@ public class ControllerLogAsyncAspect {
             + " && !@annotation(net.kprod.dsb.monitoring.MonitoringDisable)")
     public void asyncMethodInterceptor(ProceedingJoinPoint joinPoint) throws Throwable {
         Object proceed = joinPoint.proceed();
+        //todo ?
+
 //        if(proceed instanceof CompletableFuture) {
 //                CompletableFuture<?> future = (CompletableFuture<?>) proceed;
 //                future.thenAccept(futureReturnValue -> {

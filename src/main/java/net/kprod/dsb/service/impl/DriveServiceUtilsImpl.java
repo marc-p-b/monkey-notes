@@ -56,18 +56,18 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return targetFile;
     }
 
-    @Override
-    public void delete(String fileId) {
-        LOG.info("delete file {}", fileId);
-
-        try {
-            driveService.getDrive().files().delete(fileId).execute();
-
-            LOG.info("deleted file {}", fileId);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    @Override
+//    public void delete(String fileId) {
+//        LOG.info("delete file {}", fileId);
+//
+//        try {
+//            driveService.getDrive().files().delete(fileId).execute();
+//
+//            LOG.info("deleted file {}", fileId);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     @Override
     public String getFileName(String fileId) throws IOException {
@@ -207,20 +207,20 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return result.getFiles();
     }
 
-    //todo folder id as param
-    @Override
-    public void deleteSimilarNameFromTranscripts(String name, String folderId) {
-        LOG.info("delete previous files {}", name);
-        try {
-            List<File> list = listFileByName(name, folderId);
-            for(File file : list) {
-                LOG.info("deleted file {} id {}", file.getName(), file.getId());
-                delete(file.getId());
-            }
-        } catch (IOException e) {
-            LOG.error("file does not exists with name {}", name, e);
-        }
-    }
+//    //todo folder id as param
+//    @Override
+//    public void deleteSimilarNameFromTranscripts(String name, String folderId) {
+//        LOG.info("delete previous files {}", name);
+//        try {
+//            List<File> list = listFileByName(name, folderId);
+//            for(File file : list) {
+//                LOG.info("deleted file {} id {}", file.getName(), file.getId());
+//                delete(file.getId());
+//            }
+//        } catch (IOException e) {
+//            LOG.error("file does not exists with name {}", name, e);
+//        }
+//    }
 
     @Override
     public File upload(String name, String folderId, java.io.File file) {
@@ -230,7 +230,6 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         fileMetadata.setName(name);
         fileMetadata.setParents(Collections.singletonList(folderId));
 
-        //java.io.File filePath = new java.io.File("files/photo.jpg");
         FileContent mediaContent = new FileContent("application/pdf", file);
         try {
             File driveFile = driveService.getDrive().files().create(fileMetadata, mediaContent)
@@ -246,21 +245,21 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return null;
     }
 
-    @Override
-    public File createFolder(String name, String parentFolderId) {
-        File fileMetadata = new File();
-        fileMetadata.setName(name);
-        fileMetadata.setParents(Collections.singletonList(parentFolderId));
-        fileMetadata.setMimeType(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE);
-
-        try {
-            File driveFile = driveService.getDrive().files().create(fileMetadata)
-                    .setFields("id, parents")
-                    .execute();
-            return driveFile;
-        } catch (IOException e) {
-            LOG.error("error creating folder {}", name, e);
-        }
-        return null;
-    }
+//    @Override
+//    public File createFolder(String name, String parentFolderId) {
+//        File fileMetadata = new File();
+//        fileMetadata.setName(name);
+//        fileMetadata.setParents(Collections.singletonList(parentFolderId));
+//        fileMetadata.setMimeType(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE);
+//
+//        try {
+//            File driveFile = driveService.getDrive().files().create(fileMetadata)
+//                    .setFields("id, parents")
+//                    .execute();
+//            return driveFile;
+//        } catch (IOException e) {
+//            LOG.error("error creating folder {}", name, e);
+//        }
+//        return null;
+//    }
 }

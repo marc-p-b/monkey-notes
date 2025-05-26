@@ -12,7 +12,6 @@ public class DtoTranscript {
     private String name;
     private OffsetDateTime transcripted_at;
     private OffsetDateTime documented_at;
-    //private String aiModel;
     private int pageCount;
     private int version;
     private List<DtoTranscriptPage> pages;

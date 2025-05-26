@@ -140,7 +140,6 @@ public class DriveServiceImpl implements DriveService {
                 .setRedirectUri(appHost + oauthCallbackPath)
                 .build();
 
-        //LOG.info("Authorise your app through using your browser : {}", url);
         return url;
     }
 
@@ -206,7 +205,6 @@ public class DriveServiceImpl implements DriveService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         LOG.info("Refresh token for user {}", authentication.getName());
 
-        //credential.setRefreshToken(refreshToken);
         try {
             credential.refreshToken();
         } catch (IOException e) {

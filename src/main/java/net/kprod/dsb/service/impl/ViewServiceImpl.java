@@ -16,6 +16,7 @@ import net.kprod.dsb.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +80,13 @@ public class ViewServiceImpl implements ViewService {
         }
         //todo error
         return null;
+    }
+
+    @Override
+    public List<DtoTranscript> listRecentTranscripts(int from, int to) {
+        return repositoryTranscript.findRecentByIdFile_Username(authService.getConnectedUsername(), PageRequest.of(0,10)).stream()
+                .map(DtoTranscript::fromEntity)
+                .toList();
     }
 
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
@@ -179,7 +187,7 @@ public class ViewServiceImpl implements ViewService {
                         listPages.add(optPage);
         }
 
-        DtoTranscript dtoTranscript = DtoTranscript.fromEntities(t,
+        DtoTranscript dtoTranscript = DtoTranscript.fromEntity(t,
                 listPages.stream()
                     .filter(Optional::isPresent)
                     .map(Optional::get)

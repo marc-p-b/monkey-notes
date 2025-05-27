@@ -56,10 +56,10 @@ public class DefaultController {
         return ResponseEntity.ok().body(driveChMgmtService.getStatus());
     }
 
-    @GetMapping("/transcript/list")
-    public ResponseEntity<List<String>> listTranscipt() throws IOException {
-        return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
-    }
+//    @GetMapping("/transcript/list")
+//    public ResponseEntity<List<String>> listTranscipt() throws IOException {
+//        return ResponseEntity.ok().body(viewService.listAvailableTranscripts());
+//    }
 
     @GetMapping(value = "/transcript/pdf/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> getTranscriptPdf(@PathVariable String fileId) throws IOException {
@@ -105,6 +105,8 @@ public class DefaultController {
     public ResponseEntity<List<FileNode>> viewFolders() {
         return ResponseEntity.ok().body(viewService.listFolders());
     }
+
+
 
     @GetMapping(value = "/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> getFolderPdf(@PathVariable String folderId) throws IOException {

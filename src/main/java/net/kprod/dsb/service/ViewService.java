@@ -2,6 +2,7 @@ package net.kprod.dsb.service;
 
 import net.kprod.dsb.data.ViewOptions;
 import net.kprod.dsb.data.dto.DtoTranscript;
+import net.kprod.dsb.data.dto.DtoTranscriptDetails;
 import net.kprod.dsb.data.dto.FileNode;
 
 import java.io.File;
@@ -15,6 +16,6 @@ public interface ViewService {
     java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;
     DtoTranscript getTranscript(String fileId, ViewOptions options) throws IOException;
     List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId);
-    List<DtoTranscript> listRecentTranscripts(int from, int to);
+    List<DtoTranscriptDetails> listRecentTranscripts(int from, int to);
     void delete(String fileId);
 }

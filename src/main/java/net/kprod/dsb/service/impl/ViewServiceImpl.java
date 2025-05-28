@@ -2,10 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.ViewOptions;
-import net.kprod.dsb.data.dto.DtoFile;
-import net.kprod.dsb.data.dto.DtoTranscript;
-import net.kprod.dsb.data.dto.DtoTranscriptPage;
-import net.kprod.dsb.data.dto.FileNode;
+import net.kprod.dsb.data.dto.*;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.FileType;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
@@ -50,6 +47,10 @@ public class ViewServiceImpl implements ViewService {
 
     @Autowired
     private UtilsService utilsService;
+    @Autowired
+    private DriveService driveService;
+    @Autowired
+    private DriveUtilsService driveUtilsService;
 
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
@@ -83,10 +84,25 @@ public class ViewServiceImpl implements ViewService {
     }
 
     @Override
-    public List<DtoTranscript> listRecentTranscripts(int from, int to) {
-        return repositoryTranscript.findRecentByIdFile_Username(authService.getConnectedUsername(), PageRequest.of(0,10)).stream()
-                .map(DtoTranscript::fromEntity)
-                .toList();
+    public List<DtoTranscriptDetails> listRecentTranscripts(int from, int to) {
+        List<EntityTranscript> list = repositoryTranscript.findRecentByIdFile_Username(authService.getConnectedUsername(), PageRequest.of(from,to));
+        List<DtoTranscriptDetails> listDtoRecent = new ArrayList<>();
+        for (EntityTranscript entityTranscript : list) {
+            DtoTranscriptDetails dtoTranscriptDetails = null;
+            List<String> parents = driveUtilsService.getDriveParents(entityTranscript.getIdFile().getFileId());
+            if(parents.isEmpty() == false) {
+                IdFile parentIdFile = IdFile.createIdFile(authService.getConnectedUsername(), parents.get(0));
+                Optional<EntityFile> parentFile = repositoryFile.findById(parentIdFile);
+                if(parentFile.isPresent()) {
+                    dtoTranscriptDetails = new DtoTranscriptDetails(
+                            DtoTranscript.fromEntity(entityTranscript),
+                            DtoFile.fromEntity(parentFile.get()));
+
+                    listDtoRecent.add(dtoTranscriptDetails);
+                }
+            }
+        }
+        return listDtoRecent;
     }
 
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {

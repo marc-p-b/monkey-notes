@@ -101,10 +101,7 @@ public class DefaultController {
         return ResponseEntity.ok().body("OK");
     }
 
-    @GetMapping("/folder/list")
-    public ResponseEntity<List<FileNode>> viewFolders() {
-        return ResponseEntity.ok().body(viewService.listFolders());
-    }
+
 
 
 

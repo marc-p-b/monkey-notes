@@ -2,6 +2,7 @@ package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.ViewOptions;
 import net.kprod.dsb.data.dto.DtoTranscript;
+import net.kprod.dsb.data.dto.DtoTranscriptDetails;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.dsb.service.ViewService;
@@ -25,6 +26,11 @@ public class ViewsController {
     @GetMapping("/")
     public String home(Model model) {
         return "home";
+    }
+
+    @GetMapping("/folder/list")
+    public ResponseEntity<List<FileNode>> viewFolders() {
+        return ResponseEntity.ok().body(viewService.listFolders());
     }
 
     @GetMapping("/transcript/{fileId}")
@@ -54,7 +60,7 @@ public class ViewsController {
     }
 
     @GetMapping("/transcript/recent")
-    public ResponseEntity<List<DtoTranscript>> viewRecentTranscripts() throws IOException {
+    public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 

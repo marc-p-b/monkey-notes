@@ -27,6 +27,56 @@
 
 <script>
 
+    function transcriptLinks (fileId, li) {
+        const transcriptLink = document.createElement('a');
+        transcriptLink.href = `/transcript/${fileId}`;
+        transcriptLink.textContent = 'view';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(transcriptLink);
+
+        const pdfLink = document.createElement('a');
+        pdfLink.href = `/transcript/pdf/${fileId}`;
+        pdfLink.textContent = 'pdf';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(pdfLink);
+
+        const agentLink = document.createElement('a');
+        agentLink.href = `/agent/${fileId}`;
+        agentLink.textContent = 'agent';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(agentLink);
+
+        const failedLink = document.createElement('a');
+        failedLink.href = `/transcript/${fileId}/failed`;
+        failedLink.textContent = 'view failed';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(failedLink);
+
+        const forceUpdateLink = document.createElement('a');
+        forceUpdateLink.href = `/transcript/force-update/${fileId}`;
+        forceUpdateLink.textContent = 'force update';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(forceUpdateLink);
+
+        const delLink = document.createElement('a');
+        delLink.href = `/delete/${fileId}`;
+        delLink.textContent = 'delete';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(delLink);
+    }
+
+    function formatDateTime(isoString) {
+        const date = new Date(isoString);
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
     async function fetchAndRenderTree() {
         const response = await fetch('/transcript/recent');
         const fileNodes = await response.json();
@@ -40,18 +90,33 @@
         nodes.forEach(node => {
             const li = document.createElement('li');
 
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = node.transcript.name;
-            li.appendChild(nameSpan);
-
             const parentNameSpan = document.createElement('span');
             parentNameSpan.textContent = node.parent.name;
             li.appendChild(parentNameSpan);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = node.transcript.name;
+            li.appendChild(document.createTextNode(' / '));
+            li.appendChild(nameSpan);
+
+            const dateSpan = document.createElement('span');
+
+            const formatted = formatDateTime(node.transcript.transcripted_at);
+
+            console.log(formatted);
+            dateSpan.textContent = formatted;
+            li.appendChild(document.createTextNode(' ('));
+            li.appendChild(dateSpan);
+            li.appendChild(document.createTextNode(')'));
+
+            transcriptLinks(node.transcript.fileId, li);
+
 
             ul.appendChild(li);
         });
         return ul;
     }
+
     // async function fetchAndRenderTree() {
     //     const response = await fetch('/folder/list');
     //     const fileNodes = await response.json();

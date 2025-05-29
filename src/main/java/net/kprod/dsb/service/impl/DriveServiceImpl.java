@@ -33,10 +33,7 @@ import java.util.Set;
 
 @Service
 public class DriveServiceImpl implements DriveService {
-    //public static final String STORED_CREDENTIAL_NAME = "dsb-gdrive-credential";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
-
-    //private static final long TOKEN_REFRESH_INTERVAL = 3500;
     private static final String APPLICATION_NAME = "Drive Notepad Sync";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
@@ -45,9 +42,6 @@ public class DriveServiceImpl implements DriveService {
 
     @Value("${app.drive.auth.client-secret}")
     private String CLIENT_SECRET;
-
-    @Value("${app.drive.auth.credentials.path}")
-    private String credentialsPath;
 
     @Value("${app.url.self}")
     private String appHost;
@@ -91,8 +85,6 @@ public class DriveServiceImpl implements DriveService {
         //request auth
         try {
             authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
-
-                    //.setDataStoreFactory(new FileDataStoreFactory(new File(credentialsPath)))
                     .setDataStoreFactory(dataStoreFactory)
                     .setAccessType("offline")
                     .setApprovalPrompt("force")

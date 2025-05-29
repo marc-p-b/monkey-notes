@@ -1,11 +1,16 @@
 package net.kprod.dsb.service.impl;
 
+import jakarta.annotation.PostConstruct;
+import net.kprod.dsb.data.entity.EntityUser;
+import net.kprod.dsb.data.repository.RepositoryUser;
 import net.kprod.dsb.service.UtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -32,6 +37,9 @@ public class UtilsServiceImpl implements UtilsService {
     @Value("${app.url.self}")
     private String selfUrl;
 
+    @Autowired
+    private RepositoryUser repositoryUser;
+
     public static final String DEFAULT_WORKING_DIR = "/tmp";
 
     public enum WorkingDir {
@@ -46,6 +54,32 @@ public class UtilsServiceImpl implements UtilsService {
         createDir(Paths.get(downloadPath));
         createDir(Paths.get(imagePath));
         createDir(Paths.get(transcriptPath));
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void initUsers() {
+
+
+        repositoryUser.deleteAll();
+
+        EntityUser u1 = new EntityUser()
+                .setUsername("marc")
+                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
+                .setRoles("USER");
+
+        EntityUser u2 = new EntityUser()
+                .setUsername("celine")
+                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
+                .setRoles("USER");
+
+        EntityUser u3 = new EntityUser()
+                .setUsername("marc-test")
+                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
+                .setRoles("USER");
+
+        repositoryUser.save(u1);
+        repositoryUser.save(u2);
+        repositoryUser.save(u3);
     }
 
     private void createDir(Path dir) {

@@ -4,5 +4,5 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public interface ImageService {
-    void efficientStreamImage(String fileId, int imageNum, OutputStream outputStream) throws IOException;
+    void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream) throws IOException;
 }

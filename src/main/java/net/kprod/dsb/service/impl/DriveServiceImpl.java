@@ -28,6 +28,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -59,24 +61,46 @@ public class DriveServiceImpl implements DriveService {
             DriveScopes.DRIVE_METADATA,
             DriveScopes.DRIVE_METADATA_READONLY);
 
-    private Credential credential;
-    private String refreshToken;
-
     private GoogleAuthorizationCodeFlow authFlow;
     private NetHttpTransport HTTP_TRANSPORT;
-
-    private Drive googleDrive;
-
 
     @Autowired
     private ApplicationContext ctx;
 
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
+
     @Autowired
     private RepositoryGDriveCredential credentialRepository;
+
     @Autowired
     private AuthService authService;
+
+    private Map<String, Credential> mapCredentials = new HashMap<>();
+
+    private Map<String, Drive> mapDrive = new HashMap<>();
+
+    private Credential getCredential(){
+        LOG.info("Get credential user {}", authService.getConnectedUsername());
+        return mapCredentials.get(authService.getConnectedUsername());
+    }
+
+    private Credential setCredential(Credential credential){
+        LOG.info("Set credential user {}", authService.getConnectedUsername());
+        mapCredentials.put(authService.getConnectedUsername(), credential);
+        return credential;
+    }
+
+    private Drive mapGetDrive(){
+        LOG.info("Get drive user {}", authService.getConnectedUsername());
+        return mapDrive.get(authService.getConnectedUsername());
+    }
+
+    private Drive mapSetDrive(Drive drive){
+        LOG.info("Set drive user {}", authService.getConnectedUsername());
+        mapDrive.put(authService.getConnectedUsername(), drive);
+        return drive;
+    }
 
     @Override
     public Optional<String> requireAuth() {
@@ -94,7 +118,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
-            credential = authFlow.loadCredential(authService.getConnectedUsername());
+            Credential credential = setCredential(authFlow.loadCredential(authService.getConnectedUsername()));
 
             if (credential != null && credential.getExpirationTimeMilliseconds() != null) {
 
@@ -125,7 +149,7 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Failed to load credential", e);
         }
 
-        if(credential != null) {
+        if(getCredential() != null) {
             LOG.info("Credentials ok");
         } else {
             LOG.error("Credentials failure");
@@ -157,10 +181,9 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Failed to request auth token", e);
         }
 
-        refreshToken = tokenResponse.getRefreshToken();
-
         try {
-            credential = authFlow.createAndStoreCredential(tokenResponse, authService.getConnectedUsername());
+            setCredential(authFlow.createAndStoreCredential(tokenResponse, authService.getConnectedUsername()));
+
         } catch (IOException e) {
             LOG.error("Failed to create credential", e);
         }
@@ -180,19 +203,21 @@ public class DriveServiceImpl implements DriveService {
     private void getDriveConnection() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if(googleDrive == null) {
+        if(mapGetDrive() == null) {
             LOG.info("Connecting to Google Drive");
             try {
                 HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
             } catch (IOException | GeneralSecurityException e) {
                 throw new RuntimeException(e);
             }
-            googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+            Drive googleDrive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredential())
                     .setApplicationName(APPLICATION_NAME)
                     .build();
+            mapSetDrive(googleDrive);
 
             connectCallback.run();
 
+            LOG.info("Schedule refresh token user {}", authService.getConnectedUsername());
             taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
         } else {
             LOG.info("Already connected to Google Drive");
@@ -204,19 +229,20 @@ public class DriveServiceImpl implements DriveService {
         LOG.info("Refresh token for user {}", authentication.getName());
 
         try {
-            credential.refreshToken();
+            getCredential().refreshToken();
         } catch (IOException e) {
             LOG.error("Refresh token failed", e);
         }
 
+        LOG.info("Schedule refresh token user {}", authService.getConnectedUsername());
         taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
 
         this.getDriveConnection();
-        LOG.info("Credential refreshed, gdrive connected {}", googleDrive != null  ? "yes" : "no");
+        LOG.info("Credential refreshed, gdrive connected {}", mapGetDrive() != null  ? "yes" : "no");
     }
 
     public Drive getDrive() {
-        return googleDrive;
+        return mapGetDrive();
     }
 
 }

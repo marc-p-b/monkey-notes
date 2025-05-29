@@ -25,14 +25,12 @@ public class ImageController {
     @Autowired
     private UtilsService utilsService;
 
-    @GetMapping(value = "/image/{fileId}/{imageNum}")
-    public ResponseEntity<StreamingResponseBody> getImageWithMediaType(@PathVariable String fileId, @PathVariable int imageNum) throws IOException {
-
-        File file = utilsService.imagePath(fileId, imageNum).toFile();
-
+    @GetMapping(value = "/image/{username}/{fileId}/{imageNum}")
+    public ResponseEntity<StreamingResponseBody> getImageWithMediaType(@PathVariable String username, @PathVariable String fileId, @PathVariable int imageNum) throws IOException {
+        File file = utilsService.imagePath(username, fileId, imageNum).toFile();
 
         StreamingResponseBody stream = outputStream -> {
-            imageService.efficientStreamImage(fileId, imageNum, outputStream);
+            imageService.efficientStreamImage(username, fileId, imageNum, outputStream);
         };
 
         //todo adaptative to image type if necessary

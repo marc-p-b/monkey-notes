@@ -109,8 +109,8 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
-    @Value("${app.paths.images}")
-    private String imagesPath;
+//    @Value("${app.paths.images}")
+//    private String imagesPath;
 
     public void importUserData(MultipartFile multipartFile) {
         byte[] databaseBytes = null;
@@ -131,7 +131,10 @@ public class ExportServiceImpl implements ExportService {
                     else if(zipEntry.isDirectory() == false) {
                         String basename = FilenameUtils.getBaseName(zipEntry.getName());
                         String fileId = basename.substring(0, basename.lastIndexOf('_'));
-                        Path folder = Paths.get(imagesPath, fileId);
+
+                        //Path folder = Paths.get(imagesPath, fileId);
+                        Path folder = Paths.get(utilsService.getUserImagesPath().toString(), fileId);
+
                         Path destPath = Paths.get(folder.toString(), zipEntry.getName());
                         LOG.info("Importing " + zipEntry.getName());
 

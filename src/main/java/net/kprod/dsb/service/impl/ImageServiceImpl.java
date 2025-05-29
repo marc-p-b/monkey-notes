@@ -21,8 +21,8 @@ public class ImageServiceImpl implements ImageService {
     private UtilsService utilsService;
 
     @Override
-    public void efficientStreamImage(String fileId, int imageNum, OutputStream outputStream) throws IOException {
-        try (InputStream inputStream = new FileInputStream(utilsService.imagePath(fileId, imageNum).toFile())) {
+    public void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream) throws IOException {
+        try (InputStream inputStream = new FileInputStream(utilsService.imagePath(username, fileId, imageNum).toFile())) {
             byte[] buffer = new byte[IMAGE_READ_BUFFER];
             int bytesRead;
 

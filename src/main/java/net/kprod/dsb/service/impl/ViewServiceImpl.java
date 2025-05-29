@@ -214,7 +214,7 @@ public class ViewServiceImpl implements ViewService {
         listP.stream()
             .map(page->{
                 try {
-                    page.setImageUrl(utilsService.imageURL(page.getFileId(), page.getPageNumber()));
+                    page.setImageUrl(utilsService.imageURL(authService.getConnectedUsername(), page.getFileId(), page.getPageNumber()));
                 } catch (MalformedURLException e) {
                     LOG.error("Failed to create image URL fileId {} page {}", page.getFileId(), page.getPageNumber());
                 }

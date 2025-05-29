@@ -70,8 +70,9 @@ public class PdfServiceImpl implements PdfService {
     }
 
     @Override
-    public List<URL> pdf2Images(String fileId, java.io.File sourceFile, Path targetDir) {
+    public List<URL> pdf2Images(String username, String fileId, java.io.File sourceFile, Path targetDir) {
         LOG.info("Converting {} to images", sourceFile);
+
         List<URL> listImages = null;
         try {
             listImages = new ArrayList<>();
@@ -89,7 +90,7 @@ public class PdfServiceImpl implements PdfService {
                     java.io.File outputFile = pathPage.toFile();
 
                     ImageIO.write(resizedImage, "png", outputFile);
-                    listImages.add(utilsService.imageURL(fileId, (pageNumber + 1)));
+                    listImages.add(utilsService.imageURL(username, fileId, (pageNumber + 1)));
                     LOG.info("Page {} converted to image {}", pageNumber, pathPage);
                 }
                 document.close();

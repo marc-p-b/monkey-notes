@@ -14,7 +14,12 @@ public interface UtilsService {
     Path transcriptdDir(String fileId);
     Path imageDir(String fileId);
     Path imagePath(String fileId, int imageNumber);
-    URL imageURL(String fileId, int imageNumber) throws MalformedURLException;
-    Path fileWorkingDir(UtilsServiceImpl.WorkingDir dirType, String fileId);
+    Path imagePath(String username, String fileId, int imageNumber);
+    URL imageURL(String username, String fileId, int imageNumber) throws MalformedURLException;
+    //Path fileWorkingDir(UtilsServiceImpl.WorkingDir dirType, String fileId);
     void efficientStreamFile(File file, OutputStream outputStream) throws IOException;
+    Path getUserDataPath();
+    Path getUserImagesPath();
+    Path getUserDownloadsPath();
+    Path getUserTranscriptsPath();
 }

@@ -1,9 +1,10 @@
 package net.kprod.dsb.service.impl;
 
-import jakarta.annotation.PostConstruct;
 import net.kprod.dsb.data.entity.EntityUser;
 import net.kprod.dsb.data.repository.RepositoryUser;
+import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.UtilsService;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,16 +24,13 @@ import java.nio.file.Paths;
 public class UtilsServiceImpl implements UtilsService {
 
     public static final int BUFFER_FILE_READ = 8192;
+    public static final String DOWNLOADS = "downloads";
+    public static final String IMAGES = "images";
+    public static final String TRANSCRIPTS = "transcripts";
     private Logger LOG = LoggerFactory.getLogger(UtilsService.class);
 
-    @Value("${app.paths.transcripts-pdf}")
-    private String transcriptPath;
-
-    @Value("${app.paths.download}")
-    private String downloadPath;
-
-    @Value("${app.paths.images}")
-    private String imagePath;
+    @Value("${app.paths.user_data}")
+    private String userDataBasePath;
 
     @Value("${app.url.self}")
     private String selfUrl;
@@ -40,21 +38,11 @@ public class UtilsServiceImpl implements UtilsService {
     @Autowired
     private RepositoryUser repositoryUser;
 
-    public static final String DEFAULT_WORKING_DIR = "/tmp";
+    @Autowired
+    private AuthService authService;
+    @Autowired
+    private UserService userService;
 
-    public enum WorkingDir {
-        download,
-        image,
-        transcript,
-        tmp;
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void init() {
-        createDir(Paths.get(downloadPath));
-        createDir(Paths.get(imagePath));
-        createDir(Paths.get(transcriptPath));
-    }
 
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
@@ -82,25 +70,20 @@ public class UtilsServiceImpl implements UtilsService {
         repositoryUser.save(u3);
     }
 
-    private void createDir(Path dir) {
-        if(!dir.toFile().exists()) {
-            dir.toFile().mkdir();
-        }
-    }
 
     @Override
     public Path downloadDir(String fileId) {
-        return fileWorkingDir(WorkingDir.download, fileId);
+        return fileWorkingDir(getUserDownloadsPath(), fileId);
     }
 
     @Override
     public Path transcriptdDir(String fileId) {
-        return fileWorkingDir(WorkingDir.transcript, fileId);
+        return fileWorkingDir(getUserTranscriptsPath(), fileId);
     }
 
     @Override
     public Path imageDir(String fileId) {
-        return fileWorkingDir(WorkingDir.image, fileId);
+        return fileWorkingDir(getUserImagesPath(), fileId);
     }
 
     @Override
@@ -110,36 +93,58 @@ public class UtilsServiceImpl implements UtilsService {
     }
 
     @Override
-    public URL imageURL(String fileId, int imageNumber) throws MalformedURLException {
-
-        return new URL(selfUrl + "/image/" + fileId + "/" + imageNumber);
+    public Path imagePath(String username, String fileId, int imageNumber) {
+        Path path = Paths.get(userDataBasePath, username, IMAGES, fileId,fileId + "_" + imageNumber + ".jpg");
+        return path;
     }
 
     @Override
-    public Path fileWorkingDir(WorkingDir dirType, String fileId) {
-        Path path = Paths.get(DEFAULT_WORKING_DIR, fileId);;
+    public URL imageURL(String username, String fileId, int imageNumber) throws MalformedURLException {
+        StringBuilder stringBuilder = new StringBuilder()
+                .append(selfUrl).append("/image/")
+                .append(username).append("/")
+                .append(fileId).append("/")
+                .append(imageNumber);
 
-        switch (dirType) {
-            case download -> path =  Paths.get(downloadPath, fileId);
-            case image -> path =  Paths.get(imagePath, fileId);
-            case transcript -> path =  Paths.get(transcriptPath, fileId);
-            default -> Paths.get(DEFAULT_WORKING_DIR, fileId);
-        }
+        return new URL(stringBuilder.toString());
+    }
 
+    //todo create a read version, avoiding creating false dirs
+    private Path fileWorkingDir(Path path, String fileId) {
+        path = Paths.get(path.toString(), fileId);
         if(path.toFile().exists()) {
             return path;
-
         } else {
-            //TODO : forbid folder creation when not necessary
-            if(path.toFile().mkdir()) {
+            if(path.toFile().mkdirs()) {
                 LOG.info("created folder {}", fileId);
-                return path;
             } else {
                 LOG.error("failed to create directory {}", path);
-                return Path.of(DEFAULT_WORKING_DIR);
             }
         }
 
+        //todo throw exc when null
+        return path;
+
+    }
+
+    @Override
+    public Path getUserDataPath() {
+        return Paths.get(userDataBasePath, authService.getConnectedUsername());
+    }
+
+    @Override
+    public Path getUserImagesPath() {
+        return Paths.get(getUserDataPath().toString(), IMAGES);
+    }
+
+    @Override
+    public Path getUserDownloadsPath() {
+        return Paths.get(getUserDataPath().toString(), DOWNLOADS);
+    }
+
+    @Override
+    public Path getUserTranscriptsPath() {
+        return Paths.get(getUserDataPath().toString(), TRANSCRIPTS);
     }
 
     @Override

@@ -473,6 +473,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
             List<URL> listImages = pdfService.pdf2Images(
+                    authService.getConnectedUsername(),
                     file2Process.getFileId(),
                     file2Process.getFilePath().toFile(),
                     imageWorkingDir);
@@ -609,7 +610,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
 
         try {
-            URL imageURL = utilsService.imageURL(fileId, pageNumber);
+            URL imageURL = utilsService.imageURL(optAuth.get().getName(), fileId, pageNumber);
             SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                     optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));

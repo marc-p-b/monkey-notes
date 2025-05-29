@@ -8,9 +8,11 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+import net.kprod.dsb.data.gdrive.GDriveJpaDataStoreFactory;
+import net.kprod.dsb.data.repository.RepositoryGDriveCredential;
+import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.tasks.RefreshTokenTask;
 import org.slf4j.Logger;
@@ -23,7 +25,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.OffsetDateTime;
@@ -32,7 +33,7 @@ import java.util.Set;
 
 @Service
 public class DriveServiceImpl implements DriveService {
-    public static final String STORED_CREDENTIAL_NAME = "dsb-gdrive-credential";
+    //public static final String STORED_CREDENTIAL_NAME = "dsb-gdrive-credential";
     private Logger LOG = LoggerFactory.getLogger(DriveServiceImpl.class);
 
     //private static final long TOKEN_REFRESH_INTERVAL = 3500;
@@ -78,15 +79,21 @@ public class DriveServiceImpl implements DriveService {
 
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
+    @Autowired
+    private RepositoryGDriveCredential credentialRepository;
+    @Autowired
+    private AuthService authService;
 
     @Override
     public Optional<String> requireAuth() {
         HttpTransport httpTransport = new NetHttpTransport();
-
+        GDriveJpaDataStoreFactory dataStoreFactory = new GDriveJpaDataStoreFactory(credentialRepository);
         //request auth
         try {
             authFlow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET, SCOPES)
-                    .setDataStoreFactory(new FileDataStoreFactory(new File(credentialsPath)))
+
+                    //.setDataStoreFactory(new FileDataStoreFactory(new File(credentialsPath)))
+                    .setDataStoreFactory(dataStoreFactory)
                     .setAccessType("offline")
                     .setApprovalPrompt("force")
                     .build();
@@ -95,7 +102,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
-            credential = authFlow.loadCredential(STORED_CREDENTIAL_NAME);
+            credential = authFlow.loadCredential(authService.getConnectedUsername());
 
             if (credential != null && credential.getExpirationTimeMilliseconds() != null) {
 
@@ -161,8 +168,7 @@ public class DriveServiceImpl implements DriveService {
         refreshToken = tokenResponse.getRefreshToken();
 
         try {
-            credential = authFlow
-                    .createAndStoreCredential(tokenResponse, STORED_CREDENTIAL_NAME);
+            credential = authFlow.createAndStoreCredential(tokenResponse, authService.getConnectedUsername());
         } catch (IOException e) {
             LOG.error("Failed to create credential", e);
         }

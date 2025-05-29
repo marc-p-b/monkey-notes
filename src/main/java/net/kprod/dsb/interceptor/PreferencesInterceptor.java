@@ -23,14 +23,9 @@ public class PreferencesInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 
         Optional<String> optAuthUrl = driveService.requireAuth();
-        if (optAuthUrl.isPresent()) {
+        if (optAuthUrl.isPresent() || preferencesService.isParametersNotSet()) {
             response.sendRedirect("/preferences");
         }
-
-        if(preferencesService.isParametersNotSet()) {
-            response.sendRedirect("/preferences");
-        }
-
         return true;
     }
 }

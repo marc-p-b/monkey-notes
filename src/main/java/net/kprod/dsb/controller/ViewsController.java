@@ -1,7 +1,6 @@
 package net.kprod.dsb.controller;
 
 import net.kprod.dsb.data.ViewOptions;
-import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.DtoTranscriptDetails;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
@@ -28,10 +27,10 @@ public class ViewsController {
         return "home";
     }
 
-    @GetMapping("/folder/list")
-    public ResponseEntity<List<FileNode>> viewFolders() {
-        return ResponseEntity.ok().body(viewService.listFolders());
-    }
+//    @GetMapping("/folder/list")
+//    public ResponseEntity<List<FileNode>> viewFolders() {
+//        return ResponseEntity.ok().body(viewService.listAllNodes());
+//    }
 
     @GetMapping("/transcript/{fileId}")
     public String viewTranscript(Model model, @PathVariable String fileId) throws IOException {
@@ -62,6 +61,11 @@ public class ViewsController {
     @GetMapping("/transcript/recent")
     public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
+    }
+
+    @GetMapping("/folder/list")
+    public ResponseEntity<List<FileNode>> viewRootFolders() throws IOException {
+        return ResponseEntity.ok().body(viewService.listRootLevel());
     }
 
     @GetMapping("/delete/{fileId}")

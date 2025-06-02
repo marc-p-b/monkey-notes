@@ -108,12 +108,10 @@ public class ViewServiceImpl implements ViewService {
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
         List<FileNode> fileNodes = new ArrayList<>();
-        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
-        for (EntityFile child : childen) {
+        List<EntityFile> children = repositoryFile.findAllByParentFolderId(directory.getFileId());
+        for (EntityFile child : children) {
             DtoTranscript dtoTranscript = null;
             if (child.getType() == FileType.transcript) {
-
-
                 Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getIdFile());
                 if(optTranscript.isPresent()) {
                     dtoTranscript = buildDtoTranscript(optTranscript.get(), ViewOptions.all());
@@ -146,25 +144,50 @@ public class ViewServiceImpl implements ViewService {
         return files;
     }
 
-    @Override
-    public List<FileNode> listFolders() {
+    EntityFile getRootFolder() throws ServiceException {
+        String inboundFolderId = preferencesService.getInputFolderId();
 
-        String inboundFolderId = null;
-        try {
-            inboundFolderId = preferencesService.getInputFolderId();
-        } catch (ServiceException e) {
-            LOG.warn("inbound folder id not set", e);
-            return Collections.emptyList();
-        }
-
-        List<FileNode> folders = null;
         Optional<EntityFile> optFolder = repositoryFile.findById(idFile(inboundFolderId));
         if(optFolder.isEmpty()) {
+            throw new ServiceException("Folder not found id " + inboundFolderId);
+        }
+
+        return optFolder.get();
+    }
+
+    @Override
+    public List<FileNode> listAllNodes() {
+        try {
+            return listFileNodesRecurs(getRootFolder());
+        } catch (ServiceException e) {
             return Collections.emptyList();
         }
-        folders = listFileNodesRecurs(optFolder.get());
+    }
 
-        return folders;
+    @Override
+    public List<FileNode> listRootLevel() {
+        try {
+            return listLevel(getRootFolder().getIdFile().getFileId());
+        } catch (ServiceException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<FileNode> listLevel(String folderId) {
+        return repositoryFile.findAllByParentFolderId(folderId).stream()
+                .map(f -> {
+                    FileNode node = new FileNode(DtoFile.fromEntity(f));
+
+                    Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(f.getIdFile());
+                    if(optTranscript.isPresent()) {
+
+                        node.setDtoTranscript(buildDtoTranscript(optTranscript.get(), ViewOptions.all()));
+                    }
+                    return node;
+                })
+                .sorted(Comparator.comparing(fileNode -> fileNode.getName()))
+                .toList();
     }
 
     @Override

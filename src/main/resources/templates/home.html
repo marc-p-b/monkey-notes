@@ -19,7 +19,11 @@
     <div>
         <a href="/update/all">Update All</a>
     </div>
-    <h2>File and Folder Structure</h2>
+    <h2>Recents transcripts</h2>
+
+    <div id="recent-container">
+    </div>
+    <h2>Root folders</h2>
 
     <div id="folder-container">
     </div>
@@ -77,45 +81,89 @@
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
 
-    async function fetchAndRenderTree() {
+    async function fetchRecentTranscripts() {
         const response = await fetch('/transcript/recent');
-        const fileNodes = await response.json();
-        const container = document.getElementById('folder-container');
-        container.appendChild(buildTree(fileNodes));
-    }
+        const elements = await response.json();
+        const container = document.getElementById('recent-container');
 
-    function buildTree(nodes) {
         const ul = document.createElement('ul');
 
-        nodes.forEach(node => {
+        elements.forEach(element => {
             const li = document.createElement('li');
 
             const parentNameSpan = document.createElement('span');
-            parentNameSpan.textContent = node.parent.name;
+            parentNameSpan.textContent = element.parent.name;
             li.appendChild(parentNameSpan);
 
             const nameSpan = document.createElement('span');
-            nameSpan.textContent = node.transcript.name;
+            nameSpan.textContent = element.transcript.name;
             li.appendChild(document.createTextNode(' / '));
             li.appendChild(nameSpan);
 
             const dateSpan = document.createElement('span');
-
-            const formatted = formatDateTime(node.transcript.transcripted_at);
-
-            console.log(formatted);
+            const formatted = formatDateTime(element.transcript.transcripted_at);
             dateSpan.textContent = formatted;
             li.appendChild(document.createTextNode(' ('));
             li.appendChild(dateSpan);
             li.appendChild(document.createTextNode(')'));
 
-            transcriptLinks(node.transcript.fileId, li);
+            transcriptLinks(element.transcript.fileId, li);
+            ul.appendChild(li);
+        });
 
+        container.appendChild(ul);
+    }
+
+    async function fetchRootFolders() {
+        const response = await fetch('/folder/list');
+        const nodes = await response.json();
+        const container = document.getElementById('folder-container');
+
+        const ul = document.createElement('ul');
+
+        nodes.forEach(node => {
+            const li = document.createElement('li');
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = node.name;
+            li.appendChild(document.createTextNode(' / '));
+            li.appendChild(nameSpan);
+
+
+            const openLink = document.createElement('a');
+            //transcriptLink.href = `/transcript/${fileId}`;
+            openLink.textContent = 'open';
+            openLink.id = node.dtoFile.fileId;
+            openLink.className = 'folderLink';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(openLink);
 
             ul.appendChild(li);
         });
-        return ul;
+
+        container.appendChild(ul);
     }
+
+
+    function documentLoaded() {
+        fetchRecentTranscripts();
+        fetchRootFolders();
+
+        document.addEventListener('click', function(event) {
+            // Check if the clicked element has the class
+            if (event.target.matches('a.folderLink')) {
+                event.preventDefault(); // Optional: prevent the default link behavior
+                myFunction(event);           // Call your custom function
+            }
+        });
+
+        function myFunction(event) {
+            const linkId = event.target.id;
+            console.log('open ' + linkId);
+        }
+
+    }
+
 
     // async function fetchAndRenderTree() {
     //     const response = await fetch('/folder/list');
@@ -199,7 +247,9 @@
     //     return ul;
     // }
 
-    document.addEventListener('DOMContentLoaded', fetchAndRenderTree);
+
+
+    document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
 
 </body>

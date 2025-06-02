@@ -11,7 +11,9 @@ import java.util.List;
 
 public interface ViewService {
     List<String> listAvailableTranscripts();
-    List<FileNode> listFolders();
+    List<FileNode> listAllNodes();
+    List<FileNode> listRootLevel();
+    List<FileNode> listLevel(String folderId);
     File createTranscriptPdf(String fileId) throws IOException;
     java.io.File createTranscriptPdfFromFolder(String folderId) throws IOException;
     DtoTranscript getTranscript(String fileId, ViewOptions options) throws IOException;

@@ -2,6 +2,8 @@ package net.kprod.dsb.data.entity;
 
 import jakarta.persistence.Embeddable;
 
+import java.util.Objects;
+
 @Embeddable
 public class IdTranscriptPage {
     private String fileId;
@@ -29,5 +31,17 @@ public class IdTranscriptPage {
 
     public String getUsername() {
         return username;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        IdTranscriptPage that = (IdTranscriptPage) o;
+        return pageNumber == that.pageNumber && Objects.equals(fileId, that.fileId) && Objects.equals(username, that.username);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(fileId, username, pageNumber);
     }
 }

@@ -3,6 +3,8 @@ package net.kprod.dsb.data.entity;
 import jakarta.persistence.Embeddable;
 import net.kprod.dsb.data.enums.PreferenceKey;
 
+import java.util.Objects;
+
 @Embeddable
 public class EntityPreferencesId {
     private String username;
@@ -38,5 +40,17 @@ public class EntityPreferencesId {
     public EntityPreferencesId setKey(String key) {
         this.key = key;
         return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        EntityPreferencesId that = (EntityPreferencesId) o;
+        return Objects.equals(username, that.username) && Objects.equals(key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(username, key);
     }
 }

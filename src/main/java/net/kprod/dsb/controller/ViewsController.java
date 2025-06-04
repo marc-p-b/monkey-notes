@@ -68,6 +68,11 @@ public class ViewsController {
         return ResponseEntity.ok().body(viewService.listRootLevel());
     }
 
+    @GetMapping("/folder/list/{folderId}")
+    public ResponseEntity<List<FileNode>> viewFolder(@PathVariable String folderId) throws IOException {
+        return ResponseEntity.ok().body(viewService.listLevel(folderId));
+    }
+
     @GetMapping("/delete/{fileId}")
     public ResponseEntity<String> delete(@PathVariable String fileId) throws IOException {
         viewService.delete(fileId);

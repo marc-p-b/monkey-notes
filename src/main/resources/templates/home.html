@@ -25,49 +25,13 @@
     </div>
     <h2>Root folders</h2>
 
-    <div id="folder-container">
-    </div>
+    <ul id="folder-container-root">
+    </ul>
 </div>
 
 <script>
 
-    function transcriptLinks (fileId, li) {
-        const transcriptLink = document.createElement('a');
-        transcriptLink.href = `/transcript/${fileId}`;
-        transcriptLink.textContent = 'view';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(transcriptLink);
 
-        const pdfLink = document.createElement('a');
-        pdfLink.href = `/transcript/pdf/${fileId}`;
-        pdfLink.textContent = 'pdf';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(pdfLink);
-
-        const agentLink = document.createElement('a');
-        agentLink.href = `/agent/${fileId}`;
-        agentLink.textContent = 'agent';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(agentLink);
-
-        const failedLink = document.createElement('a');
-        failedLink.href = `/transcript/${fileId}/failed`;
-        failedLink.textContent = 'view failed';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(failedLink);
-
-        const forceUpdateLink = document.createElement('a');
-        forceUpdateLink.href = `/transcript/force-update/${fileId}`;
-        forceUpdateLink.textContent = 'force update';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(forceUpdateLink);
-
-        const delLink = document.createElement('a');
-        delLink.href = `/delete/${fileId}`;
-        delLink.textContent = 'delete';
-        li.appendChild(document.createTextNode(' - '));
-        li.appendChild(delLink);
-    }
 
     function formatDateTime(isoString) {
         const date = new Date(isoString);
@@ -114,35 +78,143 @@
         container.appendChild(ul);
     }
 
-    async function fetchRootFolders() {
-        const response = await fetch('/folder/list');
-        const nodes = await response.json();
-        const container = document.getElementById('folder-container');
+    function commonLinks(isFolder, fileId, li) {
+        if(isFolder) {
+            const refreshLink = document.createElement('a');
+            refreshLink.href = `/update/folder/${fileId}`;
+            refreshLink.textContent = 'update';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(refreshLink);
 
-        const ul = document.createElement('ul');
+            const folderPdf = document.createElement('a');
+            folderPdf.href = `/folder/pdf/${fileId}`;
+            folderPdf.textContent = 'pdf';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(folderPdf);
+
+            const agentLink = document.createElement('a');
+            agentLink.href = `/agent/${fileId}`;
+            agentLink.textContent = 'agent';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(agentLink);
+
+        } else {
+            const forceUpdateLink = document.createElement('a');
+            forceUpdateLink.href = `/transcript/force-update/${fileId}`;
+            forceUpdateLink.textContent = 'update';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(forceUpdateLink);
+
+            const pdfLink = document.createElement('a');
+            pdfLink.href = `/transcript/pdf/${fileId}`;
+            pdfLink.textContent = 'pdf';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(pdfLink);
+
+            const agentLink = document.createElement('a');
+            agentLink.href = `/agent/${fileId}`;
+            agentLink.textContent = 'agent';
+            li.appendChild(document.createTextNode(' - '));
+            li.appendChild(agentLink);
+        }
+
+        const delLink = document.createElement('a');
+        delLink.href = `/delete/${fileId}`;
+        delLink.textContent = 'delete';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(delLink);
+    }
+
+    function transcriptLinks (fileId, li) {
+        const transcriptLink = document.createElement('a');
+        transcriptLink.href = `/transcript/${fileId}`;
+        transcriptLink.textContent = 'view';
+        li.appendChild(document.createTextNode(' - '));
+        li.appendChild(transcriptLink);
+
+        // const failedLink = document.createElement('a');
+        // failedLink.href = `/transcript/${fileId}/failed`;
+        // failedLink.textContent = 'view failed';
+        // li.appendChild(document.createTextNode(' - '));
+        // li.appendChild(failedLink);
+
+    }
+
+    async function fetchRootFolders() {
+        folderProcess('/folder/list', 'folder-container-root');
+    }
+
+    async function folderProcess(url, targetUl) {
+
+        const response = await fetch(url);
+        const nodes = await response.json();
+        const container = document.getElementById(targetUl);
 
         nodes.forEach(node => {
             const li = document.createElement('li');
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = node.name;
-            li.appendChild(document.createTextNode(' / '));
+            //li.appendChild(document.createTextNode(' / '));
             li.appendChild(nameSpan);
 
+            if(node.folder) {
+                commonLinks(true, node.dtoFile.fileId, li)
 
-            const openLink = document.createElement('a');
-            //transcriptLink.href = `/transcript/${fileId}`;
-            openLink.textContent = 'open';
-            openLink.id = node.dtoFile.fileId;
-            openLink.className = 'folderLink';
-            li.appendChild(document.createTextNode(' - '));
-            li.appendChild(openLink);
+                const openLink = document.createElement('a');
+                openLink.textContent = 'open';
+                openLink.id = node.dtoFile.fileId;
+                openLink.className = 'folderLink';
+                li.appendChild(document.createTextNode(' - '));
+                li.appendChild(openLink);
 
-            ul.appendChild(li);
+                const folderUl = document.createElement('ul');
+                folderUl.id = 'folder-container-' + node.dtoFile.fileId;
+                li.appendChild(folderUl);
+            } else {
+                commonLinks(false, node.dtoFile.fileId, li)
+                transcriptLinks(node.dtoFile.fileId, li);
+            }
+
+            container.appendChild(li);
         });
 
-        container.appendChild(ul);
+        //container.appendChild(targetUl);
     }
+
+
+    // async function fetchFolder(folderId) {
+    //     const response = await fetch('/folder/list/' + folderId);
+    //     const nodes = await response.json();
+    //     const folderUl = document.getElementById('folder-container-' + folderId);
+    //
+    //     //const ul = document.createElement('ul');
+    //
+    //     nodes.forEach(node => {
+    //         const li = document.createElement('li');
+    //
+    //         const nameSpan = document.createElement('span');
+    //         nameSpan.textContent = node.name;
+    //         li.appendChild(document.createTextNode(' / '));
+    //         li.appendChild(nameSpan);
+    //
+    //         const openLink = document.createElement('a');
+    //         //transcriptLink.href = `/transcript/${fileId}`;
+    //         openLink.textContent = 'open';
+    //         openLink.id = node.dtoFile.fileId;
+    //         openLink.className = 'folderLink';
+    //         li.appendChild(document.createTextNode(' - '));
+    //         li.appendChild(openLink);
+    //
+    //         const folderUl = document.createElement('ul');
+    //         folderUl.id='folder-container-' + node.dtoFile.fileId;
+    //         li.appendChild(folderUl);
+    //
+    //         folderUl.appendChild(li);
+    //     });
+    //
+    //     //container.appendChild(ul);
+    // }
 
 
     function documentLoaded() {
@@ -160,6 +232,7 @@
         function myFunction(event) {
             const linkId = event.target.id;
             console.log('open ' + linkId);
+            folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
         }
 
     }

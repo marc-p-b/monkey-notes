@@ -1,32 +1,22 @@
 <html>
 <head>
     <title>Monkey notes</title>
-
 </head>
 <body>
 
 <div>
-    <a href="/">Monkey Notes</a>
-    <a href="/preferences">Preferences</a>
+    <a href="/">Monkey Notes</a> -
+    <a href="/update/all">Update All</a> -
+    <a href="/preferences">Preferences</a> -
     <a href="/processing">Processes</a>
 </div>
 
 <div>
-    <span th:text="${error}"></span>
-</div>
-
-<div>
-    <div>
-        <a href="/update/all">Update All</a>
-    </div>
     <h2>Recents transcripts</h2>
+    <div id="recent-container"></div>
 
-    <div id="recent-container">
-    </div>
     <h2>Root folders</h2>
-
-    <ul id="folder-container-root">
-    </ul>
+    <ul id="folder-container-root"></ul>
 </div>
 
 <script>

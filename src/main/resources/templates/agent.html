@@ -8,10 +8,13 @@
 <body>
 
 <div>
-    <a href="/">Home</a> -
+    <a href="/">Home</a>
 </div>
 
 <h2>Ask agent</h2>
+
+<p id="divStatus">
+</p>
 
 <div id="conversation">
 </div>
@@ -31,19 +34,19 @@
     <textarea name="instructions" id="textAreaInstructionsId"></textarea>
     <input type="hidden" name="threadId" id="inputThreadId"/>
     <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
+    <button id="buttonSend">send</button>
 </form>
 
-<button id="buttonSend">send</button>
 
 <script th:inline="javascript">
-
-let fileId = /*[[${fileId}]]*/ {};
-
+    let fileId = /*[[${fileId}]]*/ {};
 </script>
 
 <script>
 
-    document.addEventListener("DOMContentLoaded", function() {
+    function documentLoaded() {
+        const containerStatus = document.getElementById('divStatus');
+
         fetch('/agent/prepare/' + fileId, {
             method: 'GET'
         })
@@ -54,8 +57,7 @@ let fileId = /*[[${fileId}]]*/ {};
             return response.json();
         })
         .then(data => {
-
-            if(data.exists) {
+            if (data.exists) {
                 let conversationBox = document.getElementById('conversation');
 
                 data.messages.forEach(function (message, index) {
@@ -67,7 +69,7 @@ let fileId = /*[[${fileId}]]*/ {};
         })
         .catch(error => console.error('Error:', error));
 
-        document.getElementById("buttonSend").addEventListener("click", function() {
+        document.getElementById("buttonSend").addEventListener("click", function () {
             let question = document.getElementById("textAreaQuestion").value;
             let conversationBox = document.getElementById('conversation');
 
@@ -78,6 +80,7 @@ let fileId = /*[[${fileId}]]*/ {};
             let form = document.getElementById("formAgent");
             const formData = new FormData(form);
 
+            containerStatus.textContent ='Waiting for AI response...';
             fetch('/agent/ask', {
                 method: 'POST',
                 body: formData,
@@ -86,18 +89,18 @@ let fileId = /*[[${fileId}]]*/ {};
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
-                    return response.json(); // parse JSON from body
+                    return response.json();
                 })
                 .then(data => {
-
                     const eventSource = new EventSource(data.url);
                     eventSource.onmessage = (event) => {
                         let data = event.data;
 
                         if (data == 'waiting') {
-                            console.log("waiting...");
+                            //console.log("waiting...");
+                            containerStatus.append('.');
                         } else {
-                            console.log("done !");
+                            containerStatus.textContent = 'Response received !';
 
                             let pR = document.createElement("p")
                             pR.textContent = data;
@@ -107,8 +110,9 @@ let fileId = /*[[${fileId}]]*/ {};
                 })
                 .catch(error => console.error('Error:', error));
         });
-    });
+    }
 
+    document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
 </body>
 </html>

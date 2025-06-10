@@ -70,7 +70,7 @@
             li.appendChild(parentNameSpan);
 
             const itemLink = document.createElement('a');
-            itemLink.href = `/transcript/${element.transcript.fileId}`;
+            itemLink.href = `/v/transcript/${element.transcript.fileId}`;
             itemLink.textContent = element.transcript.name;
             li.appendChild(document.createTextNode(' / '));
             li.appendChild(itemLink);
@@ -98,7 +98,7 @@
             itemLink.className = 'folderLink';
             itemLink.href = "#";
         } else {
-            itemLink.href = `/transcript/${fileId}`;
+            itemLink.href = `/v/transcript/${fileId}`;
             itemLink.textContent = node.name;
 
             const title =

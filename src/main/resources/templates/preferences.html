@@ -1,19 +1,16 @@
 <html>
 <head>
     <title>Preferences</title>
-
 </head>
 <body>
 
 <h2>Preferences</h2>
 <div>
-    <a href="/">Home</a>
-    <a href="/export">Export your data</a>
+    <a href="/">Home</a> - <a href="/export">Export your data</a>
 </div>
 
 <div id="auth-box">
 </div>
-
 
 <form method="post" th:action="@{/preferences/form}">
 <ul>
@@ -47,7 +44,6 @@
         <input type="text" th:name="useDefaultModelMaxTokens" th:value="${preferences.useDefaultModelMaxTokens}" /></li>
     <li><label th:text="modelMaxTokens" th:for="modelMaxTokens" />
         <input type="text" th:name="modelMaxTokens" th:value="${preferences.modelMaxTokens}" /></li>
-
     <input type="submit" value="save" />
 </ul>
 </form>
@@ -70,10 +66,7 @@
         const response = await fetch('/preferences/authGoogleDrive');
         const authJson = await response.json();
 
-        //TODO add preferences link
-
         if(authJson.connected == false) {
-            console.log("drive !!");
             const container = document.getElementById('auth-box');
 
             const authLink = document.createElement('a');
@@ -82,10 +75,8 @@
             container.appendChild(authLink);
 
             console.log(authLink);
-
         }
     }
-
     document.addEventListener('DOMContentLoaded', ready);
 </script>
 

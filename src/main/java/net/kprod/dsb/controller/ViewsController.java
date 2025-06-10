@@ -23,34 +23,33 @@ public class ViewsController {
 
 
     @GetMapping("/")
-    public String home(Model model) {
+    public String viewHome() {
         return "home";
     }
 
-//    @GetMapping("/folder/list")
-//    public ResponseEntity<List<FileNode>> viewFolders() {
-//        return ResponseEntity.ok().body(viewService.listAllNodes());
-//    }
 
-    @GetMapping("/transcript/{fileId}")
-    public String viewTranscript(Model model, @PathVariable String fileId) throws IOException {
-        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, ViewOptions.all()));
-
+    @GetMapping("/v/transcript/{fileId}")
+    public String viewTranscript(@PathVariable("fileId") String fileId, Model model) {
+        model.addAttribute("fileId", fileId);
         return "transcript";
     }
 
-    @GetMapping("/transcript/{fileId}/failed")
-    public String viewTranscriptFailedPages(Model model, @PathVariable String fileId) throws IOException {
-        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, new ViewOptions().setCompletionStatus(ViewOptionsCompletionStatus.failed)));
 
-        return "transcript";
-    }
 
-//    @GetMapping("/transcript/list")
-//    public ResponseEntity<List<FileNode>> viewFolders() {
-//        return ResponseEntity.ok().body(viewService.listFolders());
+
+//    @GetMapping("/transcript/{fileId}")
+//    public String viewTranscript(Model model, @PathVariable String fileId) throws IOException {
+//        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, ViewOptions.all()));
+//
+//        return "transcript";
 //    }
-
+//
+//    @GetMapping("/transcript/{fileId}/failed")
+//    public String viewTranscriptFailedPages(Model model, @PathVariable String fileId) throws IOException {
+//        model.addAttribute("dtoTranscript", viewService.getTranscript(fileId, new ViewOptions().setCompletionStatus(ViewOptionsCompletionStatus.failed)));
+//
+//        return "transcript";
+//    }
 
     @GetMapping("/agent/{fileId}")
     public String viewAgent(Model model, @PathVariable String fileId) throws IOException {
@@ -78,5 +77,15 @@ public class ViewsController {
         viewService.delete(fileId);
         return ResponseEntity.ok("OK");
     }
+
+    //    @GetMapping("/folder/list")
+//    public ResponseEntity<List<FileNode>> viewFolders() {
+//        return ResponseEntity.ok().body(viewService.listAllNodes());
+//    }
+//    @GetMapping("/transcript/list")
+//    public ResponseEntity<List<FileNode>> viewFolders() {
+//        return ResponseEntity.ok().body(viewService.listFolders());
+//    }
+
 
 }

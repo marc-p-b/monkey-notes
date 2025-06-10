@@ -5,26 +5,80 @@
 </head>
 <body>
 
-<div>
-    <a href="/">Home</a> -
-    <a th:href="@{/transcript/force-update/{id}(id=${dtoTranscript.fileId})}">force udpate</a> -
-    <a th:href="@{/transcript/pdf/{id}(id=${dtoTranscript.fileId})}">get pdf</a>
+<div id="topLinks">
+    <a href="/">Home</a>
 </div>
 
-<h2 th:text="${dtoTranscript.title}"></h2>
+<div id="sections"></div>
 
-<th:block th:each="page, iterStat : ${dtoTranscript.pages}">
+<script th:inline="javascript">
+    let fileId = /*[[${fileId}]]*/ {};
+</script>
 
-    <h3 th:text="'Page #'+ ${page.pageNumber}"></h3>
-    <p>
-        <th:block th:utext="${page.transcriptHtml}"/>
-    </p>
+<script>
+    function documentLoaded() {
 
-    <a th:href="@{/update/transcript/{id}/{num}(id=${dtoTranscript.fileId},num=${page.pageNumber})}">force update</a>
-    <a th:href="${page.imageUrl}">View page <span th:text="${page.pageNumber}"></span></a>
-</th:block>
+        const container = document.getElementById('sections');
 
+        const topLinks = document.getElementById('topLinks');
 
+        const aForceUpdateAll = document.createElement('a');
+        aForceUpdateAll.href = '/transcript/force-update/' + fileId;
+        aForceUpdateAll.textContent = 'force update';
+
+        const aGetPDF = document.createElement('a');
+        aGetPDF.href = '/transcript/pdf/' + fileId;
+        aGetPDF.textContent = 'get pdf';
+
+        topLinks.appendChild(document.createTextNode(' - '));
+        topLinks.appendChild(aForceUpdateAll);
+        topLinks.appendChild(document.createTextNode(' - '));
+        topLinks.appendChild(aGetPDF);
+
+        fetch('/transcript/' + fileId, {
+            method: 'GET'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            data.pages.forEach(page => {
+                const section = document.createElement('section');
+
+                const h3 = document.createElement('h3');
+                h3.textContent = 'Page #' + page.pageNumber;
+
+                const p = document.createElement('p');
+                p.innerHTML = page.transcriptHtml;
+
+                const aForceUpdate = document.createElement('a');
+                aForceUpdate.href = '/update/transcript/' + fileId + '/' + page.pageNumber;
+                aForceUpdate.textContent = 'force update';
+
+                const aViewPage = document.createElement('a');
+                aViewPage.href = page.imageUrl;
+                aViewPage.textContent = 'view raw page';
+
+                const sectionLinks = document.createElement('div');
+
+                section.appendChild(h3);
+                section.appendChild(p);
+                section.appendChild(sectionLinks);
+
+                sectionLinks.appendChild(aForceUpdate);
+                sectionLinks.appendChild(document.createTextNode(' - '));
+                sectionLinks.appendChild(aViewPage);
+
+                container.appendChild(section);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    document.addEventListener('DOMContentLoaded', documentLoaded);
+</script>
 
 </body>
 </html>

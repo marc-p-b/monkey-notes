@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface ViewService {
-    List<String> listAvailableTranscripts();
+    //List<String> listAvailableTranscripts();
     List<FileNode> listAllNodes();
     List<FileNode> listRootLevel();
     List<FileNode> listLevel(String folderId);

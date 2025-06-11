@@ -1,5 +1,6 @@
 package net.kprod.dsb.controller;
 
+import net.kprod.dsb.data.dto.DtoConfigs;
 import net.kprod.dsb.data.dto.DtoGoogleDriveConnect;
 import net.kprod.dsb.service.DriveService;
 import net.kprod.dsb.service.PreferencesService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,11 +25,9 @@ public class PreferencesController {
     @Autowired
     private DriveService driveService;
 
-    @GetMapping("/preferences")
-    public String preferences(Model model) {
-        model.addAttribute("preferences", preferencesService.listPreferences());
-
-        return "preferences";
+    @GetMapping("/preferences/get")
+    public ResponseEntity<DtoConfigs> preferences(Model model) {
+        return ResponseEntity.ok(preferencesService.listPreferences());
     }
 
     @GetMapping("/preferences/authGoogleDrive")

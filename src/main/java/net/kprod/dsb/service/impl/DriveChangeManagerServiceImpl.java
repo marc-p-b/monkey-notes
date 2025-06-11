@@ -223,6 +223,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
+    long CONCURRENT_LIMIT = 1;
+
     @Override
     public synchronized void flushChanges() {
         LOG.info("Prepare Async (flushChanges)");
@@ -235,6 +237,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getAuth(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
+        if(concurrentProcessFull()) {
+            LOG.warn("Flush skipped, too much concurrent processes");
+        }
+
         try {
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
@@ -245,7 +251,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     .flatMap(s->s.stream())
                     .count();
             String desc = new StringBuilder().append("flushing ").append(items).append(" items").toString();
-            registersyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
+            registerSyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
 
         } catch (ServiceException e) {
             LOG.error("Failed preparing flushChanges async", e);
@@ -253,18 +259,33 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     }
 
-    private void registersyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
+    private void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
 
         String id = monitoringData.getId();
         AsyncProcess asyncProcess = new AsyncProcess()
                 .setId(id)
                 .setFuture(future)
+                //todo use enum ?
                 .setName(name.name())
                 .setCreatedAt(OffsetDateTime.now())
                 .setDescription(description);
 
         mapAsyncProcess2.put(id, asyncProcess);
 
+    }
+
+    private boolean concurrentProcessFull() {
+        long count = mapAsyncProcess2.values().stream()
+                .filter(p -> p.getName().equals(AsyncProcessName.flushChanges.name()))
+                .filter(p -> !p.getFuture().isDone())
+                .count();
+
+        if(count >= CONCURRENT_LIMIT) {
+            LOG.debug("Concurrent process full ({} processes)", count);
+            return true;
+        }
+
+        return false;
     }
 
     public void asyncProcessFlushed(Map<Authentication, Set<String>> mapAuth2SetFlushedFileId) {
@@ -363,7 +384,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            registersyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + folderId, future);
+            registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + folderId, future);
         } catch (ServiceException e) {
             LOG.info("Failed to prepare updateFolder async", e);
         }
@@ -616,7 +637,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
             String desc = new StringBuilder().append("forced update file ").append(fileId).append(" page ").append(pageNumber).toString();
-            registersyncProcess(AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
+            registerSyncProcess(AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
         } catch (ServiceException e) {
@@ -785,7 +806,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     () -> asyncForceTranscriptUpdate(fileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            registersyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(), "update transcript " + fileId, future);
+            registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(), "update transcript " + fileId, future);
         } catch (ServiceException e) {
             LOG.error("Failed to prepare runAsyncForceTranscriptUpdate", e);
         }

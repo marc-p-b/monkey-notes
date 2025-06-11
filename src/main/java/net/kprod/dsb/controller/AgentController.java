@@ -69,7 +69,6 @@ public class AgentController {
         return ResponseEntity.ok().body(new DtoURL(streamLink));
     }
 
-
     @GetMapping("/subscribe/{threadId}/{runId}")
     public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
         return agentService.threadRunPolling(threadId, runId);

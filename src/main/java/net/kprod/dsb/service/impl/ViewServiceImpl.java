@@ -47,8 +47,7 @@ public class ViewServiceImpl implements ViewService {
 
     @Autowired
     private UtilsService utilsService;
-    @Autowired
-    private DriveService driveService;
+
     @Autowired
     private DriveUtilsService driveUtilsService;
 
@@ -56,18 +55,18 @@ public class ViewServiceImpl implements ViewService {
         return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
     }
 
-    @Override
-    public List<String> listAvailableTranscripts() {
-        return repositoryTranscript.findAll().stream() //optimize request
-                .filter(d -> d.getTranscripted_at() != null)
-                .map(d -> {
-                    return new StringBuilder()
-                            //.append(d.getFileId()).append(" - ").append(d.getName())
-                            .append(d.getIdFile().getFileId()).append(" - ").append(d.getName())
-                            .toString();
-                })
-                .toList();
-    }
+//    @Override
+//    public List<String> listAvailableTranscripts() {
+//        return repositoryTranscript.findAll().stream() //optimize request
+//                .filter(d -> d.getTranscripted_at() != null)
+//                .map(d -> {
+//                    return new StringBuilder()
+//                            //.append(d.getFileId()).append(" - ").append(d.getName())
+//                            .append(d.getIdFile().getFileId()).append(" - ").append(d.getName())
+//                            .toString();
+//                })
+//                .toList();
+//    }
 
     @Override
     public DtoTranscript getTranscript(String fileId, ViewOptions viewOptions) {

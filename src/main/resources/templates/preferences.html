@@ -13,39 +13,8 @@
 </div>
 
 <form method="post" th:action="@{/preferences/form}">
-<ul>
-    <li><label th:text="useDefaultPrompt" th:for="useDefaultPrompt" />
-        <input type="text" th:name="useDefaultPrompt" th:value="${preferences.useDefaultPrompt}" /></li>
-
-    <li><label th:text="prompt" th:for="prompt" />
-        <input type="text" th:name="prompt" th:value="${preferences.prompt}" /></li>
-
-    <li><label th:text="useDefaultModel" th:for="useDefaultModel" />
-        <input type="text" th:name="useDefaultModel" th:value="${preferences.useDefaultModel}" /></li>
-    <li><label th:text="model" th:for="model" />
-        <input type="text" th:name="model" th:value="${preferences.model}" /></li>
-
-    <li><label th:text="inputFolderId" th:for="inputFolderId" />
-        <input type="text" th:name="inputFolderId" th:value="${preferences.inputFolderId}" /></li>
-    <li><label th:text="outputFolderId" th:for="outputFolderId" />
-        <input type="text" th:name="outputFolderId" th:value="${preferences.outputFolderId}" /></li>
-
-    <li><label th:text="useDefaultAiConnectTimeout" th:for="useDefaultAiConnectTimeout" />
-        <input type="text" th:name="useDefaultAiConnectTimeout" th:value="${preferences.useDefaultAiConnectTimeout}" /></li>
-    <li><label th:text="aiConnectTimeout" th:for="aiConnectTimeout" />
-        <input type="text" th:name="aiConnectTimeout" th:value="${preferences.aiConnectTimeout}" /></li>
-
-    <li><label th:text="useDefaultAiReadTimeout" th:for="useDefaultAiReadTimeout" />
-        <input type="text" th:name="useDefaultAiReadTimeout" th:value="${preferences.useDefaultAiReadTimeout}" /></li>
-    <li><label th:text="aiReadTimeout" th:for="aiReadTimeout" />
-        <input type="text" th:name="aiReadTimeout" th:value="${preferences.aiReadTimeout}" /></li>
-
-    <li><label th:text="modelMaxTokensDefault" th:for="useDefaultModelMaxTokens" />
-        <input type="text" th:name="useDefaultModelMaxTokens" th:value="${preferences.useDefaultModelMaxTokens}" /></li>
-    <li><label th:text="modelMaxTokens" th:for="modelMaxTokens" />
-        <input type="text" th:name="modelMaxTokens" th:value="${preferences.modelMaxTokens}" /></li>
+    <ul id="ulContainer"></ul>
     <input type="submit" value="save" />
-</ul>
 </form>
 
 <form th:action="@{/preferences/reset}">
@@ -59,10 +28,26 @@
 </form>
 
 <script>
+
+    function addField(fieldName, value) {
+        const li = document.createElement("li");
+
+        const lbl = document.createElement("label");
+        lbl.textContent = fieldName;
+        lbl.htmlFor = 'id' + fieldName;
+        li.appendChild(lbl);
+
+        const input = document.createElement("input");
+        input.type = 'text';
+        input.name = fieldName;
+        input.id = 'id' + fieldName;
+        input.value = value;
+        li.appendChild(input);
+
+        return li;
+    }
+
     async function ready() {
-
-        console.log("drive ?");
-
         const response = await fetch('/preferences/authGoogleDrive');
         const authJson = await response.json();
 
@@ -74,8 +59,35 @@
             authLink.textContent = "connect to google drive is required"
             container.appendChild(authLink);
 
-            console.log(authLink);
         }
+
+        const ulContainer = document.getElementById('ulContainer');
+
+
+        fetch('/preferences/get', {
+            method: 'GET'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            ulContainer.appendChild(addField("useDefaultPrompt", data.useDefaultPrompt));
+            ulContainer.appendChild(addField("prompt", data.prompt));
+            ulContainer.appendChild(addField("useDefaultModel", data.useDefaultModel));
+            ulContainer.appendChild(addField("model", data.model));
+            ulContainer.appendChild(addField("inputFolderId", data.inputFolderId));
+            ulContainer.appendChild(addField("outputFolderId", data.outputFolderId));
+            ulContainer.appendChild(addField("useDefaultAiConnectTimeout", data.useDefaultAiConnectTimeout));
+            ulContainer.appendChild(addField("aiConnectTimeout", data.aiConnectTimeout));
+            ulContainer.appendChild(addField("useDefaultAiReadTimeout", data.useDefaultAiReadTimeout));
+            ulContainer.appendChild(addField("aiReadTimeout", data.aiReadTimeout));
+            ulContainer.appendChild(addField("useDefaultModelMaxTokens", data.useDefaultModelMaxTokens));
+            ulContainer.appendChild(addField("modelMaxTokens", data.modelMaxTokens));
+        });
+
     }
     document.addEventListener('DOMContentLoaded', ready);
 </script>

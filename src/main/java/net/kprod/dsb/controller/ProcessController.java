@@ -37,8 +37,8 @@ public class ProcessController {
         return ResponseEntity.ok().body("OK");
     }
 
-    @GetMapping("/processing")
-    public String viewProcessing(Model model) throws IOException {
+    @GetMapping("/processing/get")
+    public ResponseEntity<List<DtoProcess>> viewProcessing(Model model) throws IOException {
         Map<String, AsyncProcess> mapAsyncProcess = driveChangeManagerService.getMapAsyncProcess();
 
         List<DtoProcess> list = mapAsyncProcess.entrySet().stream()
@@ -77,7 +77,6 @@ public class ProcessController {
                 })
                 .toList();
 
-        model.addAttribute("processes", list);
-        return "processing";
+        return ResponseEntity.ok().body(list);
     }
 }

@@ -30,10 +30,16 @@
         aGetPDF.href = '/transcript/pdf/' + fileId;
         aGetPDF.textContent = 'get pdf';
 
+        const agentLink = document.createElement('a');
+        agentLink.href = `/v/agent/${fileId}`;
+        agentLink.textContent = 'agent';
+
         topLinks.appendChild(document.createTextNode(' - '));
         topLinks.appendChild(aForceUpdateAll);
         topLinks.appendChild(document.createTextNode(' - '));
         topLinks.appendChild(aGetPDF);
+        topLinks.appendChild(document.createTextNode(' - '));
+        topLinks.appendChild(agentLink);
 
         fetch('/transcript/' + fileId, {
             method: 'GET'

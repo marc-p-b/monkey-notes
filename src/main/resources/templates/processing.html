@@ -11,11 +11,7 @@
 
 <h2>Current processing</h2>
 
-<ul id="ulContainer">
-    <li th:each="process : ${processes}">
-        <span th:text="${process.name}"/> : <span th:text="${process.description}"/>, <span th:text="${process.duration}"/> [<span th:text="${process.status}"/>] <a th:href="@{/process/cancel/{id}(id=${process.id})}">cancel</a>
-    </li>
-</ul>
+<ul id="ulContainer"></ul>
 
 <script>
     function ready() {

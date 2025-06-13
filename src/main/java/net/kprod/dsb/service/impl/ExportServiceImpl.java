@@ -20,7 +20,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -62,7 +61,7 @@ public class ExportServiceImpl implements ExportService {
     @Override
     public void export(OutputStream outputStream) throws IOException {
 
-        String username = authService.getConnectedUsername();
+        String username = authService.getUsernameFromContext();
         ObjectMapper mapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -163,7 +162,7 @@ public class ExportServiceImpl implements ExportService {
                     .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             DtoExport dtoExport = mapper.readValue(databaseBytes, DtoExport.class);
 
-            String connectedUsername = authService.getConnectedUsername();
+            String connectedUsername = authService.getUsernameFromContext();
 
             dtoExport.getFiles()
                     .forEach(f -> {

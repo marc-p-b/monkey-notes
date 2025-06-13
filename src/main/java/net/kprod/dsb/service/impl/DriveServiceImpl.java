@@ -81,24 +81,24 @@ public class DriveServiceImpl implements DriveService {
     private Map<String, Drive> mapDrive = new HashMap<>();
 
     private Credential getCredential(){
-        LOG.info("Get credential user {}", authService.getConnectedUsername());
-        return mapCredentials.get(authService.getConnectedUsername());
+        LOG.info("Get credential user {}", authService.getUsernameFromContext());
+        return mapCredentials.get(authService.getUsernameFromContext());
     }
 
     private Credential setCredential(Credential credential){
-        LOG.info("Set credential user {}", authService.getConnectedUsername());
-        mapCredentials.put(authService.getConnectedUsername(), credential);
+        LOG.info("Set credential user {}", authService.getUsernameFromContext());
+        mapCredentials.put(authService.getUsernameFromContext(), credential);
         return credential;
     }
 
     private Drive mapGetDrive(){
-        LOG.info("Get drive user {}", authService.getConnectedUsername());
-        return mapDrive.get(authService.getConnectedUsername());
+        LOG.info("Get drive user {}", authService.getUsernameFromContext());
+        return mapDrive.get(authService.getUsernameFromContext());
     }
 
     private Drive mapSetDrive(Drive drive){
-        LOG.info("Set drive user {}", authService.getConnectedUsername());
-        mapDrive.put(authService.getConnectedUsername(), drive);
+        LOG.info("Set drive user {}", authService.getUsernameFromContext());
+        mapDrive.put(authService.getUsernameFromContext(), drive);
         return drive;
     }
 
@@ -118,7 +118,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
-            Credential credential = setCredential(authFlow.loadCredential(authService.getConnectedUsername()));
+            Credential credential = setCredential(authFlow.loadCredential(authService.getUsernameFromContext()));
 
             if (credential != null && credential.getExpirationTimeMilliseconds() != null) {
 
@@ -182,7 +182,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         try {
-            setCredential(authFlow.createAndStoreCredential(tokenResponse, authService.getConnectedUsername()));
+            setCredential(authFlow.createAndStoreCredential(tokenResponse, authService.getUsernameFromContext()));
 
         } catch (IOException e) {
             LOG.error("Failed to create credential", e);
@@ -217,7 +217,7 @@ public class DriveServiceImpl implements DriveService {
 
             connectCallback.run();
 
-            LOG.info("Schedule refresh token user {}", authService.getConnectedUsername());
+            LOG.info("Schedule refresh token user {}", authService.getUsernameFromContext());
             taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
         } else {
             LOG.info("Already connected to Google Drive");
@@ -234,7 +234,7 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Refresh token failed", e);
         }
 
-        LOG.info("Schedule refresh token user {}", authService.getConnectedUsername());
+        LOG.info("Schedule refresh token user {}", authService.getUsernameFromContext());
         taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
 
         this.getDriveConnection();

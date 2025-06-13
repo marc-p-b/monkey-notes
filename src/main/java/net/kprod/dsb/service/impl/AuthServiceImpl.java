@@ -30,7 +30,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String getConnectedUsername() {
+    public String getUsernameFromContext() {
+        // return either Connected / Authenticated user session username
+        // or username set in noauth context (when notifying changes from drive in a multiuser setup)
 
         if(NoAuthContextHolder.getContext() != null) {
             return NoAuthContextHolder.getContext().getUsername();

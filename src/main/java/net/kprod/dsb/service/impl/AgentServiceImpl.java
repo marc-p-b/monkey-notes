@@ -31,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -64,7 +63,7 @@ public class AgentServiceImpl implements AgentService {
         if(options.isForceNew() == true) {
             return this.newAssistant(fileId, options);
         } else {
-            Optional<EntityAgent> agent = repositoryAgent.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+            Optional<EntityAgent> agent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
             if(agent.isPresent()) {
                 return DtoAgent.of(agent.get());
             } else {
@@ -76,7 +75,7 @@ public class AgentServiceImpl implements AgentService {
     @Override
     public DtoAgentPrepare prepareAssistant(String fileId) {
 
-        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
         if(optAgent.isPresent()) {
             DtoAgentPrepare agentPrepare = this.getAssistant(optAgent.get().getAssistantId());
             List<DtoAgentMessage> listMessages = this.getThreadMessages(optAgent.get().getThreadId());
@@ -127,7 +126,7 @@ public class AgentServiceImpl implements AgentService {
         EntityAgent entityAgent = new EntityAgent()
                 .setAssistantId(assistantId)
                 .setThreadId(threadId)
-                .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
         repositoryAgent.save(entityAgent);
         return DtoAgent.of(entityAgent);

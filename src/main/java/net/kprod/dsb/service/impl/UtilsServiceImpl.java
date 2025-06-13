@@ -4,7 +4,6 @@ import net.kprod.dsb.data.entity.EntityUser;
 import net.kprod.dsb.data.repository.RepositoryUser;
 import net.kprod.dsb.service.AuthService;
 import net.kprod.dsb.service.UtilsService;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -129,7 +128,7 @@ public class UtilsServiceImpl implements UtilsService {
 
     @Override
     public Path getUserDataPath() {
-        return Paths.get(userDataBasePath, authService.getConnectedUsername());
+        return Paths.get(userDataBasePath, authService.getUsernameFromContext());
     }
 
     @Override

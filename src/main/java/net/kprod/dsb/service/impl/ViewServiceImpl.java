@@ -52,7 +52,7 @@ public class ViewServiceImpl implements ViewService {
     private DriveUtilsService driveUtilsService;
 
     private IdFile idFile(String fileId) {
-        return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
+        return IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
     }
 
 //    @Override
@@ -84,13 +84,13 @@ public class ViewServiceImpl implements ViewService {
 
     @Override
     public List<DtoTranscriptDetails> listRecentTranscripts(int from, int to) {
-        List<EntityTranscript> list = repositoryTranscript.findRecentByIdFile_Username(authService.getConnectedUsername(), PageRequest.of(from,to));
+        List<EntityTranscript> list = repositoryTranscript.findRecentByIdFile_Username(authService.getUsernameFromContext(), PageRequest.of(from,to));
         List<DtoTranscriptDetails> listDtoRecent = new ArrayList<>();
         for (EntityTranscript entityTranscript : list) {
             DtoTranscriptDetails dtoTranscriptDetails = null;
             List<String> parents = driveUtilsService.getDriveParents(entityTranscript.getIdFile().getFileId());
             if(parents.isEmpty() == false) {
-                IdFile parentIdFile = IdFile.createIdFile(authService.getConnectedUsername(), parents.get(0));
+                IdFile parentIdFile = IdFile.createIdFile(authService.getUsernameFromContext(), parents.get(0));
                 Optional<EntityFile> parentFile = repositoryFile.findById(parentIdFile);
                 if(parentFile.isPresent()) {
                     dtoTranscriptDetails = new DtoTranscriptDetails(
@@ -199,7 +199,7 @@ public class ViewServiceImpl implements ViewService {
 
         Set<IdFile> setTranscriptId = listAllFilesRecurs(optFolder.get()).stream()
                 .map(d -> {
-                    return IdFile.createIdFile(authService.getConnectedUsername(), d.getFileId());
+                    return IdFile.createIdFile(authService.getUsernameFromContext(), d.getFileId());
                 })
                 .collect(Collectors.toSet());
 
@@ -221,7 +221,7 @@ public class ViewServiceImpl implements ViewService {
         for(int n = 1; n <= t.getPageCount(); n++) {
             //todo optimize ? include in all requests ? // remove n ?
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
-                    IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), t.getIdFile().getFileId(), n));
+                    IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n));
                         listPages.add(optPage);
         }
 
@@ -236,7 +236,7 @@ public class ViewServiceImpl implements ViewService {
         listP.stream()
             .map(page->{
                 try {
-                    page.setImageUrl(utilsService.imageURL(authService.getConnectedUsername(), page.getFileId(), page.getPageNumber()));
+                    page.setImageUrl(utilsService.imageURL(authService.getUsernameFromContext(), page.getFileId(), page.getPageNumber()));
                 } catch (MalformedURLException e) {
                     LOG.error("Failed to create image URL fileId {} page {}", page.getFileId(), page.getPageNumber());
                 }
@@ -276,7 +276,7 @@ public class ViewServiceImpl implements ViewService {
     @Transactional
     public void delete(String fileId) {
 
-        Optional<EntityFile> t = repositoryFile.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+        Optional<EntityFile> t = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
         if(t.isEmpty()) {
             LOG.error("No file found for id {}", fileId);
@@ -299,7 +299,7 @@ public class ViewServiceImpl implements ViewService {
 
     private void deleteFromDb(String fileId, boolean isFolder) {
         LOG.info("Delete {} from database", fileId);
-        IdFile idFile = IdFile.createIdFile(authService.getConnectedUsername(), fileId);
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
         repositoryTranscript.deleteById(idFile);
         repositoryFile.deleteById(idFile);
         if(isFolder == false) {

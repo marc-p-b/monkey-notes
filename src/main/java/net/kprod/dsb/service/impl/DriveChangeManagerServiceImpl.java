@@ -26,8 +26,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -42,9 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -128,7 +124,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private PreferencesService preferencesService;
 
     private IdFile idFile(String fileId) {
-        return IdFile.createIdFile(authService.getConnectedUsername(), fileId);
+        return IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -149,8 +145,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             //todo adapt to multiuser
 
             boolean watchChanges = false;
-            if(mapUsernameWatchData != null && mapUsernameWatchData.containsKey(authService.getConnectedUsername())) {
-                watchChanges = mapUsernameWatchData.get(authService.getConnectedUsername()).isWatchChanges();
+            if(mapUsernameWatchData != null && mapUsernameWatchData.containsKey(authService.getUsernameFromContext())) {
+                watchChanges = mapUsernameWatchData.get(authService.getUsernameFromContext()).isWatchChanges();
             }
 
             this.watch(!watchChanges); //if watchChanges is false, this is the first callback ; need to force
@@ -167,7 +163,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     public void watch(boolean renewOrForced) {
 
-        String username = authService.getConnectedUsername();
+        String username = authService.getUsernameFromContext();
 
         String channelId = UUID.randomUUID().toString();
         //LOG.info("watch channel is now id {}", currentChannelId);
@@ -570,7 +566,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             //updapte md5
                             .setMd5(f2p.getMd5());
                 } else {
-                    return f2p.asEntity(authService.getConnectedUsername());
+                    return f2p.asEntity(authService.getUsernameFromContext());
                 }
             })
             .toList();
@@ -587,7 +583,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
             List<URL> listImages = pdfService.pdf2Images(
-                    authService.getConnectedUsername(),
+                    authService.getUsernameFromContext(),
                     file2Process.getFileId(),
                     file2Process.getFilePath().toFile(),
                     imageWorkingDir);
@@ -624,14 +620,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 } else {
                     // new transcript
                     entityTranscript = new EntityTranscript()
-                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+                        .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
                 }
                 listCompletionResponse = entry.getValue();
 
                 int page = 1;
                 for (CompletionResponse completionResponse : listCompletionResponse) {
 
-                    IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, page++);
+                    IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, page++);
                     Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
 
                     EntityTranscriptPage entityTranscriptPage = null;
@@ -747,7 +743,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if (completionResponse.isCompleted()) {
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
-                    IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
+                    IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, pageNumber));
 
             EntityTranscriptPage entityTranscriptPage = null;
             if (optTranscriptPage.isPresent()) {
@@ -759,7 +755,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 LOG.warn("This page may already exists... something wrong ? fileId {}", fileId);
                 //new (should not happen)
                 entityTranscriptPage = new EntityTranscriptPage()
-                        .setIdTranscriptPage(IdTranscriptPage.createIdTranscriptPage(authService.getConnectedUsername(), fileId, pageNumber));
+                        .setIdTranscriptPage(IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, pageNumber));
             }
             entityTranscriptPage
                     .setTranscript(completionResponse.getTranscript())
@@ -836,7 +832,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Override
     public void requestForceTranscriptUpdate(String fileId) {
         LOG.info("Force update transcript {}", fileId);
-        Optional<EntityFile> optEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getConnectedUsername(), fileId));
+        Optional<EntityFile> optEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
         if(optEntityFile.isPresent()) {
             EntityFile entityFile = optEntityFile.get();
             entityFile.setMd5("");
@@ -906,7 +902,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         List<EntityFile> folders = new ArrayList<>();
         EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder)
                 .orElse(new EntityFile()
-                        .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), inboundFolderId))
+                        .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), inboundFolderId))
                         .setType(FileType.folder)
                         .setName("/"));
         folders.add(rootFolder);
@@ -914,7 +910,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         for(File folderFile : ancestors) {
 
             EntityFile folder = new EntityFile()
-                    .setIdFile(IdFile.createIdFile(authService.getConnectedUsername(), folderFile.getId()))
+                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), folderFile.getId()))
                     .setType(FileType.folder)
                     .setName(folderFile.getName());
 

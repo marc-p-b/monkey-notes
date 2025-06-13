@@ -50,9 +50,9 @@ public class PreferencesServiceImpl implements PreferencesService {
     public DtoConfigs listPreferences() {
 
         if(isParametersSet() == false) {
-            return initPreferences(authService.getConnectedUsername());
+            return initPreferences(authService.getUsernameFromContext());
         } else {
-            Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getConnectedUsername()).stream()
+            Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getUsernameFromContext()).stream()
                     .collect(Collectors.toMap(entityConfig -> entityConfig.getConfigId().getKey(), entityConfig -> entityConfig.getValue()));
             return fromMap(map);
         }
@@ -114,7 +114,7 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     public boolean isParametersSet() {
-        EntityPreferencesId entityConfigId = new EntityPreferencesId(authService.getConnectedUsername(), PreferenceKey.set);
+        EntityPreferencesId entityConfigId = new EntityPreferencesId(authService.getUsernameFromContext(), PreferenceKey.set);
         Optional<EntityPreferences> optEntity = repositoryConfig.findByConfigId(entityConfigId);
         return optEntity.isPresent();
     }
@@ -151,7 +151,7 @@ public class PreferencesServiceImpl implements PreferencesService {
             throw new ServiceException("Preferences not set");
         }
 
-        Optional<EntityPreferences> optValue = repositoryConfig.findByConfigId(new EntityPreferencesId(authService.getConnectedUsername(), configKey));
+        Optional<EntityPreferences> optValue = repositoryConfig.findByConfigId(new EntityPreferencesId(authService.getUsernameFromContext(), configKey));
         if(optValue.isEmpty()) {
             throw new ServiceException(configKey + " not set");
         }
@@ -162,13 +162,13 @@ public class PreferencesServiceImpl implements PreferencesService {
     public void setPreference(Map<String, String> formData) {
         DtoConfigs dtoConfigs = fromMap(formData)
             .setSet(true);
-        repositoryConfig.saveAll(dtoConfigs.toEntities(authService.getConnectedUsername()));
+        repositoryConfig.saveAll(dtoConfigs.toEntities(authService.getUsernameFromContext()));
     }
 
     @Override
     @Transactional
     public void resetPreference() {
-        repositoryConfig.deleteByConfigId_Username(authService.getConnectedUsername());
+        repositoryConfig.deleteByConfigId_Username(authService.getUsernameFromContext());
     }
 
 

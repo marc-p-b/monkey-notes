@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface AuthService {
     Optional<Authentication> getLoggedAuthentication();
-    String getConnectedUsername();
+    String getUsernameFromContext();
 }

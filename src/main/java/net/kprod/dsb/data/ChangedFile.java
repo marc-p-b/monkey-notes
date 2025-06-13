@@ -7,13 +7,15 @@ import java.util.concurrent.ScheduledFuture;
 
 public class ChangedFile {
         private Change change;
-        ScheduledFuture<?> future;
+        private ScheduledFuture<?> future;
         private long timestamp;
-        private Authentication auth;
+        //private Authentication auth;
+        private String username;
 
-        public ChangedFile(Change change, Authentication authentication) {
+        public ChangedFile(Change change, String username) {
                 this.change = change;
-                this.auth = authentication;
+                //this.auth = authentication;
+                this.username = username;
                 timestamp = System.currentTimeMillis();
         }
 
@@ -34,8 +36,8 @@ public class ChangedFile {
                 return this;
         }
 
-        public Authentication getAuth() {
-                return auth;
+        public String getUsername() {
+                return username;
         }
 
         @Override

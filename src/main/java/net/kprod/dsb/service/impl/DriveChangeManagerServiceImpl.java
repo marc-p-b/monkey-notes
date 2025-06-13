@@ -5,10 +5,7 @@ import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.ServiceException;
-import net.kprod.dsb.data.ChangedFile;
-import net.kprod.dsb.data.CompletionResponse;
-import net.kprod.dsb.data.DriveFileTypes;
-import net.kprod.dsb.data.File2Process;
+import net.kprod.dsb.data.*;
 import net.kprod.dsb.data.dto.AsyncProcess;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.AsyncProcessName;
@@ -45,6 +42,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -77,13 +75,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     //todo synchronized ?
     private Map<String, Authentication> mapChannelAuth;
     private Map<String, AsyncProcess> mapAsyncProcess2 = new HashMap<>();
-    private String lastPageToken = null;
-    private Channel channel;
-    private Channel responseChannel;
-    private String currentChannelId;
+    //private String lastPageToken = null;
+    //private Channel channel;
+    //private Channel responseChannel;
+    //private String currentChannelId;
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private ScheduledFuture<?> futureFlush;
-    private boolean watchChanges = false;
+    //private boolean watchChanges = false;
+
+    private Map<String, WatchData> mapUsernameWatchData;
+    private Map<String, WatchData> mapChannelIdWatchData;
+
+
 
     @Autowired
     private ApplicationContext ctx;
@@ -144,6 +147,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
             //todo adapt to multiuser
+
+            boolean watchChanges = false;
+            if(mapUsernameWatchData != null && mapUsernameWatchData.containsKey(authService.getConnectedUsername())) {
+                watchChanges = mapUsernameWatchData.get(authService.getConnectedUsername()).isWatchChanges();
+            }
+
             this.watch(!watchChanges); //if watchChanges is false, this is the first callback ; need to force
         }
     }
@@ -156,23 +165,102 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
+    public void watch(boolean renewOrForced) {
+
+        String username = authService.getConnectedUsername();
+
+        String channelId = UUID.randomUUID().toString();
+        //LOG.info("watch channel is now id {}", currentChannelId);
+        WatchData watchData = new WatchData()
+                .setChannelId(channelId)
+                .setUsername(username);
+
+
+        if(renewOrForced == false) {
+            return;
+        }
+//        SecurityContext securityContext = SecurityContextHolder.getContext();
+//        Authentication authentication = securityContext.getAuthentication();
+//        LOG.info("watch changes for user {}", authentication.getName());
+
+        //todo this cannot be multi user
+        //LOG.info("watch channel was id {}", currentChannelId);
+
+        OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
+
+        Channel channel = new Channel()
+                .setExpiration(odt.toInstant().toEpochMilli())
+                .setType("web_hook")
+                .setAddress(appHost + notifyPath)
+                .setId(watchData.getChannelId());
+
+        try {
+            String lastPageToken = driveService.getDrive().changes().getStartPageToken().execute().getStartPageToken();
+            Channel responseChannel = driveService.getDrive().changes().watch(lastPageToken, channel).execute();
+
+            watchData
+                    .setChannel(responseChannel)
+                    .setLastPageToken(lastPageToken);
+
+        } catch (IOException e) {
+            LOG.error("Failed to create watch channel", e);
+        }
+
+        //resourceId = responseChannel.getResourceId();
+
+//        long now = System.currentTimeMillis();
+//        long exp = responseChannel.getExpiration();
+
+//        if(mapChannelAuth == null) {
+//            mapChannelAuth = new HashMap<>();
+//        }
+//        mapChannelAuth.put(currentChannelId, authentication);
+//
+//        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}",
+//                responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
+
+        watchData.setFutureFlush(taskScheduler.schedule(new RefreshWatchTask(ctx, username), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant()));
+        //watchChanges = true;
+
+
+        watchData.setWatchChanges(true);
+
+        if(mapChannelIdWatchData == null) {
+            mapChannelIdWatchData = new HashMap<>();
+        }
+        if(mapUsernameWatchData == null) {
+            mapUsernameWatchData = new HashMap<>();
+        }
+
+        mapUsernameWatchData.put(username, watchData);
+        mapChannelIdWatchData.put(channelId, watchData);
+    }
+
     @Override
     public void changeNotified(String channelId) {
         //not from current channel watch
-        if(channelId.equals(currentChannelId) == false) {
+//        if(channelId.equals(currentChannelId) == false) {
+//            LOG.debug("Rejected notified changes channel {}", channelId);
+//            return;
+//        }
+
+        if(mapChannelIdWatchData == null || !mapChannelIdWatchData.containsKey(channelId)) {
             LOG.debug("Rejected notified changes channel {}", channelId);
             return;
         }
 
-        Authentication auth = mapChannelAuth.get(channelId);
-        if(auth == null) {
-            LOG.debug("Rejected notified auth channel {} (No auth available)", channelId);
-            return;
-        }
-        LOG.debug("Changes notified channel {} user {}", channelId, auth.getName());
+        WatchData watchData = mapChannelIdWatchData.get(channelId);
+        NoAuthContextHolder.setContext(new NoAuthContext(watchData.getUsername()));
+        //Authentication auth = mapChannelAuth.get(channelId);
 
-        SecurityContext context = SecurityContextHolder.getContext();
-        context.setAuthentication(auth);
+//        if(auth == null) {
+//            LOG.debug("Rejected notified auth channel {} (No auth available)", channelId);
+//            return;
+//        }
+        LOG.debug("Changes notified channel {} user {}", channelId, watchData.getUsername());
+
+//        SecurityContext context = SecurityContextHolder.getContext();
+//        context.setAuthentication(auth);
 
         String inboundFolderId = "";
         try {
@@ -184,15 +272,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         ChangeList changes = null;
         try {
-            changes = driveService.getDrive().changes().list(lastPageToken).execute();
-            lastPageToken = changes.getNewStartPageToken();
+            changes = driveService.getDrive().changes().list(watchData.getLastPageToken()).execute();
+            watchData.setLastPageToken(changes.getNewStartPageToken());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         if(!changes.isEmpty()) {
             for (Change change : changes.getChanges()) {
-                ChangedFile changedFile = new ChangedFile(change, auth);
+                ChangedFile changedFile = new ChangedFile(change, watchData.getUsername());
 
                 String fileId = change.getFileId();
 
@@ -230,12 +318,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Prepare Async (flushChanges)");
 
         long now = System.currentTimeMillis();
-        Map<Authentication, Set<String>> mapAuth2SetFlushedFileId =
+        Map<String, Set<String>> mapAuth2SetFlushedFileId =
                 mapScheduled.entrySet().stream()
                 //filter changes by time passed since map insertion
                 .filter(e -> now - e.getValue().getTimestamp() > (flushInterval - 1))
                 //regroup by user
-                .collect(Collectors.groupingBy(e->e.getValue().getAuth(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
+                .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
         if(concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
@@ -288,15 +376,20 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return false;
     }
 
-    public void asyncProcessFlushed(Map<Authentication, Set<String>> mapAuth2SetFlushedFileId) {
-        for(Map.Entry<Authentication, Set<String>> e: mapAuth2SetFlushedFileId.entrySet()) {
-            Authentication auth = e.getKey();
-            Set<String> setFlushedFileId = e.getValue();
-            LOG.info("Processing user {} flushed files {}", auth.getName(), setFlushedFileId.size());
+    public void asyncProcessFlushed(Map<String, Set<String>> mapAuth2SetFlushedFileId) {
+        for(Map.Entry<String, Set<String>> e: mapAuth2SetFlushedFileId.entrySet()) {
+            //Authentication auth = e.getKey();
+            String username = e.getKey();
 
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(auth);
-            SecurityContextHolder.setContext(context);
+            Set<String> setFlushedFileId = e.getValue();
+            LOG.info("Processing user {} flushed files {}", username, setFlushedFileId.size());
+
+//            SecurityContext context = SecurityContextHolder.createEmptyContext();
+//            context.setAuthentication(auth);
+//            SecurityContextHolder.setContext(context);
+
+            NoAuthContextHolder.setContext(new NoAuthContext(username));
+
             asyncProcessFlushedByUser(e.getValue());
         }
     }
@@ -688,81 +781,43 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         LOG.info("Completed : Force page update for {} page {}", fileId, pageNumber);
     }
 
+    //TODO
     public void watchStop() throws IOException {
-        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
-        driveService.getDrive().channels().stop(responseChannel);
-        watchChanges = false;
+//        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
+//        driveService.getDrive().channels().stop(responseChannel);
+//        watchChanges = false;
     }
 
-    public void watch(boolean renewOrForced) {
-        if(renewOrForced == false) {
-            return;
-        }
-        SecurityContext securityContext = SecurityContextHolder.getContext();
-        Authentication authentication = securityContext.getAuthentication();
-        LOG.info("watch changes for user {}", authentication.getName());
 
-        //todo this cannot be multi user
-        LOG.info("watch channel was id {}", currentChannelId);
-        currentChannelId = UUID.randomUUID().toString();
-        LOG.info("watch channel is now id {}", currentChannelId);
 
-        OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
-
-        channel = new Channel()
-                .setExpiration(odt.toInstant().toEpochMilli())
-                .setType("web_hook")
-                .setAddress(appHost + notifyPath)
-                .setId(currentChannelId);
-
-        try {
-            lastPageToken = driveService.getDrive().changes().getStartPageToken().execute().getStartPageToken();
-            responseChannel = driveService.getDrive().changes().watch(lastPageToken, channel).execute();
-        } catch (IOException e) {
-            LOG.error("Failed to create watch channel", e);
-        }
-
-        //resourceId = responseChannel.getResourceId();
-
-        long now = System.currentTimeMillis();
-        long exp = responseChannel.getExpiration();
-
-        if(mapChannelAuth == null) {
-            mapChannelAuth = new HashMap<>();
-        }
-        mapChannelAuth.put(currentChannelId, authentication);
-
-        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}", responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
-
-        taskScheduler.schedule(new RefreshWatchTask(ctx, authentication), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant());
-        watchChanges = true;
-    }
-
+    //TODO
     public void renewWatch() throws IOException {
-        LOG.info("renew watch");
-
-        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
-        driveService.getDrive().channels().stop(responseChannel);
-
-        this.watch(true);
+//        LOG.info("renew watch");
+//
+//        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
+//        driveService.getDrive().channels().stop(responseChannel);
+//
+//        this.watch(true);
     }
 
+    //TODO
     @Override
     public Map<String, Object> getStatus() {
-        List<String> listScheduled = mapScheduled.entrySet().stream()
-                .map(e->{
-                    return new StringBuilder().append(e.getKey()).append(" : ").append(e.getValue()).toString();
-                })
-                .collect(Collectors.toList());
-
-        long delayToFlush = futureFlush != null ? futureFlush.getDelay(TimeUnit.SECONDS) : -1;
-
-        Map<String, Object> info = new HashMap<>();
-        info.put("Watch changes", watchChanges ? "enabled" : "disabled");
-        info.put("Next flush", delayToFlush + "s");
-        info.put("Scheduled count", "" + listScheduled.size());
-        info.put("Scheduled", listScheduled);
-        return info;
+//        List<String> listScheduled = mapScheduled.entrySet().stream()
+//                .map(e->{
+//                    return new StringBuilder().append(e.getKey()).append(" : ").append(e.getValue()).toString();
+//                })
+//                .collect(Collectors.toList());
+//
+//        long delayToFlush = futureFlush != null ? futureFlush.getDelay(TimeUnit.SECONDS) : -1;
+//
+//        Map<String, Object> info = new HashMap<>();
+//        info.put("Watch changes", watchChanges ? "enabled" : "disabled");
+//        info.put("Next flush", delayToFlush + "s");
+//        info.put("Scheduled count", "" + listScheduled.size());
+//        info.put("Scheduled", listScheduled);
+//        return info;
+        return null;
     }
 
     @Override

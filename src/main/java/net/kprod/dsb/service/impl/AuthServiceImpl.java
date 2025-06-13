@@ -36,6 +36,9 @@ public class AuthServiceImpl implements AuthService {
 
         if(NoAuthContextHolder.getContext() != null) {
             return NoAuthContextHolder.getContext().getUsername();
+        } else {
+            LOG.warn("NoAuthContextHolder context is set");
+
         }
 
         Optional<Authentication> optionalAuthentication = getLoggedAuthentication();

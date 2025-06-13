@@ -40,6 +40,7 @@ public class SupplyAsyncAuthenticated implements Supplier {
     @Override
     public Object get() {
         monitoringService.keep(monitorData,"async");
+        //TODO also user noauthcontext ?
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);

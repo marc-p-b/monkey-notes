@@ -10,9 +10,7 @@ import net.kprod.dsb.data.dto.AsyncProcess;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.AsyncProcessName;
 import net.kprod.dsb.data.enums.FileType;
-import net.kprod.dsb.data.repository.RepositoryFile;
-import net.kprod.dsb.data.repository.RepositoryTranscript;
-import net.kprod.dsb.data.repository.RepositoryTranscriptPage;
+import net.kprod.dsb.data.repository.*;
 import net.kprod.dsb.monitoring.*;
 import net.kprod.dsb.service.*;
 import net.kprod.dsb.tasks.FlushTask;
@@ -68,21 +66,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     @Value("${app.changes.listen.on-startup.enabled}")
     private boolean changesListenEnabled;
 
-    //todo synchronized ?
-    private Map<String, Authentication> mapChannelAuth;
-    private Map<String, AsyncProcess> mapAsyncProcess2 = new HashMap<>();
-    //private String lastPageToken = null;
-    //private Channel channel;
-    //private Channel responseChannel;
-    //private String currentChannelId;
-    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private ScheduledFuture<?> futureFlush;
-    //private boolean watchChanges = false;
-
+    private Map<String, AsyncProcess> mapAsyncProcess2 = new HashMap<>();
+    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private Map<String, WatchData> mapUsernameWatchData;
     private Map<String, WatchData> mapChannelIdWatchData;
-
-
 
     @Autowired
     private ApplicationContext ctx;
@@ -118,10 +106,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private RepositoryTranscriptPage repositoryTranscriptPage;
 
     @Autowired
+    private RepositoryGDriveCredential repositoryGDriveCredential;
+
+    @Autowired
     private AuthService authService;
 
     @Autowired
     private PreferencesService preferencesService;
+    @Autowired
+    private RepositoryUser repositoryUser;
 
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
@@ -137,18 +130,26 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             }
         };
         driveService.connectCallback(runnable);
+
+        LOG.info("Watch drive updates for all users");
+//        repositoryGDriveCredential.findAll()
+//                .stream()
+//                .map(EntityGDriveCredential::getId)
+//                .forEach(username -> {
+//                    NoAuthContextHolder.setContext(new NoAuthContext(username));
+//                    watch(true);
+//                });
+        NoAuthContextHolder.setContext(new NoAuthContext("marc"));
+        watch(true);
     }
 
     void driveAuthCallBack() {
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
-            //todo adapt to multiuser
-
             boolean watchChanges = false;
             if(mapUsernameWatchData != null && mapUsernameWatchData.containsKey(authService.getUsernameFromContext())) {
                 watchChanges = mapUsernameWatchData.get(authService.getUsernameFromContext()).isWatchChanges();
             }
-
             this.watch(!watchChanges); //if watchChanges is false, this is the first callback ; need to force
         }
     }
@@ -162,63 +163,40 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public void watch(boolean renewOrForced) {
-
         String username = authService.getUsernameFromContext();
 
+        LOG.info("Setup watch drive update for user {}", username);
+
         String channelId = UUID.randomUUID().toString();
-        //LOG.info("watch channel is now id {}", currentChannelId);
-        WatchData watchData = new WatchData()
-                .setChannelId(channelId)
-                .setUsername(username);
 
 
         if(renewOrForced == false) {
             return;
         }
-//        SecurityContext securityContext = SecurityContextHolder.getContext();
-//        Authentication authentication = securityContext.getAuthentication();
-//        LOG.info("watch changes for user {}", authentication.getName());
-
-        //todo this cannot be multi user
-        //LOG.info("watch channel was id {}", currentChannelId);
-
         OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
-
         Channel channel = new Channel()
                 .setExpiration(odt.toInstant().toEpochMilli())
                 .setType("web_hook")
                 .setAddress(appHost + notifyPath)
-                .setId(watchData.getChannelId());
+                .setId(channelId);
 
+        WatchData watchData = null;
         try {
+
             String lastPageToken = driveService.getDrive().changes().getStartPageToken().execute().getStartPageToken();
             Channel responseChannel = driveService.getDrive().changes().watch(lastPageToken, channel).execute();
 
-            watchData
-                    .setChannel(responseChannel)
-                    .setLastPageToken(lastPageToken);
+            watchData = new WatchData()
+                .setChannelId(channelId)
+                .setUsername(username)
+                .setChannel(responseChannel)
+                .setLastPageToken(lastPageToken);
 
         } catch (IOException e) {
             LOG.error("Failed to create watch channel", e);
         }
 
-        //resourceId = responseChannel.getResourceId();
-
-//        long now = System.currentTimeMillis();
-//        long exp = responseChannel.getExpiration();
-
-//        if(mapChannelAuth == null) {
-//            mapChannelAuth = new HashMap<>();
-//        }
-//        mapChannelAuth.put(currentChannelId, authentication);
-//
-//        LOG.info("watch response: rs id {} channel id {} lastPageToken {} last for {}",
-//                responseChannel.getResourceId(), currentChannelId, lastPageToken, (exp - now));
-
         watchData.setFutureFlush(taskScheduler.schedule(new RefreshWatchTask(ctx, username), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant()));
-        //watchChanges = true;
-
-
         watchData.setWatchChanges(true);
 
         if(mapChannelIdWatchData == null) {
@@ -230,16 +208,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         mapUsernameWatchData.put(username, watchData);
         mapChannelIdWatchData.put(channelId, watchData);
+        LOG.info("Watch ok for user {}", username);
     }
 
     @Override
     public void changeNotified(String channelId) {
-        //not from current channel watch
-//        if(channelId.equals(currentChannelId) == false) {
-//            LOG.debug("Rejected notified changes channel {}", channelId);
-//            return;
-//        }
-
         if(mapChannelIdWatchData == null || !mapChannelIdWatchData.containsKey(channelId)) {
             LOG.debug("Rejected notified changes channel {}", channelId);
             return;
@@ -247,16 +220,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         WatchData watchData = mapChannelIdWatchData.get(channelId);
         NoAuthContextHolder.setContext(new NoAuthContext(watchData.getUsername()));
-        //Authentication auth = mapChannelAuth.get(channelId);
 
-//        if(auth == null) {
-//            LOG.debug("Rejected notified auth channel {} (No auth available)", channelId);
-//            return;
-//        }
         LOG.debug("Changes notified channel {} user {}", channelId, watchData.getUsername());
-
-//        SecurityContext context = SecurityContextHolder.getContext();
-//        context.setAuthentication(auth);
 
         String inboundFolderId = "";
         try {

@@ -93,6 +93,13 @@ public class DriveServiceImpl implements DriveService {
 
     private Drive mapGetDrive(){
         LOG.info("Get drive user {}", authService.getUsernameFromContext());
+
+        if(mapDrive == null || mapDrive.containsKey(authService.getUsernameFromContext()) == false) {
+            //HUHO
+            LOG.warn("WAAAAT CAN I DO");
+            requireAuth();
+        }
+
         return mapDrive.get(authService.getUsernameFromContext());
     }
 
@@ -201,9 +208,11 @@ public class DriveServiceImpl implements DriveService {
     }
 
     private void getDriveConnection() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        //Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authService.getUsernameFromContext();
 
-        if(mapGetDrive() == null) {
+        //if(mapGetDrive() == null) {
+        if(mapDrive == null || mapDrive.containsKey(username) == false) {
             LOG.info("Connecting to Google Drive");
             try {
                 HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -218,15 +227,16 @@ public class DriveServiceImpl implements DriveService {
             connectCallback.run();
 
             LOG.info("Schedule refresh token user {}", authService.getUsernameFromContext());
-            taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
+            taskScheduler.schedule(new RefreshTokenTask(ctx, username), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
         } else {
             LOG.info("Already connected to Google Drive");
         }
     }
 
     public void refreshToken()  {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        LOG.info("Refresh token for user {}", authentication.getName());
+        //Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authService.getUsernameFromContext();
+        LOG.info("Refresh token for user {}", username);
 
         try {
             getCredential().refreshToken();
@@ -235,7 +245,7 @@ public class DriveServiceImpl implements DriveService {
         }
 
         LOG.info("Schedule refresh token user {}", authService.getUsernameFromContext());
-        taskScheduler.schedule(new RefreshTokenTask(ctx, authentication), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
+        taskScheduler.schedule(new RefreshTokenTask(ctx, username), OffsetDateTime.now().plusSeconds(tokenRefreshInterval).toInstant());
 
         this.getDriveConnection();
         LOG.info("Credential refreshed, gdrive connected {}", mapGetDrive() != null  ? "yes" : "no");

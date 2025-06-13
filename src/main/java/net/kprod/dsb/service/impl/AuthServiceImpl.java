@@ -1,5 +1,6 @@
 package net.kprod.dsb.service.impl;
 
+import net.kprod.dsb.data.NoAuthContextHolder;
 import net.kprod.dsb.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,11 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String getConnectedUsername() {
+
+        if(NoAuthContextHolder.getContext() != null) {
+            return NoAuthContextHolder.getContext().getUsername();
+        }
+
         Optional<Authentication> optionalAuthentication = getLoggedAuthentication();
         if(optionalAuthentication.isEmpty()) {
             LOG.error("No authentication found");

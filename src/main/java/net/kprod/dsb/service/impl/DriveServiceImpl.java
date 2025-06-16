@@ -81,22 +81,22 @@ public class DriveServiceImpl implements DriveService {
     private Map<String, Drive> mapDrive = new HashMap<>();
 
     private Credential getCredential(){
-        LOG.info("Get credential user {}", authService.getUsernameFromContext());
+        //LOG.info("Get credential user {}", authService.getUsernameFromContext());
         return mapCredentials.get(authService.getUsernameFromContext());
     }
 
     private Credential setCredential(Credential credential){
-        LOG.info("Set credential user {}", authService.getUsernameFromContext());
+        //LOG.info("Set credential user {}", authService.getUsernameFromContext());
         mapCredentials.put(authService.getUsernameFromContext(), credential);
         return credential;
     }
 
     private Drive mapGetDrive(){
-        LOG.info("Get drive user {}", authService.getUsernameFromContext());
+        //LOG.info("Get drive user {}", authService.getUsernameFromContext());
 
         if(mapDrive == null || mapDrive.containsKey(authService.getUsernameFromContext()) == false) {
             //HUHO
-            LOG.warn("WAAAAT CAN I DO");
+            //LOG.warn("WAAAAT CAN I DO");
             requireAuth();
         }
 
@@ -156,11 +156,11 @@ public class DriveServiceImpl implements DriveService {
             LOG.error("Failed to load credential", e);
         }
 
-        if(getCredential() != null) {
-            LOG.info("Credentials ok");
-        } else {
-            LOG.error("Credentials failure");
-        }
+//        if(getCredential() != null) {
+//            LOG.info("Credentials ok");
+//        } else {
+//            LOG.error("Credentials failure");
+//        }
         return Optional.empty();
     }
 

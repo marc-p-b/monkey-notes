@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -70,7 +71,7 @@ public class PdfServiceImpl implements PdfService {
     }
 
     @Override
-    public List<URL> pdf2Images(String username, String fileId, java.io.File sourceFile, Path targetDir) {
+    public List<URL> pdf2Images(String username, String fileId, File sourceFile, Path targetDir) {
         LOG.info("Converting {} to images", sourceFile);
 
         List<URL> listImages = null;
@@ -83,6 +84,8 @@ public class PdfServiceImpl implements PdfService {
                 int pageCount = document.getNumberOfPages();
                 for (int pageNumber = 0; pageNumber < pageCount; pageNumber++) {
                     BufferedImage image = pdfRenderer.renderImageWithDPI(pageNumber, PDF2IMAGE_DPI, PDF2IMAGE_IMAGE_TYPE);
+
+                    //String md5 = imageMd5(image);
 
                     BufferedImage resizedImage = resizeImage(image);
 
@@ -104,6 +107,35 @@ public class PdfServiceImpl implements PdfService {
         }
         return null;
     }
+
+    //seems not reliable between 2 pdf conversions..
+//    private String imageMd5(BufferedImage image) throws NoSuchAlgorithmException {
+//        MessageDigest md = MessageDigest.getInstance("MD5");
+//
+//        if (image.getRaster().getDataBuffer() instanceof DataBufferByte) {
+//            byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+//            md.update(pixels);
+//        } else {
+//            int width = image.getWidth();
+//            int height = image.getHeight();
+//            int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
+//            for (int pixel : pixels) {
+//                md.update((byte) ((pixel >> 24) & 0xFF));
+//                md.update((byte) ((pixel >> 16) & 0xFF));
+//                md.update((byte) ((pixel >> 8) & 0xFF));
+//                md.update((byte) (pixel & 0xFF));
+//            }
+//        }
+//        return toHex(md.digest());
+//    }
+//
+//    private String toHex(byte[] bytes) {
+//        StringBuilder sb = new StringBuilder();
+//        for (byte b : bytes) {
+//            sb.append(String.format("%02x", b));
+//        }
+//        return sb.toString();
+//    }
 
     @Override
     public java.io.File createTranscriptPdf(String fileId, List<DtoTranscript> listDtoTranscript) throws IOException {

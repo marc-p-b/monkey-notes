@@ -97,4 +97,5 @@ public class EntityTranscriptPage {
         this.completed = completed;
         return this;
     }
+
 }

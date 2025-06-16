@@ -99,6 +99,23 @@
         </dependency>
 
         <dependency>
+            <groupId>org.openpnp</groupId>
+            <artifactId>opencv</artifactId>
+            <version>4.8.1-0</version>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.boofcv</groupId>-->
+<!--            <artifactId>boofcv-core</artifactId>-->
+<!--            <version>0.43</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.boofcv</groupId>-->
+<!--            <artifactId>boofcv-swing</artifactId>-->
+<!--            <version>0.43</version>-->
+<!--        </dependency>-->
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>

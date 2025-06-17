@@ -135,15 +135,15 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         driveService.connectCallback(runnable);
 
         LOG.info("Watch drive updates for all users");
-//        repositoryGDriveCredential.findAll()
-//                .stream()
-//                .map(EntityGDriveCredential::getId)
-//                .forEach(username -> {
-//                    NoAuthContextHolder.setContext(new NoAuthContext(username));
-//                    watch(true);
-//                });
-        NoAuthContextHolder.setContext(new NoAuthContext("marc"));
-        watch(true);
+        repositoryGDriveCredential.findAll()
+                .stream()
+                .map(EntityGDriveCredential::getId)
+                .forEach(username -> {
+                    NoAuthContextHolder.setContext(new NoAuthContext(username));
+                    watch(true);
+                });
+        //NoAuthContextHolder.setContext(new NoAuthContext("marc"));
+        //watch(true);
     }
 
     void driveAuthCallBack() {
@@ -554,6 +554,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             //prepare pages comparison
             int currentCount = 0;
+            boolean allowCompare = true;
             Optional<EntityTranscript> t = repositoryTranscript.findById(idFile(file2Process.getFileId()));
             List<BufferedImage> previousImages = new ArrayList<>();
             if(t.isPresent()) {
@@ -564,6 +565,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                         previousImages.add(ImageIO.read(imgPath.toFile()));
                     } catch (IOException e) {
                         LOG.error("Failed to load image fileid {} page {}", file2Process.getFileId(), imageNum);
+                        allowCompare = false;
                     }
                 }
             }
@@ -579,7 +581,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             //at least one page is modified
             //TODO transcript only modified pages
             boolean isFileModified = false;
-            if(listImages.size() == currentCount) {
+            if(listImages.size() == currentCount && allowCompare) {
                 //same page count, compare content
                  for(int imageNum = 1; imageNum <= listImages.size(); imageNum++) {
                     try {

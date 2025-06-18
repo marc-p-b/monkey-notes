@@ -105,6 +105,7 @@
             const refreshLink = document.createElement('a');
             refreshLink.href = `/update/folder/${fileId}`;
             refreshLink.textContent = 'update';
+            refreshLink.classList.add('clickableLink');
             li.appendChild(document.createTextNode(' - '));
             li.appendChild(refreshLink);
 
@@ -179,14 +180,46 @@
         document.addEventListener('click', function(event) {
             if (event.target.matches('a.folderLink')) {
                 event.preventDefault();
-                myFunction(event);
+                openFolder(event);
+            } else if (event.target.matches('a.clickableLink')) {
+                event.preventDefault();
+                requestLink(event);
             }
+
+
         });
 
-        function myFunction(event) {
+        function openFolder(event) {
             const linkId = event.target.id;
             console.log('open ' + linkId);
             folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
+        }
+
+        function requestLink(event) {
+            //console.log("!!!");
+            const linkHref = event.target.href;
+
+            fetch(linkHref, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                console.log(response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('update done !');
+            });
+
+
+            //console.log(linkHref);
+
+
+
+            //console.log('open ' + linkId);
+            //folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
         }
 
     }

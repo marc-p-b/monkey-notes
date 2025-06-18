@@ -13,10 +13,10 @@
 
 <div>
     <h2>Recents transcripts</h2>
-    <div id="recent-container"></div>
+    <div id="recent-container">(loading...)</div>
 
     <h2>Root folders</h2>
-    <ul id="folder-container-root"></ul>
+    <div id="folders-container">(loading...)</div>
 </div>
 
 <script>
@@ -75,6 +75,7 @@
             ul.appendChild(li);
         });
 
+        container.textContent = "";
         container.appendChild(ul);
     }
 
@@ -147,7 +148,7 @@
     }
 
     async function fetchRootFolders() {
-        folderProcess('/folder/list', 'folder-container-root');
+        folderProcess('/folder/list', 'folders-container');
     }
 
     async function folderProcess(url, targetUl) {
@@ -155,6 +156,7 @@
         const response = await fetch(url);
         const nodes = await response.json();
         const container = document.getElementById(targetUl);
+        const ul = document.createElement('ul');
 
         nodes.forEach(node => {
             const li = document.createElement('li');
@@ -164,10 +166,10 @@
             const folderUl = document.createElement('ul');
             folderUl.id = 'folder-container-' + node.dtoFile.fileId;
             li.appendChild(folderUl);
-
-            container.appendChild(li);
+            ul.appendChild(li);
         });
-
+        container.textContent = "";
+        container.appendChild(ul);
     }
 
     function documentLoaded() {
@@ -175,10 +177,9 @@
         fetchRootFolders();
 
         document.addEventListener('click', function(event) {
-            // Check if the clicked element has the class
             if (event.target.matches('a.folderLink')) {
-                event.preventDefault(); // Optional: prevent the default link behavior
-                myFunction(event);           // Call your custom function
+                event.preventDefault();
+                myFunction(event);
             }
         });
 

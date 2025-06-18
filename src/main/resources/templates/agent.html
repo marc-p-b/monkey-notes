@@ -13,39 +13,42 @@
 
 <h2>Ask agent</h2>
 
-<p id="divStatus">
-</p>
+<div id="container">
+    <div id="status"></div>
 
-<div id="conversation">
+    <div id="conversation"></div>
+
+    <form id="formAgent">
+        <label for="textAreaQuestion">Question</label>
+        <textarea name="question" id="textAreaQuestion"></textarea>
+        <label for="inputResetId">Reset</label>
+        <input type="checkbox" name="reset" id="inputResetId"/>
+        <label for="selectModelId">Model</label>
+        <select name="selectModel" id="selectModelId">
+            <option value="default">default</option>
+            <option value="gpt-4o">gpt 4o</option>
+            <option value="gpt-4o-mini">gtp 4o mini</option>
+        </select>
+        <label for="textAreaInstructionsId">Instructions</label>
+        <textarea name="instructions" id="textAreaInstructionsId"></textarea>
+        <input type="hidden" name="threadId" id="inputThreadId"/>
+        <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
+    </form>
+
+    <button id="buttonSend">send</button>
 </div>
 
-<form id="formAgent">
-    <label for="textAreaQuestion">Question</label>
-    <textarea name="question" id="textAreaQuestion"></textarea>
-    <label for="inputResetId">Reset</label>
-    <input type="checkbox" name="reset" id="inputResetId"/>
-    <label for="selectModelId">Model</label>
-    <select name="selectModel" id="selectModelId">
-        <option value="default">default</option>
-        <option value="gpt-4o">gpt 4o</option>
-        <option value="gpt-4o-mini">gtp 4o mini</option>
-    </select>
-    <label for="textAreaInstructionsId">Instructions</label>
-    <textarea name="instructions" id="textAreaInstructionsId"></textarea>
-    <input type="hidden" name="threadId" id="inputThreadId"/>
-    <input type="hidden" name="fileId" th:value="${fileId}" id="inputFileId"/>
-    <button id="buttonSend">send</button>
-</form>
-
-
 <script th:inline="javascript">
-    let fileId = /*[[${fileId}]]*/ {};
+
+let fileId = /*[[${fileId}]]*/ {};
+
 </script>
 
 <script>
 
-    function documentLoaded() {
-        const containerStatus = document.getElementById('divStatus');
+    document.addEventListener("DOMContentLoaded", function() {
+        let conversationBox = document.getElementById('conversation');
+        let statusBox = document.getElementById('status');
 
         fetch('/agent/prepare/' + fileId, {
             method: 'GET'
@@ -57,9 +60,7 @@
             return response.json();
         })
         .then(data => {
-            if (data.exists) {
-                let conversationBox = document.getElementById('conversation');
-
+            if(data.exists) {
                 data.messages.forEach(function (message, index) {
                     let pM = document.createElement("p")
                     pM.textContent = 'from ' + message.messageDir + ' @ ' + message.createdAt + ' : ' + message.content;
@@ -69,7 +70,7 @@
         })
         .catch(error => console.error('Error:', error));
 
-        document.getElementById("buttonSend").addEventListener("click", function () {
+        document.getElementById("buttonSend").addEventListener("click", function() {
             let question = document.getElementById("textAreaQuestion").value;
             let conversationBox = document.getElementById('conversation');
 
@@ -80,39 +81,40 @@
             let form = document.getElementById("formAgent");
             const formData = new FormData(form);
 
-            containerStatus.textContent ='Waiting for AI response...';
+            statusBox.textContent = "Waiting for response...";
+
             fetch('/agent/ask', {
                 method: 'POST',
                 body: formData,
             })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // parse JSON from body
+            })
+            .then(data => {
+
+                const eventSource = new EventSource(data.url);
+                eventSource.onmessage = (event) => {
+                    let data = event.data;
+
+                    if (data == 'waiting') {
+                        console.log("waiting...");
+                        statusBox.append(".");
+                    } else {
+                        console.log("done !");
+                        statusBox.append(" Done !");
+                        let pR = document.createElement("p")
+                        pR.textContent = data;
+                        conversationBox.appendChild(pR);
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    const eventSource = new EventSource(data.url);
-                    eventSource.onmessage = (event) => {
-                        let data = event.data;
-
-                        if (data == 'waiting') {
-                            //console.log("waiting...");
-                            containerStatus.append('.');
-                        } else {
-                            containerStatus.textContent = 'Response received !';
-
-                            let pR = document.createElement("p")
-                            pR.textContent = data;
-                            conversationBox.appendChild(pR);
-                        }
-                    };
-                })
-                .catch(error => console.error('Error:', error));
+                };
+            })
+            .catch(error => console.error('Error:', error));
         });
-    }
+    });
 
-    document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
 </body>
 </html>

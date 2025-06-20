@@ -70,13 +70,13 @@ public class TranscriptController {
     @GetMapping("/update/all")
     public ResponseEntity<String> updateAll() {
         driveChMgmtService.updateAll();
-        return ResponseEntity.ok().body("OK");
+        return ResponseEntity.ok().body("Update root folder requested");
     }
 
     @GetMapping("/update/folder/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
         driveChMgmtService.updateFolder(folderId);
-        return ResponseEntity.ok().body("OK");
+        return ResponseEntity.ok().body("Folder update is requested");
     }
 
     @GetMapping("/update/transcript/{fileId}/{pageNumber}")
@@ -105,7 +105,7 @@ public class TranscriptController {
     @GetMapping("/transcript/force-update/{fileId}")
     public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
         driveChMgmtService.requestForceTranscriptUpdate(fileId);
-        return ResponseEntity.ok().body("OK");
+        return ResponseEntity.ok().body("Transcript update requested");
     }
 
     @GetMapping("/folder/list")
@@ -125,6 +125,6 @@ public class TranscriptController {
     @GetMapping("/delete/{fileId}")
     public ResponseEntity<String> delete(@PathVariable String fileId) throws IOException {
         viewService.delete(fileId);
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok("Object deleted");
     }
 }

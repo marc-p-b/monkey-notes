@@ -8,10 +8,12 @@
     <a href="/">Monkey Notes</a> -
     <a href="/v/preferences">Preferences</a> -
     <a href="/v/processing">Processes</a> -
-    <a href="/update/all">Update All</a>
+    <a class="clickableLink" href="/update/all">Update All</a>
 </div>
 
 <div>
+    <div id="status"></div>
+
     <h2>Recents transcripts</h2>
     <div id="recent-container">(loading...)</div>
 
@@ -125,6 +127,7 @@
             const forceUpdateLink = document.createElement('a');
             forceUpdateLink.href = `/transcript/force-update/${fileId}`;
             forceUpdateLink.textContent = 'update';
+            forceUpdateLink.classList.add('clickableLink');
             li.appendChild(document.createTextNode(' - '));
             li.appendChild(forceUpdateLink);
 
@@ -144,6 +147,7 @@
         const delLink = document.createElement('a');
         delLink.href = `/delete/${fileId}`;
         delLink.textContent = 'delete';
+        delLink.classList.add('clickableLink');
         li.appendChild(document.createTextNode(' - '));
         li.appendChild(delLink);
     }
@@ -196,9 +200,7 @@
         }
 
         function requestLink(event) {
-            //console.log("!!!");
             const linkHref = event.target.href;
-
             fetch(linkHref, {
                 method: 'GET'
             })
@@ -206,20 +208,20 @@
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                console.log(response);
-                return response.json();
+                return response.text();
+                // console.log(response.text());
+                // const statusBox = document.getElementById("status");
+                // statusBox.textContent = response.text();
+            }).then(bodyText => {
+                console.log('Response body as text:', bodyText);
+                // You can now use `bodyText` as a regular string
+                const statusBox = document.getElementById("status");
+                statusBox.textContent = bodyText;
             })
-            .then(data => {
-                console.log('update done !');
+            .catch(error => {
+                console.error('Fetch error:', error);
             });
 
-
-            //console.log(linkHref);
-
-
-
-            //console.log('open ' + linkId);
-            //folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
         }
 
     }

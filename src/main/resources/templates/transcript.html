@@ -9,11 +9,26 @@
     <a href="/">Home</a>
 </div>
 
+<div id="header">
+    <h2 id="headerTitle"></h2>
+    <p>
+        by <span id="headerAuthor"></span>
+        <span id="headerDDateContainer">, document date <span id="headerDDate"></span></span>
+        <span id="headerTDateContainer">, last update at <span id="headerTDate"></span></span>
+        (total pages <span id="headerPages"></span>, version <span id="headerVersion"></span>)
+    </p>
+</div>
+
+<div id="status"></div>
+
 <div id="sections"></div>
 
 <script th:inline="javascript">
     let fileId = /*[[${fileId}]]*/ {};
 </script>
+
+<script src="/js/custom_dates.js"></script>
+<script src="/js/request_link.js"></script>
 
 <script>
     function documentLoaded() {
@@ -25,6 +40,7 @@
         const aForceUpdateAll = document.createElement('a');
         aForceUpdateAll.href = '/transcript/force-update/' + fileId;
         aForceUpdateAll.textContent = 'force update';
+        aForceUpdateAll.classList.add('clickableLink');
 
         const aGetPDF = document.createElement('a');
         aGetPDF.href = '/transcript/pdf/' + fileId;
@@ -51,8 +67,34 @@
             return response.json();
         })
         .then(data => {
+
+            const headerTitle = document.getElementById('headerTitle');
+            const headerAuthor = document.getElementById('headerAuthor');
+            const headerDDate = document.getElementById('headerDDate');
+            const headerTDate = document.getElementById('headerTDate');
+            const headerPages = document.getElementById('headerPages');
+            const headerVersion = document.getElementById('headerVersion');
+
             data.pages.forEach(page => {
                 const section = document.createElement('section');
+
+                headerTitle.textContent = data.title;
+                headerAuthor.textContent = data.username;
+
+                if(data.transcripted_at != null) {
+                    headerTDate.textContent = formatDateTime(data.transcripted_at);
+                } else {
+                    document.getElementById('headerTDateContainer').style.display = "none";
+                }
+
+                if(data.documented_at != null) {
+                    headerDDate.textContent = formatDate(data.documented_at);
+                } else {
+                    document.getElementById('headerDDateContainer').style.display = "none";
+                }
+
+                headerPages.textContent = data.pageCount;
+                headerVersion.textContent = data.version;
 
                 const h3 = document.createElement('h3');
                 h3.textContent = 'Page #' + page.pageNumber;
@@ -82,6 +124,14 @@
             });
         })
         .catch(error => console.error('Error:', error));
+
+        document.addEventListener('click', function(event) {
+            if (event.target.matches('a.clickableLink')) {
+                event.preventDefault();
+                requestLink(event, document.getElementById("status"));
+            }
+        });
+
     }
     document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>

@@ -21,31 +21,10 @@
     <div id="folders-container">(loading...)</div>
 </div>
 
+<script src="/js/custom_dates.js"></script>
+<script src="/js/request_link.js"></script>
+
 <script>
-
-    function formatDateTime(isoString) {
-        const date = new Date(isoString);
-
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-
-    function formatDate(isoString) {
-        const date = new Date(isoString);
-
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${day}/${month}/${year}`;
-    }
 
     async function fetchRecentTranscripts() {
         const response = await fetch('/transcript/recent');
@@ -187,7 +166,7 @@
                 openFolder(event);
             } else if (event.target.matches('a.clickableLink')) {
                 event.preventDefault();
-                requestLink(event);
+                requestLink(event, document.getElementById("status"));
             }
 
 
@@ -198,32 +177,6 @@
             console.log('open ' + linkId);
             folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
         }
-
-        function requestLink(event) {
-            const linkHref = event.target.href;
-            fetch(linkHref, {
-                method: 'GET'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-                // console.log(response.text());
-                // const statusBox = document.getElementById("status");
-                // statusBox.textContent = response.text();
-            }).then(bodyText => {
-                console.log('Response body as text:', bodyText);
-                // You can now use `bodyText` as a regular string
-                const statusBox = document.getElementById("status");
-                statusBox.textContent = bodyText;
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-            });
-
-        }
-
     }
 
 
@@ -308,9 +261,6 @@
     //     });
     //     return ul;
     // }
-
-
-
     document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
 

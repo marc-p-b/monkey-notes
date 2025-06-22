@@ -15,6 +15,7 @@
         by <span id="headerAuthor"></span>
         <span id="headerDDateContainer">, document date <span id="headerDDate"></span></span>
         <span id="headerTDateContainer">, last update at <span id="headerTDate"></span></span>
+        <span id="headerODateContainer">, discovered date <span id="headerODate"></span></span>
         (total pages <span id="headerPages"></span>, version <span id="headerVersion"></span>)
     </p>
 </div>
@@ -72,6 +73,7 @@
             const headerAuthor = document.getElementById('headerAuthor');
             const headerDDate = document.getElementById('headerDDate');
             const headerTDate = document.getElementById('headerTDate');
+            const headerODate = document.getElementById('headerODate');
             const headerPages = document.getElementById('headerPages');
             const headerVersion = document.getElementById('headerVersion');
 
@@ -91,6 +93,12 @@
                     headerDDate.textContent = formatDate(data.documented_at);
                 } else {
                     document.getElementById('headerDDateContainer').style.display = "none";
+                }
+
+                if(data.discovered_at != null) {
+                    headerODate.textContent = formatDate(data.discovered_at);
+                } else {
+                    document.getElementById('headerODateContainer').style.display = "none";
                 }
 
                 headerPages.textContent = data.pageCount;

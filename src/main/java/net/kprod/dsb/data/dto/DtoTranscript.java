@@ -10,8 +10,12 @@ public class DtoTranscript {
     private String username;
     private String fileId;
     private String name;
+    //last update (images -> transcript)
     private OffsetDateTime transcripted_at;
+    //date from title (regex)
     private OffsetDateTime documented_at;
+    //file first discovery // todo replace with drive date ?
+    private OffsetDateTime discovered_at;
     private int pageCount;
     private int version;
     private List<DtoTranscriptPage> pages;
@@ -101,4 +105,12 @@ public class DtoTranscript {
         return this;
     }
 
+    public OffsetDateTime getDiscovered_at() {
+        return discovered_at;
+    }
+
+    public DtoTranscript setDiscovered_at(OffsetDateTime discovered_at) {
+        this.discovered_at = discovered_at;
+        return this;
+    }
 }

@@ -75,7 +75,7 @@ public class ViewServiceImpl implements ViewService {
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(idFile);
         Optional<EntityFile> optFile = repositoryFile.findById(idFile);
         if (optDoc.isPresent() && optFile.isPresent()) {
-            DtoTranscript dtoTranscript = buildDtoTranscript(optDoc.get(), viewOptions);
+            DtoTranscript dtoTranscript = buildDtoTranscript(optDoc.get(), optFile.get(), viewOptions);
             return dtoTranscript;
         }
         //todo error
@@ -113,7 +113,7 @@ public class ViewServiceImpl implements ViewService {
             if (child.getType() == FileType.transcript) {
                 Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getIdFile());
                 if(optTranscript.isPresent()) {
-                    dtoTranscript = buildDtoTranscript(optTranscript.get(), ViewOptions.all());
+                    dtoTranscript = buildDtoTranscript(optTranscript.get(), child, ViewOptions.all());
                 } else {
                     LOG.warn("No transcript found for id {}", child.getIdFile());
                     //todo NO transcript / error
@@ -180,8 +180,7 @@ public class ViewServiceImpl implements ViewService {
 
                     Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(f.getIdFile());
                     if(optTranscript.isPresent()) {
-
-                        node.setDtoTranscript(buildDtoTranscript(optTranscript.get(), ViewOptions.all()));
+                        node.setDtoTranscript(buildDtoTranscript(optTranscript.get(), f, ViewOptions.all()));
                     }
                     return node;
                 })
@@ -210,12 +209,12 @@ public class ViewServiceImpl implements ViewService {
 
                     //String parentFolderId = f.isPresent() ? f.get().getParentFolderId() : folderId;
 
-                    return buildDtoTranscript(t, ViewOptions.all());
+                    return buildDtoTranscript(t, f.get(), ViewOptions.all());
                 })
                 .toList();
     }
 
-    private DtoTranscript buildDtoTranscript(EntityTranscript t, ViewOptions viewOptions) {
+    private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
         List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
 
         for(int n = 1; n <= t.getPageCount(); n++) {
@@ -258,6 +257,9 @@ public class ViewServiceImpl implements ViewService {
         }
 
         dtoTranscript.setPages(listP);
+        //TODO this requires file entity ; is this really needed ?
+        dtoTranscript.setDiscovered_at(file.getDiscovered_at());
+
         return dtoTranscript;
     }
 

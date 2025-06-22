@@ -586,23 +586,20 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                  for(int imageNum = 1; imageNum <= listImages.size(); imageNum++) {
                     try {
                         BufferedImage img = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), file2Process.getFileId(), imageNum).toFile());
-
-//                        // TODO SAVE TO COMP
-//                        saveImg(img,"/home/marc/Desktop/_a/new_"+imageNum);
-//                        // TODO SAVE TO COMP
-//                        saveImg(previousImages.get(imageNum - 1),"/home/marc/Desktop/_a/prev_"+imageNum);
-
-
                         double comp = imageService.compareImages(previousImages.get(imageNum - 1), img);
 
-                        if(Double.POSITIVE_INFINITY == comp) {
-                            LOG.info("FileId {} page {} UNMODIFIED", file2Process.getFileId(), imageNum);
-                        } else {
+//                        if(Double.POSITIVE_INFINITY == comp) {
+//                            LOG.info("FileId {} page {} UNMODIFIED", file2Process.getFileId(), imageNum);
+//                        } else {
+//                            isFileModified = true;
+//                            LOG.info("FileId {} page {} MODIFIED", file2Process.getFileId(), imageNum);
+//                        }
+
+                        if(Double.POSITIVE_INFINITY != comp) {
                             isFileModified = true;
-                            LOG.info("FileId {} page {} MODIFIED", file2Process.getFileId(), imageNum);
                         }
 
-                    } catch (IOException e) {
+                        } catch (IOException e) {
                         LOG.error("Failed to compare images img {} page {}", file2Process.getFileId(), imageNum);
                     }
                 }

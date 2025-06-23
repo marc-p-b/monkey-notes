@@ -31,13 +31,7 @@ public interface DriveChangeManagerService {
 
     void forcePageUpdate(String fileId, int pageNumber);
 
-    //Map<String, AsyncProcess> getMapAsyncProcess();
-
-    void cancelProcess(String id);
-
     void requestForceTranscriptUpdate(String fileId);
 
     void forceTranscriptUpdate(String fileId);
-
-    List<DtoProcess> listProcess();
 }

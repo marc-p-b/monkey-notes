@@ -64,12 +64,12 @@ public class AgentController {
         DtoAgent dtoAgent = agentService.getOrCreateAssistant(fileId, dtoOptions);
         agentService.addMessage(dtoAgent.getThreadId(), question);
         String runId = agentService.createRun(dtoAgent);
-        String streamLink = "/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
+        String streamLink = "/agent/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
 
         return ResponseEntity.ok().body(new DtoURL(streamLink));
     }
 
-    @GetMapping("/subscribe/{threadId}/{runId}")
+    @GetMapping("/agent/subscribe/{threadId}/{runId}")
     public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
         return agentService.threadRunPolling(threadId, runId);
     }

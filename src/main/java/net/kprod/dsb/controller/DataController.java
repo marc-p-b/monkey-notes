@@ -17,20 +17,20 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.IOException;
 
 @Controller
-public class ExportController {
-    private Logger LOG = LoggerFactory.getLogger(ExportController.class);
+public class DataController {
+    private Logger LOG = LoggerFactory.getLogger(DataController.class);
 
     @Autowired
     private ExportService exportService;
 
-    @PostMapping("/import")
+    @PostMapping("/data/import")
     public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile multipartFile) {
 
         exportService.importUserData(multipartFile);
         return ResponseEntity.ok("OK");
     }
 
-    @GetMapping(value = "/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/data/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> exportUserData() throws IOException {
 
         StreamingResponseBody stream = outputStream -> {

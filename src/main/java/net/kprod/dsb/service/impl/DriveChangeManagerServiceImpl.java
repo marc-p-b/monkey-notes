@@ -7,6 +7,7 @@ import com.google.api.services.drive.model.File;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.data.*;
 import net.kprod.dsb.data.dto.AsyncProcess;
+import net.kprod.dsb.data.dto.DtoProcess;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.AsyncProcessName;
 import net.kprod.dsb.data.enums.FileType;
@@ -32,15 +33,12 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +49,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     //todo props
     public static final int ANCESTORS_RETRIEVE_MAX_DEPTH = 4;
     public static final String MIME_PDF = "application/pdf";
+    long CONCURRENT_LIMIT = 1;
 
     private Logger LOG = LoggerFactory.getLogger(DriveChangeManagerService.class);
 
@@ -70,7 +69,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private boolean changesListenEnabled;
 
     private ScheduledFuture<?> futureFlush;
-    private Map<String, AsyncProcess> mapAsyncProcess2 = new HashMap<>();
+    private Map<String, AsyncProcess> mapAsyncProcess = new HashMap<>();
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private Map<String, WatchData> mapUsernameWatchData;
     private Map<String, WatchData> mapChannelIdWatchData;
@@ -121,6 +120,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
+    }
+
+    //TODO UTILS
+    private String getLocalFileName(String fileId) {
+        Optional<EntityFile> optionalEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+        return optionalEntityFile.isPresent() ? optionalEntityFile.get().getName() : fileId;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -275,7 +280,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    long CONCURRENT_LIMIT = 1;
+
 
     @Override
     public synchronized void flushChanges() {
@@ -302,7 +307,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             long items = mapAuth2SetFlushedFileId.values().stream()
                     .flatMap(s->s.stream())
                     .count();
-            String desc = new StringBuilder().append("flushing ").append(items).append(" items").toString();
+
+            String desc = "";
+            if(items <= 10) {
+                String itemsList = mapAuth2SetFlushedFileId.values().stream()
+                        .flatMap(s -> s.stream())
+                        .map(s -> this.getLocalFileName(s))
+                        .collect(Collectors.joining(", "));
+
+                desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
+            } else {
+                desc = new StringBuilder().append("flushing ").append(" items : ").toString();
+            }
+
             registerSyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
 
         } catch (ServiceException e) {
@@ -322,12 +339,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .setCreatedAt(OffsetDateTime.now())
                 .setDescription(description);
 
-        mapAsyncProcess2.put(id, asyncProcess);
+        mapAsyncProcess.put(id, asyncProcess);
 
     }
 
     private boolean concurrentProcessFull() {
-        long count = mapAsyncProcess2.values().stream()
+        long count = mapAsyncProcess.values().stream()
                 .filter(p -> p.getName().equals(AsyncProcessName.flushChanges.name()))
                 .filter(p -> !p.getFuture().isDone())
                 .count();
@@ -441,7 +458,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + folderId, future);
+            registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + this.getLocalFileName(folderId), future);
         } catch (ServiceException e) {
             LOG.info("Failed to prepare updateFolder async", e);
         }
@@ -757,15 +774,21 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-            String desc = new StringBuilder().append("forced update file ").append(fileId).append(" page ").append(pageNumber).toString();
+
+
+
+            String desc = new StringBuilder()
+                    .append("forced update file ")
+                    .append(this.getLocalFileName(fileId)).append(" page ")
+                    .append(pageNumber).toString();
             registerSyncProcess(AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
+
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
         } catch (ServiceException e) {
             LOG.error("Failed to prepare runAsyncForcePageUpdate async", e);
         }
     }
-
 
 
     @MonitoringAsync
@@ -850,14 +873,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Override
     public void cancelProcess(String id) {
-        if(mapAsyncProcess2.get(id) == null) {
+        if(mapAsyncProcess.get(id) == null) {
             LOG.error("Process does not exists {}", id);
             return;
         }
         LOG.info("Request process cancellation{}", id);
-        CompletableFuture future = mapAsyncProcess2.get(id).getFuture();
+        CompletableFuture future = mapAsyncProcess.get(id).getFuture();
         future.cancel(true);
-        mapAsyncProcess2.remove(id);
+        mapAsyncProcess.remove(id);
         LOG.info("Process cancelled {}", id);
     }
 
@@ -889,7 +912,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                     () -> asyncForceTranscriptUpdate(fileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(), "update transcript " + fileId, future);
+            registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
+                    "update transcript " + this.getLocalFileName(fileId), future);
         } catch (ServiceException e) {
             LOG.error("Failed to prepare runAsyncForceTranscriptUpdate", e);
         }
@@ -956,9 +980,50 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
     }
 
-    @Override
-    public Map<String, AsyncProcess> getMapAsyncProcess() {
-        return mapAsyncProcess2;
+
+    private Map<String, AsyncProcess> getMapAsyncProcess() {
+        return mapAsyncProcess;
     }
 
+    @Override
+    public List<DtoProcess> listProcess() {
+        Map<String, AsyncProcess> mapAsyncProcess = getMapAsyncProcess();
+
+        List<DtoProcess> list = mapAsyncProcess.entrySet().stream()
+                .map(e -> {
+                    AsyncProcess asyncProcess = e.getValue();
+                    String processName = asyncProcess.getName();
+                    CompletableFuture<AsyncResult> future = asyncProcess.getFuture();
+                    String status = "unknown";
+                    DtoProcess p = new DtoProcess(e.getKey(), processName);
+
+                    Duration d = Duration.between(asyncProcess.getCreatedAt(), OffsetDateTime.now());
+                    p.setDescription(asyncProcess.getDescription());
+                    String strDuration = new StringBuilder()
+                            .append(d.toHoursPart()).append("h ")
+                            .append(d.toMinutesPart()).append("m ")
+                            .append(d.toSecondsPart()).append("s ").toString();
+                    p.setDuration(strDuration);
+
+
+                    if (future.isDone()) {
+                        try {
+                            AsyncResult asyncResult = future.get();
+                            status = switch (asyncResult.getState()) {
+                                case failed -> "failed";
+                                case completed -> "completed in " + asyncResult.getRunTime() + "ms";
+                                default -> "unknown";
+                            };
+                        } catch (InterruptedException | ExecutionException e2) {
+                            status = "ERROR while getting process status";
+                        }
+                    } else {
+                        status = "running";
+                    }
+                    p.setStatus(status);
+                    return p;
+                })
+                .toList();
+        return list;
+    }
 }

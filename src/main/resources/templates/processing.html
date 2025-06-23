@@ -17,7 +17,7 @@
     function ready() {
         const ulContainer = document.getElementById('ulContainer');
 
-        fetch('/processing/get', {
+        fetch('/process/list', {
             method: 'GET'
         })
             .then(response => {
@@ -38,13 +38,14 @@
                     const aCancel = document.createElement("a");
                     aCancel.href = '/process/cancel/' + process.id;
                     aCancel.textContent = 'cancel';
+                    li.appendChild(document.createTextNode(' - '));
                     li.appendChild(aCancel);
 
                     ulContainer.appendChild(li);
 
                 });
             });
-    }
+    }document.createTextNode(' - ')
 
     document.addEventListener('DOMContentLoaded', ready);
 

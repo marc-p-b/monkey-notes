@@ -39,8 +39,8 @@
         const topLinks = document.getElementById('topLinks');
 
         const aForceUpdateAll = document.createElement('a');
-        aForceUpdateAll.href = '/transcript/force-update/' + fileId;
-        aForceUpdateAll.textContent = 'force update';
+        aForceUpdateAll.href = '/transcript/update/' + fileId;
+        aForceUpdateAll.textContent = 'Update';
         aForceUpdateAll.classList.add('clickableLink');
 
         const aGetPDF = document.createElement('a');
@@ -111,8 +111,8 @@
                 p.innerHTML = page.transcriptHtml;
 
                 const aForceUpdate = document.createElement('a');
-                aForceUpdate.href = '/update/transcript/' + fileId + '/' + page.pageNumber;
-                aForceUpdate.textContent = 'force update';
+                aForceUpdate.href = '/transcript/update/' + fileId + '/' + page.pageNumber;
+                aForceUpdate.textContent = 'Update page';
 
                 const aViewPage = document.createElement('a');
                 aViewPage.href = page.imageUrl;

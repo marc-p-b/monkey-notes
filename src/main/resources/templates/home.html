@@ -8,7 +8,7 @@
     <a href="/">Monkey Notes</a> -
     <a href="/v/preferences">Preferences</a> -
     <a href="/v/processing">Processes</a> -
-    <a class="clickableLink" href="/update/all">Update All</a>
+    <a class="clickableLink" href="/transcript/update/all">Update All</a>
 </div>
 
 <div>
@@ -84,7 +84,7 @@
 
         if(node.folder) {
             const refreshLink = document.createElement('a');
-            refreshLink.href = `/update/folder/${fileId}`;
+            refreshLink.href = `/transcript/folder/update/${fileId}`;
             refreshLink.textContent = 'update';
             refreshLink.classList.add('clickableLink');
             li.appendChild(document.createTextNode(' - '));
@@ -104,7 +104,7 @@
 
         } else {
             const forceUpdateLink = document.createElement('a');
-            forceUpdateLink.href = `/transcript/force-update/${fileId}`;
+            forceUpdateLink.href = `/transcript/update/${fileId}`;
             forceUpdateLink.textContent = 'update';
             forceUpdateLink.classList.add('clickableLink');
             li.appendChild(document.createTextNode(' - '));
@@ -124,7 +124,7 @@
         }
 
         const delLink = document.createElement('a');
-        delLink.href = `/delete/${fileId}`;
+        delLink.href = `/transcript/delete/${fileId}`;
         delLink.textContent = 'delete';
         delLink.classList.add('clickableLink');
         li.appendChild(document.createTextNode(' - '));
@@ -132,7 +132,7 @@
     }
 
     async function fetchRootFolders() {
-        folderProcess('/folder/list', 'folders-container');
+        folderProcess('/transcript/folder/list', 'folders-container');
     }
 
     async function folderProcess(url, targetUl) {
@@ -175,7 +175,7 @@
         function openFolder(event) {
             const linkId = event.target.id;
             console.log('open ' + linkId);
-            folderProcess('/folder/list/' + linkId, 'folder-container-' + linkId);
+            folderProcess('/transcript/folder/list/' + linkId, 'folder-container-' + linkId);
         }
     }
 

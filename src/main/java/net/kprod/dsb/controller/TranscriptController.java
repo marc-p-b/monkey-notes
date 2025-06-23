@@ -67,26 +67,28 @@ public class TranscriptController {
                 .body(stream);
     }
 
-    @GetMapping("/update/all")
+    @GetMapping("/transcript/update/all")
     public ResponseEntity<String> updateAll() {
         driveChMgmtService.updateAll();
         return ResponseEntity.ok().body("Update root folder requested");
     }
 
-    @GetMapping("/update/folder/{folderId}")
+    //@GetMapping("/update/folder/{folderId}")
+    @GetMapping("/transcript/folder/update/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
         driveChMgmtService.updateFolder(folderId);
         return ResponseEntity.ok().body("Folder update is requested");
     }
 
-    @GetMapping("/update/transcript/{fileId}/{pageNumber}")
+    //@GetMapping("/update/transcript/{fileId}/{pageNumber}")
+    @GetMapping("/transcript/update/{fileId}/{pageNumber}")
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
         driveChMgmtService.forcePageUpdate(fileId, pageNumber);
         return ResponseEntity.ok().body("OK");
     }
 
-
-    @GetMapping(value = "/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    //@GetMapping(value = "/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/transcript/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> getFolderPdf(@PathVariable String folderId) throws IOException {
         File file = viewService.createTranscriptPdfFromFolder(folderId);
 
@@ -102,13 +104,13 @@ public class TranscriptController {
                 .body(stream);
     }
 
-    @GetMapping("/transcript/force-update/{fileId}")
+    @GetMapping("/transcript/update/{fileId}")
     public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
         driveChMgmtService.requestForceTranscriptUpdate(fileId);
         return ResponseEntity.ok().body("Transcript update requested");
     }
 
-    @GetMapping("/folder/list")
+    @GetMapping("/transcript/folder/list")
     public ResponseEntity<List<FileNode>> viewRootFolders() throws IOException {
         return ResponseEntity.ok().body(viewService.listRootLevel());
     }
@@ -117,12 +119,12 @@ public class TranscriptController {
 //    public ResponseEntity<List<FileNode>> viewFolders() {
 //        return ResponseEntity.ok().body(viewService.listAllNodes());
 
-    @GetMapping("/folder/list/{folderId}")
+    @GetMapping("/transcript/folder/list/{folderId}")
     public ResponseEntity<List<FileNode>> viewFolder(@PathVariable String folderId) throws IOException {
         return ResponseEntity.ok().body(viewService.listLevel(folderId));
     }
 
-    @GetMapping("/delete/{fileId}")
+    @GetMapping("/transcript/delete/{fileId}")
     public ResponseEntity<String> delete(@PathVariable String fileId) throws IOException {
         viewService.delete(fileId);
         return ResponseEntity.ok("Object deleted");

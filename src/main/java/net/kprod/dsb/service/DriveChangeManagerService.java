@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface DriveChangeManagerService {
-    void updateAll();
+    //void updateAll();
 
-    void updateFolder(String folderId);
+    //void updateFolder(String folderId);
 
     void watchStop() throws IOException;
 
@@ -27,11 +27,11 @@ public interface DriveChangeManagerService {
 
     Map<String, Object> getStatus();
 
-    String updateAncestorsFolders(String fileId) throws ServiceException;
+    //String updateAncestorsFolders(String fileId) throws ServiceException;
 
-    void forcePageUpdate(String fileId, int pageNumber);
+    //void forcePageUpdate(String fileId, int pageNumber);
 
-    void requestForceTranscriptUpdate(String fileId);
+   // void requestForceTranscriptUpdate(String fileId);
 
-    void forceTranscriptUpdate(String fileId);
+    //void forceTranscriptUpdate(String fileId);
 }

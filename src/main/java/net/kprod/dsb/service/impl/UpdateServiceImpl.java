@@ -2,6 +2,7 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.ServiceException;
+import net.kprod.dsb.Utils;
 import net.kprod.dsb.data.CompletionResponse;
 import net.kprod.dsb.data.DriveFileTypes;
 import net.kprod.dsb.data.File2Process;
@@ -83,7 +84,7 @@ public class UpdateServiceImpl implements UpdateService {
                 .map(f2p -> {
                     String fileId = f2p.getFileId();
 
-                    Optional<EntityFile> optDoc = repositoryFile.findById(idFile(fileId));
+                    Optional<EntityFile> optDoc = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
                     if (optDoc.isPresent()) {
                         return optDoc.get()
                                 //updapte md5
@@ -107,7 +108,7 @@ public class UpdateServiceImpl implements UpdateService {
             //prepare pages comparison
             int currentCount = 0;
             boolean allowCompare = true;
-            Optional<EntityTranscript> t = repositoryTranscript.findById(idFile(file2Process.getFileId()));
+            Optional<EntityTranscript> t = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file2Process.getFileId()));
             List<BufferedImage> previousImages = new ArrayList<>();
             if(t.isPresent()) {
                 currentCount = t.get().getPageCount();
@@ -184,7 +185,7 @@ public class UpdateServiceImpl implements UpdateService {
                 for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
 
                     String fileId = entry.getKey();
-                    Optional<EntityTranscript> optDoc = repositoryTranscript.findById(idFile(fileId));
+                    Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
                     EntityTranscript entityTranscript = null;
                     if (optDoc.isPresent()) {
                         // already exists transcript
@@ -235,7 +236,7 @@ public class UpdateServiceImpl implements UpdateService {
                     entityTranscript
                             .setName(f2p.getFileName())
                             .setTranscripted_at(OffsetDateTime.now())
-                            .setDocumented_at(utilsService.identifyDates(f2p))
+                            .setDocumented_at(Utils.identifyDates(f2p))
                             .setPageCount(listCompletionResponse.size());
 
                     repositoryTranscript.save(entityTranscript);
@@ -368,7 +369,7 @@ public class UpdateServiceImpl implements UpdateService {
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());
-                    Optional<EntityFile> optDoc = repositoryFile.findById(idFile(file.getId()));
+                    Optional<EntityFile> optDoc = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file.getId()));
                     if (file.getTrashed() == true) {
                         LOG.info("File is trashed {} {}", file.getId(), file.getName());
                     } else if (optDoc.isPresent() && optDoc.get().getMd5().equals(file.getMd5Checksum()) == true) {
@@ -453,7 +454,7 @@ public class UpdateServiceImpl implements UpdateService {
 
             repositoryTranscriptPage.save(entityTranscriptPage);
 
-            Optional<EntityTranscript> entityTranscript = repositoryTranscript.findById(idFile(fileId));
+            Optional<EntityTranscript> entityTranscript = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
             if (entityTranscript.isPresent()) {
                 entityTranscript.get().bumpVersion();
                 repositoryTranscript.save(entityTranscript.get());

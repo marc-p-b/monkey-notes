@@ -5,10 +5,7 @@ import net.kprod.dsb.data.dto.DtoTranscript;
 import net.kprod.dsb.data.dto.DtoTranscriptDetails;
 import net.kprod.dsb.data.dto.FileNode;
 import net.kprod.dsb.data.enums.ViewOptionsCompletionStatus;
-import net.kprod.dsb.service.DriveChangeManagerService;
-import net.kprod.dsb.service.DriveUtilsService;
-import net.kprod.dsb.service.UtilsService;
-import net.kprod.dsb.service.ViewService;
+import net.kprod.dsb.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,6 +29,9 @@ public class TranscriptController {
 
     @Autowired
     private DriveUtilsService driveUtilsService;
+
+    @Autowired
+    private UpdateService updateService;
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
@@ -69,21 +69,21 @@ public class TranscriptController {
 
     @GetMapping("/transcript/update/all")
     public ResponseEntity<String> updateAll() {
-        driveChMgmtService.updateAll();
+        updateService.updateAll();
         return ResponseEntity.ok().body("Update root folder requested");
     }
 
     //@GetMapping("/update/folder/{folderId}")
     @GetMapping("/transcript/folder/update/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
-        driveChMgmtService.updateFolder(folderId);
+        updateService.updateFolder(folderId);
         return ResponseEntity.ok().body("Folder update is requested");
     }
 
     //@GetMapping("/update/transcript/{fileId}/{pageNumber}")
     @GetMapping("/transcript/update/{fileId}/{pageNumber}")
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
-        driveChMgmtService.forcePageUpdate(fileId, pageNumber);
+        updateService.forcePageUpdate(fileId, pageNumber);
         return ResponseEntity.ok().body("OK");
     }
 
@@ -106,7 +106,7 @@ public class TranscriptController {
 
     @GetMapping("/transcript/update/{fileId}")
     public ResponseEntity<String> forceUpdateTranscript(@PathVariable String fileId) {
-        driveChMgmtService.requestForceTranscriptUpdate(fileId);
+        updateService.requestForceTranscriptUpdate(fileId);
         return ResponseEntity.ok().body("Transcript update requested");
     }
 

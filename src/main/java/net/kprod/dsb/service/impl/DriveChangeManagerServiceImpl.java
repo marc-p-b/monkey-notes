@@ -152,6 +152,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         if(renewOrForced == false) {
             return;
         }
+
+        if(driveService.getDrive() == null) {
+            LOG.warn("Drive is disconnected");
+            return;
+        }
+
         OffsetDateTime odt = OffsetDateTime.now().plusSeconds(changesWatchExpiration);
         Channel channel = new Channel()
                 .setExpiration(odt.toInstant().toEpochMilli())
@@ -313,7 +319,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 String filename = change.getFile().getName();
                 LOG.info("Flushing fileid {} name {}", fileId, filename);
 
-                Optional<EntityFile> optDoc = repositoryFile.findById(utilsService.idFile(fileId));
+                Optional<EntityFile> optDoc = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
                 File file = null;
                 try {

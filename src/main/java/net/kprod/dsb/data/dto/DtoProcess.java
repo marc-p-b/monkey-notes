@@ -1,23 +1,31 @@
 package net.kprod.dsb.data.dto;
 
 public class DtoProcess {
-    String id;
-    String name;
-    String status;
-    String description;
-    String duration;
+    private String id;
+    private String name;
+    private String statusStr;
+    private Status status;
+    private String description;
+    private String duration;
+
+    public enum Status {
+        unknown,
+        running,
+        failed,
+        completed, error;
+    }
 
     public DtoProcess(String processId, String processName) {
         this.id = processId;
         this.name = processName;
     }
 
-    public String getStatus() {
-        return status;
+    public String getStatusStr() {
+        return statusStr;
     }
 
-    public DtoProcess setStatus(String status) {
-        this.status = status;
+    public DtoProcess setStatusStr(String statusStr) {
+        this.statusStr = statusStr;
         return this;
     }
 
@@ -57,12 +65,21 @@ public class DtoProcess {
         return this;
     }
 
+    public Status getStatus() {
+        return status;
+    }
+
+    public DtoProcess setStatus(Status status) {
+        this.status = status;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "DtoProcess{" +
                 "id='" + id + '\'' +
                 ", name='" + name + '\'' +
-                ", status='" + status + '\'' +
+                ", status='" + statusStr + '\'' +
                 ", description='" + description + '\'' +
                 ", duration='" + duration + '\'' +
                 '}';

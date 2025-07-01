@@ -15,8 +15,10 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Service
 public class ProcessServiceImpl implements ProcessService {
@@ -74,7 +76,8 @@ public class ProcessServiceImpl implements ProcessService {
                 AsyncProcess asyncProcess = e.getValue();
                 String processName = asyncProcess.getName();
                 CompletableFuture<AsyncResult> future = asyncProcess.getFuture();
-                String status = "unknown";
+                DtoProcess.Status status = DtoProcess.Status.unknown;
+                String statusStr = "unknown";
                 DtoProcess p = new DtoProcess(e.getKey(), processName);
 
                 Duration d = Duration.between(asyncProcess.getCreatedAt(), OffsetDateTime.now());
@@ -89,21 +92,41 @@ public class ProcessServiceImpl implements ProcessService {
                 if (future.isDone()) {
                     try {
                         AsyncResult asyncResult = future.get();
-                        status = switch (asyncResult.getState()) {
+                        statusStr = switch (asyncResult.getState()) {
                             case failed -> "failed";
                             case completed -> "completed in " + asyncResult.getRunTime() + "ms";
                             default -> "unknown";
                         };
+
+                        status = switch (asyncResult.getState()) {
+                            case failed -> DtoProcess.Status.failed;
+                            case completed -> DtoProcess.Status.completed;
+                            default -> DtoProcess.Status.unknown;
+                        };
+
                     } catch (InterruptedException | ExecutionException e2) {
-                        status = "ERROR while getting process status";
+                        statusStr = "ERROR while getting process status";
+                        status = DtoProcess.Status.error;
                     }
                 } else {
-                    status = "running";
+                    statusStr = "running";
+                    status = DtoProcess.Status.running;
                 }
+                p.setStatusStr(statusStr);
                 p.setStatus(status);
                 return p;
             })
             .toList();
+
+
+        //TODO add a checkbox on page to remove none running processes
+        Set<String> set2Remove = list.stream()
+                .filter(p -> !p.getStatus().equals(DtoProcess.Status.running))
+                .map(DtoProcess::getId)
+                .collect(Collectors.toSet());
+
+        mapAsyncProcess.keySet().removeAll(set2Remove);
+
         return list;
     }
 }

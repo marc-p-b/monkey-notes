@@ -32,7 +32,7 @@
                     const li = document.createElement("li");
 
                     const span = document.createElement("span");
-                    span.textContent = process.name + " : " + process.description + ", " + process.duration + " [" + process.status + "]";
+                    span.textContent = process.name + " : " + process.description + ", " + process.duration + " [" + process.statusStr + "]";
                     li.appendChild(span);
 
                     const aCancel = document.createElement("a");
@@ -45,7 +45,8 @@
 
                 });
             });
-    }document.createTextNode(' - ')
+    }
+
 
     document.addEventListener('DOMContentLoaded', ready);
 

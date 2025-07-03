@@ -105,8 +105,20 @@ public class UtilsServiceImpl implements UtilsService {
     }
 
     @Override
+    public Path tempImagePath(String fileId, int imageNumber) {
+        Path path = Paths.get(imageDir(fileId + "_temp").toString(),fileId + "_" + imageNumber + ".jpg");
+        return path;
+    }
+
+    @Override
     public Path imagePath(String username, String fileId, int imageNumber) {
         Path path = Paths.get(userDataBasePath, username, IMAGES, fileId,fileId + "_" + imageNumber + ".jpg");
+        return path;
+    }
+
+    @Override
+    public Path tempImagePath(String username, String fileId, int imageNumber) {
+        Path path = Paths.get(userDataBasePath, username, IMAGES, fileId + "_temp",fileId + "_" + imageNumber + ".jpg");
         return path;
     }
 
@@ -117,6 +129,17 @@ public class UtilsServiceImpl implements UtilsService {
                 .append(username).append("/")
                 .append(fileId).append("/")
                 .append(imageNumber);
+
+        return new URL(stringBuilder.toString());
+    }
+
+    @Override
+    public URL tempImageURL(String username, String fileId, int imageNumber) throws MalformedURLException {
+        StringBuilder stringBuilder = new StringBuilder()
+                .append(selfUrl).append("/image/")
+                .append(username).append("/")
+                .append(fileId).append("/")
+                .append(imageNumber).append("/temp");
 
         return new URL(stringBuilder.toString());
     }

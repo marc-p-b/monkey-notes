@@ -2,6 +2,8 @@ package net.kprod.dsb.data;
 
 public class CompletionResponse {
     private String fileId;
+    private int pageNumber;
+
     private long transcriptTook;
     private String aiModel;
     private int tokensPrompt;
@@ -83,6 +85,15 @@ public class CompletionResponse {
 
     public CompletionResponse setTranscriptTook(long transcriptTook) {
         this.transcriptTook = transcriptTook;
+        return this;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public CompletionResponse setPageNumber(int pageNumber) {
+        this.pageNumber = pageNumber;
         return this;
     }
 }

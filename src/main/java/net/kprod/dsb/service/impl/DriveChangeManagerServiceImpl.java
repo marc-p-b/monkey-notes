@@ -269,6 +269,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
+        //TODO filter already processing fileId
+
         if(processService.concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
         }

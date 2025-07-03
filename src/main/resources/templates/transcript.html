@@ -105,7 +105,7 @@
                 headerVersion.textContent = data.version;
 
                 const h3 = document.createElement('h3');
-                h3.textContent = 'Page #' + page.pageNumber;
+                h3.textContent = 'Page #' + (page.pageNumber + 1);
 
                 const p = document.createElement('p');
                 p.innerHTML = page.transcriptHtml;

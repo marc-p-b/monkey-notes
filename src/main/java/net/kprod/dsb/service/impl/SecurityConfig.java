@@ -26,6 +26,7 @@ public class SecurityConfig {
                 .requestMatchers("/grant-callback").permitAll()  // Public endpoints
                 .requestMatchers("/notify").permitAll()
                 .requestMatchers("/image/*/*/*").permitAll() //todo secure
+                .requestMatchers("/imagetemp/*/*/*").permitAll() //todo secure
                 .anyRequest().authenticated()  // Secure all other endpoints
             )
             .formLogin(Customizer.withDefaults()) // Enable form login

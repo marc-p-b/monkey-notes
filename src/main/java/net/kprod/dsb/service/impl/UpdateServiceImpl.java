@@ -3,9 +3,7 @@ package net.kprod.dsb.service.impl;
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.ServiceException;
 import net.kprod.dsb.Utils;
-import net.kprod.dsb.data.CompletionResponse;
-import net.kprod.dsb.data.DriveFileTypes;
-import net.kprod.dsb.data.File2Process;
+import net.kprod.dsb.data.*;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.AsyncProcessName;
 import net.kprod.dsb.data.enums.FileType;
@@ -17,6 +15,7 @@ import net.kprod.dsb.monitoring.MonitoringAsync;
 import net.kprod.dsb.monitoring.MonitoringService;
 import net.kprod.dsb.monitoring.SupplyAsyncAuthenticated;
 import net.kprod.dsb.service.*;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +28,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -79,7 +80,242 @@ public class UpdateServiceImpl implements UpdateService {
     private RepositoryTranscriptPage repositoryTranscriptPage;
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
-        // create file objects
+
+        for(File2Process file2Process : files2Process) {
+            // --------------------------------------
+            // get full path of the current file
+            // --------------------------------------
+            try {
+                updateAncestorsFolders(file2Process.getFileId());
+            } catch (ServiceException e) {
+                LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+            }
+
+            // --------------------------------------
+            // PDF 2 images
+            // --------------------------------------
+            //Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId() + "_temp");
+            List<URL> listImages = pdfService.pdf2Images(
+                    authService.getUsernameFromContext(),
+                    file2Process.getFileId(),
+                    file2Process.getFilePath().toFile());
+//            ,
+//                    imageWorkingDir);
+            LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
+
+            // --------------------------------------
+            // Get list of modified or created images
+            // --------------------------------------
+            Images2Process images2Process = getModifiedOrNewImages2Process(file2Process, listImages);
+
+            List<Image2Process> modifiedOrNewImages = images2Process.getListImage2Process();
+            LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
+
+            // --------------------------------------
+            // Call LLM
+            // --------------------------------------
+            List<CompletionResponse> listCompletionResponse = new ArrayList<>();
+            for (Image2Process image2Process : modifiedOrNewImages) {
+                URL imageUrl = image2Process.getUrl();
+
+                CompletionResponse completionResponse = qwenService.analyzeImage(
+                        file2Process.getFileId(),
+                        imageUrl);
+                completionResponse.setFile2Process(file2Process);
+                completionResponse.setPageNumber(image2Process.getPageNumber());
+                listCompletionResponse.add(completionResponse);
+                if (completionResponse.isCompleted()) {
+                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
+                } else {
+                    LOG.info("FileId {} Image {} failed", file2Process.getFileId(), imageUrl);
+                }
+            }
+            LOG.info("Images converted {}", listCompletionResponse.size());
+
+            Map<String, List<CompletionResponse>> mapCompleted = listCompletionResponse.stream()
+                    .collect(Collectors.groupingBy(CompletionResponse::getFileId));
+
+            for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
+                String fileId = entry.getKey();
+                Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+                EntityTranscript entityTranscript = null;
+                if (optDoc.isPresent()) {
+                    // already exists transcript
+                    entityTranscript = optDoc.get();
+                    entityTranscript.bumpVersion();
+                } else {
+                    // new transcript
+                    entityTranscript = new EntityTranscript()
+                            .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+                }
+                listCompletionResponse = entry.getValue();
+
+                Map<Integer, CompletionResponse> map = listCompletionResponse.stream()
+                        .collect(Collectors.toMap(
+                                CompletionResponse::getPageNumber,
+                                cr -> cr
+                        ));
+
+                //int page = 1;
+                //for (CompletionResponse completionResponse : listCompletionResponse) {
+
+                for(Image2Process image2Process : modifiedOrNewImages) {
+
+                    //CompletionResponse completionResponse = listCompletionResponse.get(image2Process.getPageNumber());
+                    CompletionResponse completionResponse = map.get(image2Process.getPageNumber());
+
+                    try {
+                        repositoryTranscriptPage.deleteById(IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, image2Process.getPageNumber()));
+                    } catch (Exception e) {
+                        LOG.warn("Failed to get page {}", fileId, e);
+                    }
+
+                    IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, completionResponse.getPageNumber());
+                    Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
+
+                    EntityTranscriptPage entityTranscriptPage = null;
+                    if (optPage.isPresent()) {
+                        //already exists page
+                        entityTranscriptPage = optPage.get();
+                        entityTranscriptPage.bumpVersion();
+                    } else {
+                        //new page
+                        entityTranscriptPage = new EntityTranscriptPage()
+                                .setIdTranscriptPage(idTranscriptPage);
+
+                    }
+                    if (completionResponse.isCompleted()) {
+                        entityTranscriptPage
+                                .setTranscript(completionResponse.getTranscript())
+                                .setAiModel(completionResponse.getAiModel())
+                                .setTranscriptTook(completionResponse.getTranscriptTook())
+                                .setTokensPrompt(completionResponse.getTokensPrompt())
+                                .setTokensResponse(completionResponse.getTokensCompletion())
+                                .setCompleted(true);
+                    } else {
+                        entityTranscriptPage
+                                .setTranscript("Transcription failed")
+                                .setCompleted(false);
+                    }
+                    repositoryTranscriptPage.save(entityTranscriptPage);
+                }
+
+                File2Process f2p = listCompletionResponse.get(0).getFile2Process();
+
+                entityTranscript
+                        .setName(f2p.getFileName())
+                        .setTranscripted_at(OffsetDateTime.now())
+                        .setDocumented_at(Utils.identifyDates(f2p))
+                        .setPageCount(listImages.size());
+
+                repositoryTranscript.save(entityTranscript);
+
+                }
+            //}
+
+        }
+        //LOG.info("Done processing files {}", listDocs.size());
+
+        // TODO moved at the end... OK ?
+        createFileEntities(files2Process);
+
+
+    }
+
+    @NotNull
+    private Images2Process getModifiedOrNewImages2Process(File2Process file2Process, List<URL> newImages) {
+
+
+        String fileId = file2Process.getFileId();
+
+        //int currentCount = 0;
+        boolean allowCompare = true;
+        Optional<EntityTranscript> transcript = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file2Process.getFileId()));
+        List<BufferedImage> previousImages = new ArrayList<>();
+        if(transcript.isPresent()) {
+            //currentCount = transcript.get().getPageCount();
+            for(int imageNum = 0; imageNum < transcript.get().getPageCount(); imageNum++) {
+                Path imgPath = utilsService.imagePath(authService.getUsernameFromContext(), file2Process.getFileId(), imageNum);
+                try {
+                    previousImages.add(ImageIO.read(imgPath.toFile()));
+                } catch (IOException e) {
+                    LOG.error("Failed to load image fileid {} page {}", file2Process.getFileId(), imageNum);
+                    allowCompare = false;
+                }
+            }
+        }
+
+        List<Image2Process> modifiedOrNewImages = new ArrayList<>();
+
+        int changeAfter = 0;
+        if(allowCompare && transcript.isPresent()) {
+
+            boolean isFileModified = false;
+
+            int imageNum = 0;
+            //compare until differs within the size of previous list
+            for(; imageNum < previousImages.size() && isFileModified == false; imageNum++) {
+                try {
+                    BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+
+                    BufferedImage newImg = ImageIO.read(utilsService.tempImagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+
+
+                    double comp = imageService.compareImages(previousImg, newImg);
+                    if(Double.POSITIVE_INFINITY != comp) {
+                        isFileModified = true;
+                        modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+                    }
+
+                } catch (IOException e) {
+                    LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
+                    isFileModified = true;
+                    modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+                }
+            }
+
+            //differs at imageNum
+            changeAfter = imageNum;
+            for(; imageNum < newImages.size(); imageNum++) {
+                modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
+            }
+
+
+        } else {
+            //add all images to modified set
+            for(int imageNum = 0; imageNum < newImages.size(); imageNum++) {
+                modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
+            }
+        }
+
+        return new Images2Process()
+                .setListImage2Process(modifiedOrNewImages)
+                .setChangeAfterPageNumber(changeAfter);
+    }
+
+//    private List<Image2Process> comparePages(String fileId, List<URL> newImages, List<BufferedImage> previousImages, int start, int end) {
+//        boolean isFileModified = false;
+//        List<Image2Process> modifiedOrNewImages = new ArrayList<>();
+//        for(int imageNum = start; imageNum < end && isFileModified == false; imageNum++) {
+//            try {
+//                BufferedImage img = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+//                double comp = imageService.compareImages(previousImages.get(imageNum), img);
+//                if(Double.POSITIVE_INFINITY != comp) {
+//                    isFileModified = true;
+//                    modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+//                }
+//
+//            } catch (IOException e) {
+//                LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
+//                isFileModified = true;
+//                modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+//            }
+//        }
+//        return modifiedOrNewImages;
+//    }
+
+    @NotNull
+    private List<EntityFile> createFileEntities(List<File2Process> files2Process) {
         List<EntityFile> listDocs = files2Process.stream()
                 .map(f2p -> {
                     String fileId = f2p.getFileId();
@@ -94,158 +330,10 @@ public class UpdateServiceImpl implements UpdateService {
                     }
                 })
                 .toList();
+
+        //TODO do this after processing ?
         repositoryFile.saveAll(listDocs);
-
-        for(File2Process file2Process : files2Process) {
-
-            //update full path
-            try {
-                updateAncestorsFolders(file2Process.getFileId());
-            } catch (ServiceException e) {
-                LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
-            }
-
-            //prepare pages comparison
-            int currentCount = 0;
-            boolean allowCompare = true;
-            Optional<EntityTranscript> t = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file2Process.getFileId()));
-            List<BufferedImage> previousImages = new ArrayList<>();
-            if(t.isPresent()) {
-                currentCount = t.get().getPageCount();
-                for(int imageNum = 1; imageNum <= t.get().getPageCount(); imageNum++) {
-                    Path imgPath = utilsService.imagePath(authService.getUsernameFromContext(), file2Process.getFileId(), imageNum);
-                    try {
-                        previousImages.add(ImageIO.read(imgPath.toFile()));
-                    } catch (IOException e) {
-                        LOG.error("Failed to load image fileid {} page {}", file2Process.getFileId(), imageNum);
-                        allowCompare = false;
-                    }
-                }
-            }
-
-            Path imageWorkingDir = utilsService.downloadDir(file2Process.getFileId());
-            List<URL> listImages = pdfService.pdf2Images(
-                    authService.getUsernameFromContext(),
-                    file2Process.getFileId(),
-                    file2Process.getFilePath().toFile(),
-                    imageWorkingDir);
-            LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
-
-            //at least one page is modified
-            //TODO transcript only modified pages
-            boolean isFileModified = false;
-            if(listImages.size() == currentCount && allowCompare) {
-                //same page count, compare content
-                for(int imageNum = 1; imageNum <= listImages.size(); imageNum++) {
-                    try {
-                        BufferedImage img = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), file2Process.getFileId(), imageNum).toFile());
-                        double comp = imageService.compareImages(previousImages.get(imageNum - 1), img);
-
-//                        if(Double.POSITIVE_INFINITY == comp) {
-//                            LOG.info("FileId {} page {} UNMODIFIED", file2Process.getFileId(), imageNum);
-//                        } else {
-//                            isFileModified = true;
-//                            LOG.info("FileId {} page {} MODIFIED", file2Process.getFileId(), imageNum);
-//                        }
-
-                        if(Double.POSITIVE_INFINITY != comp) {
-                            isFileModified = true;
-                        }
-
-                    } catch (IOException e) {
-                        LOG.error("Failed to compare images img {} page {}", file2Process.getFileId(), imageNum);
-                    }
-                }
-            } else {
-                isFileModified = true;
-                LOG.info("FileId {} page count changed", file2Process.getFileId());
-            }
-            LOG.info("PDF fileId {} status {}", file2Process.getFileId(), (isFileModified ? "modified" : "unmodified"));
-
-            if(isFileModified) {
-
-                List<CompletionResponse> listCompletionResponse = new ArrayList<>();
-                for (URL imagePath : listImages) {
-                    CompletionResponse completionResponse = qwenService.analyzeImage(
-                            file2Process.getFileId(),
-                            imagePath);
-                    completionResponse.setFile2Process(file2Process);
-                    listCompletionResponse.add(completionResponse);
-                    if (completionResponse.isCompleted()) {
-                        LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imagePath, completionResponse.getTranscript().length());
-                    } else {
-                        LOG.info("FileId {} Image {} failed", file2Process.getFileId(), imagePath);
-                    }
-                }
-                LOG.info("Images converted {}", listCompletionResponse.size());
-
-                Map<String, List<CompletionResponse>> mapCompleted = listCompletionResponse.stream()
-                        .collect(Collectors.groupingBy(CompletionResponse::getFileId));
-
-                for (Map.Entry<String, List<CompletionResponse>> entry : mapCompleted.entrySet()) {
-
-                    String fileId = entry.getKey();
-                    Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-                    EntityTranscript entityTranscript = null;
-                    if (optDoc.isPresent()) {
-                        // already exists transcript
-                        entityTranscript = optDoc.get();
-                        entityTranscript.bumpVersion();
-                    } else {
-                        // new transcript
-                        entityTranscript = new EntityTranscript()
-                                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-                    }
-                    listCompletionResponse = entry.getValue();
-
-                    int page = 1;
-                    for (CompletionResponse completionResponse : listCompletionResponse) {
-
-                        IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, page++);
-                        Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
-
-                        EntityTranscriptPage entityTranscriptPage = null;
-                        if (optPage.isPresent()) {
-                            //already exists page
-                            entityTranscriptPage = optPage.get();
-                            entityTranscriptPage.bumpVersion();
-                        } else {
-                            //new page
-                            entityTranscriptPage = new EntityTranscriptPage()
-                                    .setIdTranscriptPage(idTranscriptPage);
-
-                        }
-                        if (completionResponse.isCompleted()) {
-                            entityTranscriptPage
-                                    .setTranscript(completionResponse.getTranscript())
-                                    .setAiModel(completionResponse.getAiModel())
-                                    .setTranscriptTook(completionResponse.getTranscriptTook())
-                                    .setTokensPrompt(completionResponse.getTokensPrompt())
-                                    .setTokensResponse(completionResponse.getTokensCompletion())
-                                    .setCompleted(true);
-                        } else {
-                            entityTranscriptPage
-                                    .setTranscript("Transcription failed")
-                                    .setCompleted(false);
-                        }
-                        repositoryTranscriptPage.save(entityTranscriptPage);
-                    }
-
-                    File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-
-                    entityTranscript
-                            .setName(f2p.getFileName())
-                            .setTranscripted_at(OffsetDateTime.now())
-                            .setDocumented_at(Utils.identifyDates(f2p))
-                            .setPageCount(listCompletionResponse.size());
-
-                    repositoryTranscript.save(entityTranscript);
-
-                }
-            }
-
-        }
-        LOG.info("Done processing files {}", listDocs.size());
+        return listDocs;
     }
 
     private String updateAncestorsFolders(String fileId) throws ServiceException {

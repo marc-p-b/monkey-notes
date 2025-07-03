@@ -18,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -32,6 +33,20 @@ public class ImageServiceImpl implements ImageService {
     @Override
     public void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream) throws IOException {
         try (InputStream inputStream = new FileInputStream(utilsService.imagePath(username, fileId, imageNum).toFile())) {
+            byte[] buffer = new byte[IMAGE_READ_BUFFER];
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+        }
+    }
+
+    @Override
+    public void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream, boolean temp) throws IOException {
+        Path p = temp ? utilsService.tempImagePath(username, fileId, imageNum) : utilsService.imagePath(username, fileId, imageNum);
+
+        try (InputStream inputStream = new FileInputStream(p.toFile())) {
             byte[] buffer = new byte[IMAGE_READ_BUFFER];
             int bytesRead;
 

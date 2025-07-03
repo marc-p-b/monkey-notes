@@ -217,7 +217,7 @@ public class ViewServiceImpl implements ViewService {
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
         List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
 
-        for(int n = 1; n <= t.getPageCount(); n++) {
+        for(int n = 0; n < t.getPageCount(); n++) {
             //todo optimize ? include in all requests ? // remove n ?
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n));

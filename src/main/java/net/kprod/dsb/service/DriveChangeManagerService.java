@@ -19,7 +19,7 @@ public interface DriveChangeManagerService {
 
     void watch(boolean renewOrForce);
 
-    void renewWatch() throws IOException;
+    void renewWatch(String username) throws IOException;
 
     void changeNotified(String channelId);
 

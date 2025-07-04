@@ -67,6 +67,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private Map<String, ChangedFile> mapScheduled = new HashMap<>();
     private Map<String, WatchData> mapUsernameWatchData;
     private Map<String, WatchData> mapChannelIdWatchData;
+    private Set<String> setProcessingFileId = new HashSet<>();
 
     @Autowired
     private ApplicationContext ctx;
@@ -103,11 +104,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     @Autowired
     private PreferencesService preferencesService;
-
-
-
-    //TODO UTILS
-
 
     @EventListener(ApplicationReadyEvent.class)
     void connect() {
@@ -318,8 +314,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    private Set<String> setProcessingFileId = new HashSet<>();
-
     public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
 
         // TODO SYNC !
@@ -400,7 +394,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         System.out.println("T> "+ setProcessingFileId);
     }
 
+    public void renewWatch(String username) throws IOException {
+        NoAuthContextHolder.setContext(new NoAuthContext(username));
+        LOG.info("renew watch for user {}", username);
 
+        WatchData watchData = mapUsernameWatchData.get(username);
+        //LOG.info("stop watch channel id {}", responseChannel.getResourceId());
+        driveService.getDrive().channels().stop(watchData.getChannel());
+
+        this.watch(true);
+    }
 
     //TODO
     public void watchStop() throws IOException {
@@ -409,15 +412,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 //        watchChanges = false;
     }
 
-    //TODO
-    public void renewWatch() throws IOException {
-//        LOG.info("renew watch");
-//
-//        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
-//        driveService.getDrive().channels().stop(responseChannel);
-//
-//        this.watch(true);
-    }
 
     //TODO
     @Override

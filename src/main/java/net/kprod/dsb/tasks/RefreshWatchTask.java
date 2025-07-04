@@ -39,7 +39,7 @@ public class RefreshWatchTask implements Runnable{
 		long startTime = System.currentTimeMillis();
 		try {
 			//TODO set username here
-            service.renewWatch();
+            service.renewWatch(username);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

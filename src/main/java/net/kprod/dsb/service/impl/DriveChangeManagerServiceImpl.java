@@ -269,7 +269,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
-        //TODO filter already processing fileId
+
 
         if(processService.concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
@@ -281,6 +281,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
             // register async process
+            //TODO filter already processing fileId ?
+
+
+
             long items = mapAuth2SetFlushedFileId.values().stream()
                     .flatMap(s->s.stream())
                     .count();
@@ -314,8 +318,21 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
+    private Set<String> setProcessingFileId = new HashSet<>();
+
     public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
-        List<File2Process> files2Process = setFlushedFileId.stream()
+
+        // TODO SYNC !
+        //Removed already processing
+        Set<String> setFilteredFlushedFileId = setFlushedFileId.stream()
+                .filter(fileId -> !setProcessingFileId.contains(fileId))
+                .collect(Collectors.toSet());
+
+        setProcessingFileId.addAll(setFilteredFlushedFileId);
+        System.out.println("S> "+ setProcessingFileId);
+        // TODO SYNC END !
+
+        List<File2Process> files2Process = setFilteredFlushedFileId.stream()
             .map(fileId -> {
                 Change change = mapScheduled.get(fileId).getChange();
                 String filename = change.getFile().getName();
@@ -379,6 +396,8 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .toList();
 
         updateService.runListAsyncProcess(files2Process);
+        setProcessingFileId.removeAll(setFilteredFlushedFileId);
+        System.out.println("T> "+ setProcessingFileId);
     }
 
 

@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class AsyncProcess {
         private String id;
+        //private String uniqueId;
         private String name;
         private OffsetDateTime createdAt;
         private String description;
@@ -23,6 +24,15 @@ public class AsyncProcess {
                 this.id = id;
                 return this;
         }
+//
+//        public String getUniqueId() {
+//                return uniqueId;
+//        }
+//
+//        public AsyncProcess setUniqueId(String uniqueId) {
+//                this.uniqueId = uniqueId;
+//                return this;
+//        }
 
         public String getName() {
                 return name;

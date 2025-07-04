@@ -43,7 +43,7 @@ public class ImageController {
 
     @GetMapping(value = "/imagetemp/{username}/{fileId}/{imageNum}")
     public ResponseEntity<StreamingResponseBody> getImageWithMediaTypeTemp(@PathVariable String username, @PathVariable String fileId, @PathVariable int imageNum) throws IOException {
-        File file = utilsService.imagePath(username, fileId, imageNum).toFile();
+        File file = utilsService.tempImagePath(username, fileId, imageNum).toFile();
 
         StreamingResponseBody stream = outputStream -> {
             imageService.efficientStreamImage(username, fileId, imageNum, outputStream, true);

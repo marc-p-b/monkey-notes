@@ -27,8 +27,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -131,6 +130,25 @@ public class UpdateServiceImpl implements UpdateService {
                 }
             }
             LOG.info("Images converted {}", listCompletionResponse.size());
+
+
+            Path tempDir = utilsService.tempImageDir(file2Process.getFileId());
+            Path oldDir = utilsService.imageDir(file2Process.getFileId());
+
+            try {
+                if(oldDir.toFile().exists()) {
+                    LOG.info("delete {}", oldDir);
+                    //Files.delete(oldDir);
+                    Utils.deleteDirectory(oldDir);
+                }
+                LOG.info("move {} to {}", tempDir, oldDir);
+                Files.move(tempDir, oldDir, StandardCopyOption.REPLACE_EXISTING);
+
+                //LOG.info("delete temp {}", tempDir);
+                //Files.delete(tempDir);
+            } catch (IOException e) {
+                LOG.error("ERROR moving dirs", e);
+            }
 
             Map<String, List<CompletionResponse>> mapCompleted = listCompletionResponse.stream()
                     .collect(Collectors.groupingBy(CompletionResponse::getFileId));
@@ -239,7 +257,7 @@ public class UpdateServiceImpl implements UpdateService {
                 try {
                     previousImages.add(ImageIO.read(imgPath.toFile()));
                 } catch (IOException e) {
-                    LOG.error("Failed to load image fileid {} page {}", file2Process.getFileId(), imageNum);
+                    LOG.error("Failed to load previous image from path path {}", imgPath);
                     allowCompare = false;
                 }
             }
@@ -252,32 +270,54 @@ public class UpdateServiceImpl implements UpdateService {
 
             boolean isFileModified = false;
 
-            int imageNum = 0;
-            //compare until differs within the size of previous list
-            for(; imageNum < previousImages.size() && isFileModified == false; imageNum++) {
-                try {
-                    BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+            //TODO compare when pages count is the same
 
-                    BufferedImage newImg = ImageIO.read(utilsService.tempImagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+            if(previousImages.size() == newImages.size()) {
+
+                for (int imageNum = 0; imageNum < previousImages.size(); imageNum++) {
+                    try {
+                        BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+                        BufferedImage newImg = ImageIO.read(utilsService.tempImagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+                        double comp = imageService.compareImages(previousImg, newImg);
+                        if (Double.POSITIVE_INFINITY != comp) {
+                            modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+                        }
+
+                    } catch (IOException e) {
+                        LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
+                        modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+                    }
+                }
+
+            } else {
+
+                int imageNum = 0;
+                //compare until differs within the size of previous list
+                for (; imageNum < previousImages.size() && isFileModified == false; imageNum++) {
+                    try {
+                        BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
+
+                        BufferedImage newImg = ImageIO.read(utilsService.tempImagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
 
 
-                    double comp = imageService.compareImages(previousImg, newImg);
-                    if(Double.POSITIVE_INFINITY != comp) {
+                        double comp = imageService.compareImages(previousImg, newImg);
+                        if (Double.POSITIVE_INFINITY != comp) {
+                            isFileModified = true;
+                            modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
+                        }
+
+                    } catch (IOException e) {
+                        LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
                         isFileModified = true;
                         modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
                     }
-
-                } catch (IOException e) {
-                    LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
-                    isFileModified = true;
-                    modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
                 }
-            }
 
-            //differs at imageNum
-            changeAfter = imageNum;
-            for(; imageNum < newImages.size(); imageNum++) {
-                modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
+                //differs at imageNum
+                changeAfter = imageNum;
+                for (; imageNum < newImages.size(); imageNum++) {
+                    modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
+                }
             }
 
 

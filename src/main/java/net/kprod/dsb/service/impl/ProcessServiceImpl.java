@@ -12,10 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -26,11 +23,34 @@ public class ProcessServiceImpl implements ProcessService {
     private Map<String, AsyncProcess> mapAsyncProcess = new HashMap<>();
     long CONCURRENT_LIMIT = 1;
 
+
     public void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
+
+//        Optional<AsyncProcess> optExistingProcess = mapAsyncProcess.values().stream()
+//                .filter(p->p.getUniqueId().equals(uniqueId))
+//                .findFirst();
+//
+//        if(optExistingProcess.isPresent()) {
+//            AsyncProcess asyncProcess = optExistingProcess.get();
+//
+//            if(!asyncProcess.getFuture().isDone()) {
+//                LOG.warn("Async process {} already exists", asyncProcess.getUniqueId());
+//                return;
+//            }
+//
+//            //TODO auto vaccum process here ?
+//            //            if(asyncProcess.getFuture().isDone()) {
+//            //
+//            //            }
+//
+//        }
+
+
         String id = monitoringData.getId();
         AsyncProcess asyncProcess = new AsyncProcess()
                 .setId(id)
                 .setFuture(future)
+                //.setUniqueId(uniqueId)
                 //todo use enum ?
                 .setName(name.name())
                 .setCreatedAt(OffsetDateTime.now())

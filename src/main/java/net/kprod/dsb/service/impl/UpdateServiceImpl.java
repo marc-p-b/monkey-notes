@@ -27,11 +27,12 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -128,7 +129,6 @@ public class UpdateServiceImpl implements UpdateService {
             }
             LOG.info("Images converted {}", listCompletionResponse.size());
 
-
             // --------------------------------------
             // Move new files to regular dir
             // --------------------------------------
@@ -149,98 +149,94 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             // Create transcript db entities
             // --------------------------------------
-
-            String fileId = file2Process.getFileId();
-            Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-            EntityTranscript entityTranscript = null;
-            if (optDoc.isPresent()) {
-                // already exists transcript
-                entityTranscript = optDoc.get();
-                entityTranscript.bumpVersion();
-            } else {
-                // new transcript
-                entityTranscript = new EntityTranscript()
-                        .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-            }
-
-            //Map pageNumber -> CompletionResponse
-            Map<Integer, CompletionResponse> map = listCompletionResponse.stream()
-                .collect(Collectors.toMap(
-                    CompletionResponse::getPageNumber,
-                    cr -> cr
-                ));
+            saveTranscript(file2Process.getFileId(), listCompletionResponse, listImages.size());
 
             // --------------------------------------
             // Create transcript page db entities
             // --------------------------------------
-
-            for(Image2Process image2Process : modifiedOrNewImages) {
-                CompletionResponse completionResponse = map.get(image2Process.getPageNumber());
-
-//                //Delete modified transcript page
-//                try {
-//                    repositoryTranscriptPage.deleteById(IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, image2Process.getPageNumber()));
-//                } catch (Exception e) {
-//                    LOG.warn("Failed to get page {}", fileId, e);
-//                }
-
-                IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, completionResponse.getPageNumber());
-                Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
-
-                EntityTranscriptPage entityTranscriptPage = null;
-                if (optPage.isPresent()) {
-                    //already exists page
-                    entityTranscriptPage = optPage.get();
-                    entityTranscriptPage.bumpVersion();
-                } else {
-                    //new page
-                    entityTranscriptPage = new EntityTranscriptPage()
-                        .setIdTranscriptPage(idTranscriptPage);
-
-                }
-                if (completionResponse.isCompleted()) {
-                    //TODO process transcript text
-                    entityTranscriptPage
-                        .setTranscript(completionResponse.getTranscript())
-                        .setAiModel(completionResponse.getAiModel())
-                        .setTranscriptTook(completionResponse.getTranscriptTook())
-                        .setTokensPrompt(completionResponse.getTokensPrompt())
-                        .setTokensResponse(completionResponse.getTokensCompletion())
-                        .setCompleted(true);
-                } else {
-                    entityTranscriptPage
-                        .setTranscript("Transcription failed")
-                        .setCompleted(false);
-                }
-                repositoryTranscriptPage.save(entityTranscriptPage);
-            }
-
-            File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-            entityTranscript
-                    .setName(f2p.getFileName())
-                    .setTranscripted_at(OffsetDateTime.now())
-                    .setDocumented_at(Utils.identifyDates(f2p))
-                    .setPageCount(listImages.size());
-
-            repositoryTranscript.save(entityTranscript);
+            saveTranscriptPages(file2Process.getFileId(), listCompletionResponse, modifiedOrNewImages);
         }
         createFileEntities(files2Process);
         LOG.info("Done processing files {}", files2Process.size());
+    }
 
+    private String saveTranscript(String fileId, List<CompletionResponse> listCompletionResponse, int transcriptTotalPageCount) {
+
+        Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+        EntityTranscript entityTranscript = null;
+        if (optDoc.isPresent()) {
+            // already exists transcript
+            entityTranscript = optDoc.get();
+            entityTranscript.bumpVersion();
+        } else {
+            // new transcript
+            entityTranscript = new EntityTranscript()
+                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+        }
+
+        //TODO retrieve f2p is not very elegant
+        File2Process f2p = listCompletionResponse.get(0).getFile2Process();
+        entityTranscript
+                .setName(f2p.getFileName())
+                .setTranscripted_at(OffsetDateTime.now())
+                .setDocumented_at(Utils.identifyDates(f2p))
+                .setPageCount(transcriptTotalPageCount);
+        repositoryTranscript.save(entityTranscript);
+        return fileId;
+    }
+
+    private void saveTranscriptPages(String fileId, List<CompletionResponse> listCompletionResponse, List<Image2Process> modifiedOrNewImages) {
+        //Map pageNumber -> CompletionResponse
+        Map<Integer, CompletionResponse> mapPageNumber2Completion = listCompletionResponse.stream()
+                .collect(Collectors.toMap(
+                        CompletionResponse::getPageNumber,
+                        cr -> cr
+                ));
+
+        for(Image2Process image2Process : modifiedOrNewImages) {
+            CompletionResponse completionResponse = mapPageNumber2Completion.get(image2Process.getPageNumber());
+
+            IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, completionResponse.getPageNumber());
+            Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
+
+            EntityTranscriptPage entityTranscriptPage = null;
+            if (optPage.isPresent()) {
+                //already exists page
+                entityTranscriptPage = optPage.get();
+                entityTranscriptPage.bumpVersion();
+            } else {
+                //new page
+                entityTranscriptPage = new EntityTranscriptPage()
+                    .setIdTranscriptPage(idTranscriptPage);
+
+            }
+            if (completionResponse.isCompleted()) {
+                //TODO process transcript text
+                entityTranscriptPage
+                    .setTranscript(completionResponse.getTranscript())
+                    .setAiModel(completionResponse.getAiModel())
+                    .setTranscriptTook(completionResponse.getTranscriptTook())
+                    .setTokensPrompt(completionResponse.getTokensPrompt())
+                    .setTokensResponse(completionResponse.getTokensCompletion())
+                    .setCompleted(true);
+            } else {
+                entityTranscriptPage
+                    .setTranscript("Transcription failed")
+                    .setCompleted(false);
+            }
+            repositoryTranscriptPage.save(entityTranscriptPage);
+        }
     }
 
     @NotNull
     private Images2Process getModifiedOrNewImages2Process(File2Process file2Process, List<URL> newImages) {
-
-
         String fileId = file2Process.getFileId();
-
-        //int currentCount = 0;
         boolean allowCompare = true;
+
+        // previous images
         Optional<EntityTranscript> transcript = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file2Process.getFileId()));
         List<BufferedImage> previousImages = new ArrayList<>();
         if(transcript.isPresent()) {
-            //currentCount = transcript.get().getPageCount();
             for(int imageNum = 0; imageNum < transcript.get().getPageCount(); imageNum++) {
                 Path imgPath = utilsService.imagePath(authService.getUsernameFromContext(), file2Process.getFileId(), imageNum);
                 try {
@@ -252,17 +248,13 @@ public class UpdateServiceImpl implements UpdateService {
             }
         }
 
+        //compare with new images
         List<Image2Process> modifiedOrNewImages = new ArrayList<>();
-
         int changeAfter = 0;
         if(allowCompare && transcript.isPresent()) {
-
             boolean isFileModified = false;
-
-            //TODO compare when pages count is the same
-
             if(previousImages.size() == newImages.size()) {
-
+                //same page count, we compare all images
                 for (int imageNum = 0; imageNum < previousImages.size(); imageNum++) {
                     try {
                         BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
@@ -271,30 +263,23 @@ public class UpdateServiceImpl implements UpdateService {
                         if (Double.POSITIVE_INFINITY != comp) {
                             modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
                         }
-
                     } catch (IOException e) {
                         LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
                         modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
                     }
                 }
-
             } else {
-
+                //compare until differs within the size of previous list -> we stop comparison at first diff
                 int imageNum = 0;
-                //compare until differs within the size of previous list
                 for (; imageNum < previousImages.size() && isFileModified == false; imageNum++) {
                     try {
                         BufferedImage previousImg = ImageIO.read(utilsService.imagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
-
                         BufferedImage newImg = ImageIO.read(utilsService.tempImagePath(authService.getUsernameFromContext(), fileId, imageNum).toFile());
-
-
                         double comp = imageService.compareImages(previousImg, newImg);
                         if (Double.POSITIVE_INFINITY != comp) {
                             isFileModified = true;
                             modifiedOrNewImages.add(Image2Process.create(fileId, imageNum, newImages.get(imageNum)));
                         }
-
                     } catch (IOException e) {
                         LOG.error("Failed to compare images img {} page {}", fileId, imageNum);
                         isFileModified = true;
@@ -308,15 +293,12 @@ public class UpdateServiceImpl implements UpdateService {
                     modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
                 }
             }
-
-
         } else {
             //add all images to modified set
             for(int imageNum = 0; imageNum < newImages.size(); imageNum++) {
                 modifiedOrNewImages.add(Image2Process.create(file2Process.getFileId(), imageNum, newImages.get(imageNum)));
             }
         }
-
         return new Images2Process()
                 .setListImage2Process(modifiedOrNewImages)
                 .setChangeAfterPageNumber(changeAfter);

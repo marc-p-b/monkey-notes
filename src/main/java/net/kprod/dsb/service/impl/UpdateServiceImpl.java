@@ -2,7 +2,10 @@ package net.kprod.dsb.service.impl;
 
 import com.google.api.services.drive.model.File;
 import net.kprod.dsb.ServiceException;
-import net.kprod.dsb.Utils;
+import net.kprod.dsb.data.repository.RepositoryNamedEntity;
+import net.kprod.dsb.transcript.NamedEntity;
+import net.kprod.dsb.utils.TranscriptUtils;
+import net.kprod.dsb.utils.Utils;
 import net.kprod.dsb.data.*;
 import net.kprod.dsb.data.entity.*;
 import net.kprod.dsb.data.enums.AsyncProcessName;
@@ -79,6 +82,9 @@ public class UpdateServiceImpl implements UpdateService {
     @Autowired
     private RepositoryTranscriptPage repositoryTranscriptPage;
 
+    @Autowired
+    private RepositoryNamedEntity repositoryNamedEntity;
+
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
         for(File2Process file2Process : files2Process) {
@@ -147,6 +153,42 @@ public class UpdateServiceImpl implements UpdateService {
             }
 
             // --------------------------------------
+            // Identify commands
+            // --------------------------------------
+
+            try {
+//                repositoryNamedEntity.findAll()
+//                        .stream().forEach(e -> {
+//                            repositoryNamedEntity.delete(e);
+//                        });
+
+                List<EntityNamedEntity> namedEntities = new ArrayList<>();
+                for (CompletionResponse completionResponse : listCompletionResponse) {
+
+                    List<NamedEntity> list = TranscriptUtils.identifyCommands(completionResponse.getTranscript());
+                    for (NamedEntity transcriptCommand : list) {
+
+                        LOG.info("Pages {} command {}", completionResponse.getPageNumber(), transcriptCommand);
+
+//                    String value = transcriptCommand.getValue();
+//                    switch (transcriptCommand.getVerb()) {
+//
+//                    }
+                        IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(authService.getUsernameFromContext(), file2Process.getFileId(), completionResponse.getPageNumber());
+                        namedEntities.add(new EntityNamedEntity()
+                                .setIdNamedEntity(idNamedEntity)
+                                .setVerb(transcriptCommand.getVerb())
+                                .setValue(transcriptCommand.getValue())
+                                .setStartIndex(transcriptCommand.getStart())
+                                .setEndIndex(transcriptCommand.getEnd()));
+                    }
+                }
+                repositoryNamedEntity.saveAll(namedEntities);
+            }catch (Exception e) {
+                LOG.error("ERROR updating images", e);
+            }
+
+            // --------------------------------------
             // Create transcript db entities
             // --------------------------------------
             saveTranscript(file2Process.getFileId(), listCompletionResponse, listImages.size());
@@ -179,7 +221,7 @@ public class UpdateServiceImpl implements UpdateService {
         entityTranscript
                 .setName(f2p.getFileName())
                 .setTranscripted_at(OffsetDateTime.now())
-                .setDocumented_at(Utils.identifyDates(f2p))
+                .setDocumented_at(TranscriptUtils.identifyDates(f2p))
                 .setPageCount(transcriptTotalPageCount);
         repositoryTranscript.save(entityTranscript);
         return fileId;

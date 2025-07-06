@@ -3,10 +3,7 @@ package net.kprod.dsb.utils;
 import net.kprod.dsb.data.File2Process;
 import net.kprod.dsb.transcript.NamedEntity;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -24,6 +21,7 @@ public class TranscriptUtils {
         try {
             if (m1.find()) {
                 try {
+                    //TODO Date must be neutral (GMT) and then adapted to user according its setting
                     LocalDate ld = LocalDate.parse(m1.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
                     ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
                     documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
@@ -63,6 +61,21 @@ public class TranscriptUtils {
             NamedEntity.NamedEntityVerb verb = NamedEntity.NamedEntityVerb.fromString(m.group(1));
             String value = m.group(3);
 
+            Pattern patternDate = Pattern.compile("\\d\\d/\\d\\d/\\d\\d");
+
+            if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {
+                if (verb.equals(NamedEntity.NamedEntityVerb.dateUs)) {
+                    LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("yy/MM/dd"));
+                    LocalDateTime ldt = ld.atStartOfDay();
+                    Instant instant = ldt.toInstant(ZoneOffset.UTC);
+                    value = DateTimeFormatter.ISO_INSTANT.format(instant);
+                } else if (verb.equals(NamedEntity.NamedEntityVerb.dateIntl)) {
+                    LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("dd/MM/yy"));
+                    LocalDateTime ldt = ld.atStartOfDay();
+                    Instant instant = ldt.toInstant(ZoneOffset.UTC);
+                    value = DateTimeFormatter.ISO_INSTANT.format(instant);
+                }
+            }
             commands.add(new NamedEntity(verb, value, m.start(), m.end()));
 
         }

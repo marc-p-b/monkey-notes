@@ -33,7 +33,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.OffsetDateTime;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -153,34 +154,27 @@ public class UpdateServiceImpl implements UpdateService {
             }
 
             // --------------------------------------
-            // Identify commands
+            // Identify named entities
             // --------------------------------------
 
             try {
-//                repositoryNamedEntity.findAll()
-//                        .stream().forEach(e -> {
-//                            repositoryNamedEntity.delete(e);
-//                        });
+
 
                 List<EntityNamedEntity> namedEntities = new ArrayList<>();
                 for (CompletionResponse completionResponse : listCompletionResponse) {
+                    //remove namedEntities associated to this page
+                    repositoryNamedEntity.deleteByIdNamedEntity(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
 
                     List<NamedEntity> list = TranscriptUtils.identifyCommands(completionResponse.getTranscript());
-                    for (NamedEntity transcriptCommand : list) {
-
-                        LOG.info("Pages {} command {}", completionResponse.getPageNumber(), transcriptCommand);
-
-//                    String value = transcriptCommand.getValue();
-//                    switch (transcriptCommand.getVerb()) {
-//
-//                    }
+                    for (NamedEntity namedEntity : list) {
+                        LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
                         IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(authService.getUsernameFromContext(), file2Process.getFileId(), completionResponse.getPageNumber());
                         namedEntities.add(new EntityNamedEntity()
                                 .setIdNamedEntity(idNamedEntity)
-                                .setVerb(transcriptCommand.getVerb())
-                                .setValue(transcriptCommand.getValue())
-                                .setStartIndex(transcriptCommand.getStart())
-                                .setEndIndex(transcriptCommand.getEnd()));
+                                .setVerb(namedEntity.getVerb())
+                                .setValue(namedEntity.getValue())
+                                .setStartIndex(namedEntity.getStart())
+                                .setEndIndex(namedEntity.getEnd()));
                     }
                 }
                 repositoryNamedEntity.saveAll(namedEntities);

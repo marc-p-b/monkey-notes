@@ -6,7 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import net.kprod.dsb.transcript.NamedEntity;
 
-@Entity
+@Entity(name="named_entity")
 public class EntityNamedEntity {
     @EmbeddedId
     IdNamedEntity idNamedEntity;

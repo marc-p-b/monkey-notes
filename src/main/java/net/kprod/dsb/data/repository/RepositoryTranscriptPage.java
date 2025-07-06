@@ -11,5 +11,6 @@ import java.util.List;
 public interface RepositoryTranscriptPage extends JpaRepository<EntityTranscriptPage, IdTranscriptPage> {
     List<EntityTranscriptPage> findByIdTranscriptPage_Username(String username);
     List<EntityTranscriptPage> findByIdTranscriptPage_FileId(String FileId);
+    //TODO add username parameter to delete
     void deleteByIdTranscriptPage_FileId(String fileId);
 }

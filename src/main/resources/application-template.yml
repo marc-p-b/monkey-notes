@@ -1,0 +1,72 @@
+spring:
+  application.name: DriveSpringBoot
+  resources:
+    static-locations=classpath:static/:
+  datasource:
+    url: jdbc:postgresql://HOST:PORT/DB?currentSchema=SCHEMA
+    username: DB_USER
+    password: DB_PASSWORD
+    hikari.auto-commit: false
+  jpa:
+    hibernate.ddl-auto: update
+    properties.hibernate.jdbc.time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+app:
+  dry-run: false
+  drive:
+    auth:
+      refresh-token: 3500
+      client-id: GDRIVE_CLIENT_ID
+      client-secret: GDRIVE_SECRET
+  changes:
+    expiration: 3000
+    flush: 5
+  openai:
+    api: OPENAI_API_KEY
+    assistant:
+      defaults:
+        model: gpt-4o-mini
+        instructions: Tu es un assistant qui répond à des questions concernant des notes prises pendant des réunions. Le document joint \"knowledge.json\" (appelé NOTES par l'utilisateur) provient de notes manuscrites transformés par OCR au format JSON
+  qwen:
+    url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions
+    key: QWEN_API_KEY
+  paths:
+    user_data: /home/USER/.monkey/user_data
+  url:
+    self: https://PUBLIC_HOST
+  notify:
+    path: /notify
+  oauth-callback:
+    path: /grant-callback
+  defaults:
+    qwen:
+      prompt: extraire le texte de l'image. ne pas ajouter d'autre texte
+      # available models : qwen2.5-vl-72b-instruct, qwen-vl-max
+      model: qwen2.5-vl-72b-instruct
+      max-tokens: 5000
+    ai:
+      connect-timeout: 3000
+      read-timeout: 180000
+  email:
+    enable: true
+    sender: SENDER@EMAIL.COM
+    recipient: RECIPIENT@EMAIL.COM
+    mailjet.apikey:
+      public: MAILJET_API_PUBLIC_KEY
+      private: MAILJET_API_PRIVATE_KEY
+
+#Tooling Spring Boot Starter config
+tooling :
+  error :
+    stacktrace :
+      include : true
+      log : true
+
+#Logger config
+logging:
+  level:
+    ROOT: INFO

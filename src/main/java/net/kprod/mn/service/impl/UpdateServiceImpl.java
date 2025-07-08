@@ -114,6 +114,11 @@ public class UpdateServiceImpl implements UpdateService {
             List<Image2Process> modifiedOrNewImages = images2Process.getListImage2Process();
             LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
 
+            if(modifiedOrNewImages.isEmpty()) {
+                LOG.info("No new or modified images, exiting from update process");
+                return;
+            }
+
             // --------------------------------------
             // Call LLM
             // --------------------------------------
@@ -145,9 +150,12 @@ public class UpdateServiceImpl implements UpdateService {
                 if(imageDir.toFile().exists()) {
                     LOG.info("delete {}", imageDir);
                     Utils.deleteDirectory(imageDir);
+
+                    if(tempDir.toFile().exists()) {
+                        LOG.info("move {} to {}", tempDir, imageDir);
+                        Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
+                    }
                 }
-                LOG.info("move {} to {}", tempDir, imageDir);
-                Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 LOG.error("ERROR moving dirs", e);
             }
@@ -210,13 +218,15 @@ public class UpdateServiceImpl implements UpdateService {
         }
 
         //TODO retrieve f2p is not very elegant
-        File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-        entityTranscript
-                .setName(f2p.getFileName())
-                .setTranscripted_at(OffsetDateTime.now())
-                .setDocumented_at(TranscriptUtils.identifyDates(f2p))
-                .setPageCount(transcriptTotalPageCount);
-        repositoryTranscript.save(entityTranscript);
+        if(!listCompletionResponse.isEmpty()) {
+            File2Process f2p = listCompletionResponse.get(0).getFile2Process();
+            entityTranscript
+                    .setName(f2p.getFileName())
+                    .setTranscripted_at(OffsetDateTime.now())
+                    .setDocumented_at(TranscriptUtils.identifyDates(f2p))
+                    .setPageCount(transcriptTotalPageCount);
+            repositoryTranscript.save(entityTranscript);
+        }
         return fileId;
     }
 
@@ -417,6 +427,14 @@ public class UpdateServiceImpl implements UpdateService {
                     () -> asyncUpdateFolder(folderId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
+//            future.thenAccept(result -> {
+//               if(result.isSuccessful()) {
+//                   LOG.info("Successfully updated folder id {}", folderId);
+//               } else if (result.isFailure()) {
+//                   LOG.error("Failed to update folder id {}", folderId, result.getException());
+//               }
+//            });
+
             processService.registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
         } catch (ServiceException e) {
             LOG.info("Failed to prepare updateFolder async", e);
@@ -522,7 +540,13 @@ public class UpdateServiceImpl implements UpdateService {
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-
+//            future.thenAccept(result -> {
+//                if(result.isSuccessful()) {
+//                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
+//                } else if (result.isFailure()) {
+//                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
+//                }
+//            });
 
             String desc = new StringBuilder()
                     .append("forced update file ")
@@ -606,6 +630,15 @@ public class UpdateServiceImpl implements UpdateService {
                     optAuth.get(),
                     () -> asyncForceTranscriptUpdate(fileId));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+
+//            future.thenAccept(result -> {
+//                if(result.isSuccessful()) {
+//                    LOG.info("Successfully updated file id {}", fileId);
+//                } else if (result.isFailure()) {
+//                    LOG.error("Failed to update file id {}", fileId, result.getException());
+//                }
+//            });
+
 
             processService.registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
                     "update transcript " + utilsService.getLocalFileName(fileId), future);

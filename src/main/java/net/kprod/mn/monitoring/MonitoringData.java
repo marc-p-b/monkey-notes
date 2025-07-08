@@ -1,7 +1,5 @@
 package net.kprod.mn.monitoring;
 
-import net.kprod.mn.ServiceException;
-
 import java.util.Optional;
 
 /**
@@ -63,11 +61,7 @@ public class MonitoringData {
          * Build method
          * @return Builded {@link MonitoringData} object
          */
-        public MonitoringData build() throws ServiceException {
-//            if(StringUtils.isEmpty(service) || StringUtils.isEmpty(id)) {
-//                throw new ServiceException("Unable to build MonitorData");
-//            }
-            //TODO this is not great, find something better to ensure that those values are not null
+        public MonitoringData build() {
             return new MonitoringData(
                     this.id,
                     this.service,

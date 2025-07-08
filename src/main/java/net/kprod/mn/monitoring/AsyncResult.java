@@ -2,13 +2,13 @@ package net.kprod.mn.monitoring;
 
 public class AsyncResult {
     public enum State {
-        unknown,
+        //unknown,
         completed,
         failed;
     };
     private Long runTime;
     private Exception exception;
-    private State state = State.unknown;
+    private State state = State.failed;
 
     private AsyncResult() {
     }
@@ -60,5 +60,6 @@ public class AsyncResult {
     public boolean isFailure() {
         return state == State.failed;
     }
+
 }
 

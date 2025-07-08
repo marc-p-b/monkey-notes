@@ -23,8 +23,8 @@ public class ControllerLogAspect {
             + " || @annotation(org.springframework.web.bind.annotation.PutMapping)"
             + " || @annotation(org.springframework.web.bind.annotation.PatchMapping)"
             + " || @annotation(org.springframework.web.bind.annotation.PostMapping)"
-            + " || @annotation(net.kprod.mn.monitoring.MonitoringForce))"
-            + " && !@annotation(net.kprod.mn.monitoring.MonitoringDisable)")
+            + " || @annotation(fr.lmsg.mntt.monitoring.MonitoringForce))"
+            + " && !@annotation(fr.lmsg.mntt.monitoring.MonitoringDisable)")
     public Object controllerInterceptor(ProceedingJoinPoint joinPoint) throws Throwable {
         //serviceName is composed of Controller name and Controller method name
         //get the method name

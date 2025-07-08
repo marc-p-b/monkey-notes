@@ -1,6 +1,5 @@
 package net.kprod.mn.monitoring;
 
-import net.kprod.mn.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -31,11 +30,14 @@ public class MonitoringServiceImpl implements MonitoringService {
     @Value("${tooling.error.stacktrace.log:true}")
     private boolean logStackTrace;
 
-    public static final String STACKTRACE_UNAVAILABLE_MESSAGE = "unavailable";
-
     /** {@inheritDoc} */
     @Override
     public String start(String controllerName, String methodName) {
+        return start(controllerName, methodName, "");
+    }
+
+    @Override
+    public String start(String controllerName, String methodName, String suffix) {
         MDC.clear();
         //processId is a random UUID
         String processId = UUID.randomUUID().toString();
@@ -46,14 +48,13 @@ public class MonitoringServiceImpl implements MonitoringService {
                 .append(SERVICENAME_SEPARATOR)
                 .append(methodName);
 
-        try {
-            MonitoringData monitoringData = new MonitoringData
-                    .Builder(sbServiceName.toString(), processId)
-                    .build();
-            this.initMonitoring(monitoringData);
-        } catch (ServiceException e) {
-            LOG.error("Failed to start monitoring, [{}]", e.getMessage());
-        }
+
+        MonitoringData monitoringData = new MonitoringData
+                .Builder(sbServiceName.toString(), processId)
+                .setSuffix(suffix)
+                .build();
+        this.initMonitoring(monitoringData);
+
         return processId;
     }
 
@@ -92,14 +93,9 @@ public class MonitoringServiceImpl implements MonitoringService {
     }
 
     public MonitoringData getCurrentMonitoringData() {
-        try {
-            return new MonitoringData.Builder(this.getProcessName(), this.getProcessId())
-                    .setSuffix(getProcessSuffix())
-                    .build();
-        } catch (ServiceException e) {
-            LOG.error("Failed to get current monitoring, [{}]", e.getMessage());
-        }
-        return null;
+        return new MonitoringData.Builder(this.getProcessName(), this.getProcessId())
+                .setSuffix(getProcessSuffix())
+                .build();
     }
 
     //get processId from MDC

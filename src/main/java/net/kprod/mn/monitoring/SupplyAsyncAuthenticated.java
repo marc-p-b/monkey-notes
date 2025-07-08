@@ -1,6 +1,5 @@
 package net.kprod.mn.monitoring;
 
-import net.kprod.mn.ServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,19 +17,12 @@ public class SupplyAsyncAuthenticated implements Supplier {
      * @param monitoringService
      * @param runnable
      */
-    public SupplyAsyncAuthenticated(MonitoringService monitoringService, MonitoringData monitorData, Authentication authentication, AsyncRunnable runnable) throws ServiceException {
-        if(monitoringService == null ||
-                monitorData == null ||
-                runnable == null) {
-            //FIXME
-            throw new ServiceException("All parameters must be defined");
-        }
+    public SupplyAsyncAuthenticated(MonitoringService monitoringService, MonitoringData monitorData, Authentication authentication, AsyncRunnable runnable) {
         this.monitoringService = monitoringService;
         this.monitorData = monitorData;
         this.runnable = runnable;
         this.authentication = authentication;
     }
-
 
     /**
      * Async execution supplier

@@ -421,24 +421,21 @@ public class UpdateServiceImpl implements UpdateService {
             return;
         }
 
-        try {
-            SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
-                    optAuth.get(),
-                    () -> asyncUpdateFolder(folderId));
-            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+        SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
+                optAuth.get(),
+                () -> asyncUpdateFolder(folderId));
+        CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//            future.thenAccept(result -> {
-//               if(result.isSuccessful()) {
-//                   LOG.info("Successfully updated folder id {}", folderId);
-//               } else if (result.isFailure()) {
-//                   LOG.error("Failed to update folder id {}", folderId, result.getException());
-//               }
-//            });
+        future.thenAccept(result -> {
+           if(result.isSuccessful()) {
+               LOG.info("Successfully updated folder id {}", folderId);
+           } else if (result.isFailure()) {
+               LOG.error("Failed to update folder id {}", folderId, result.getException());
+           }
+        });
 
-            processService.registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
-        } catch (ServiceException e) {
-            LOG.info("Failed to prepare updateFolder async", e);
-        }
+        processService.registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
+
     }
 
     public void updateAll() {
@@ -540,13 +537,13 @@ public class UpdateServiceImpl implements UpdateService {
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//            future.thenAccept(result -> {
-//                if(result.isSuccessful()) {
-//                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
-//                } else if (result.isFailure()) {
-//                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
-//                }
-//            });
+            future.thenAccept(result -> {
+                if(result.isSuccessful()) {
+                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
+                } else if (result.isFailure()) {
+                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
+                }
+            });
 
             String desc = new StringBuilder()
                     .append("forced update file ")
@@ -556,8 +553,6 @@ public class UpdateServiceImpl implements UpdateService {
 
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
-        } catch (ServiceException e) {
-            LOG.error("Failed to prepare runAsyncForcePageUpdate async", e);
         }
     }
 
@@ -625,26 +620,24 @@ public class UpdateServiceImpl implements UpdateService {
             return;
         }
 
-        try {
-            SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
-                    optAuth.get(),
-                    () -> asyncForceTranscriptUpdate(fileId));
-            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//            future.thenAccept(result -> {
-//                if(result.isSuccessful()) {
-//                    LOG.info("Successfully updated file id {}", fileId);
-//                } else if (result.isFailure()) {
-//                    LOG.error("Failed to update file id {}", fileId, result.getException());
-//                }
-//            });
+        SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
+                optAuth.get(),
+                () -> asyncForceTranscriptUpdate(fileId));
+        CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+
+        future.thenAccept(result -> {
+            if(result.isSuccessful()) {
+                LOG.info("Successfully updated file id {}", fileId);
+            } else if (result.isFailure()) {
+                LOG.error("Failed to update file id {}", fileId, result.getException());
+            }
+        });
 
 
-            processService.registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
-                    "update transcript " + utilsService.getLocalFileName(fileId), future);
-        } catch (ServiceException e) {
-            LOG.error("Failed to prepare runAsyncForceTranscriptUpdate", e);
-        }
+        processService.registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
+                "update transcript " + utilsService.getLocalFileName(fileId), future);
+
     }
 
     @MonitoringAsync

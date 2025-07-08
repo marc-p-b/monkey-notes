@@ -258,35 +258,39 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             LOG.warn("Flush skipped, too much concurrent processes");
         }
 
-        try {
-            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
-                    () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
-            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+        SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
+        CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            // register async process
-            //TODO filter already processing fileId ?
+        // register async process
+        //TODO filter already processing fileId ?
 
-
-
-            long items = mapAuth2SetFlushedFileId.values().stream()
-                    .flatMap(s->s.stream())
-                    .count();
-
-            String desc = "";
-            if(items <= 10) {
-                String itemsList = mapAuth2SetFlushedFileId.values().stream()
-                        .flatMap(s -> s.stream())
-                        .map(s -> utilsService.getLocalFileName(s))
-                        .collect(Collectors.joining(", "));
-
-                desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
-            } else {
-                desc = new StringBuilder().append("flushing ").append(" items : ").toString();
+        future.thenAccept(result -> {
+            if(result.isSuccessful()) {
+                LOG.info("Successfully flushed changes");
+            } else if (result.isFailure()) {
+                LOG.error("Failed to flushed changes", result.getException());
             }
-            processService.registerSyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
-        } catch (ServiceException e) {
-            LOG.error("Failed preparing flushChanges async", e);
+        });
+
+
+
+        long items = mapAuth2SetFlushedFileId.values().stream()
+                .flatMap(s->s.stream())
+                .count();
+
+        String desc = "";
+        if(items <= 10) {
+            String itemsList = mapAuth2SetFlushedFileId.values().stream()
+                    .flatMap(s -> s.stream())
+                    .map(s -> utilsService.getLocalFileName(s))
+                    .collect(Collectors.joining(", "));
+
+            desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
+        } else {
+            desc = new StringBuilder().append("flushing ").append(" items : ").toString();
         }
+        processService.registerSyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
     }
 
     public void asyncProcessFlushed(Map<String, Set<String>> mapAuth2SetFlushedFileId) {

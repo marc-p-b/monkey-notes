@@ -1,7 +1,5 @@
 package net.kprod.mn.monitoring;
 
-import net.kprod.mn.ServiceException;
-
 import java.util.function.Supplier;
 
 public class SupplyAsync implements Supplier {
@@ -15,17 +13,11 @@ public class SupplyAsync implements Supplier {
      * @param monitoringService
      * @param runnable
      */
-    public SupplyAsync(MonitoringService monitoringService, MonitoringData monitorData, AsyncRunnable runnable) throws ServiceException {
-        if(monitoringService == null ||
-                monitorData == null ||
-                runnable == null) {
-            throw new ServiceException("All parameters must be defined");
-        }
+    public SupplyAsync(MonitoringService monitoringService, MonitoringData monitorData, AsyncRunnable runnable)  {
         this.monitoringService = monitoringService;
         this.monitorData = monitorData;
         this.runnable = runnable;
     }
-
 
     /**
      * Async execution supplier

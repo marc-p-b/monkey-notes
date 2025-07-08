@@ -14,6 +14,8 @@ public interface MonitoringService {
      */
     String start(String controllerName, String methodName);
 
+    String start(String controllerName, String methodName, String suffix);
+
     /**
      * Continue monitoring, in case of @Async for example
      *

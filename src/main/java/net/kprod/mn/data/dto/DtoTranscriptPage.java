@@ -3,6 +3,7 @@ package net.kprod.mn.data.dto;
 import net.kprod.mn.data.entity.EntityTranscriptPage;
 
 import java.net.URL;
+import java.util.List;
 
 public class DtoTranscriptPage {
     private String fileId;
@@ -17,6 +18,7 @@ public class DtoTranscriptPage {
     private String aiModel;
     private URL imageUrl;
     private boolean completed;
+    private List<DtoNamedEntity> listNamedEntities;
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
         DtoTranscriptPage dto = new DtoTranscriptPage()
@@ -32,6 +34,15 @@ public class DtoTranscriptPage {
                 .setTokensResponse(page.getTokensResponse())
                 .setCompleted(page.isCompleted());
         return dto;
+    }
+
+    public List<DtoNamedEntity> getListNamedEntities() {
+        return listNamedEntities;
+    }
+
+    public DtoTranscriptPage setListNamedEntities(List<DtoNamedEntity> listNamedEntities) {
+        this.listNamedEntities = listNamedEntities;
+        return this;
     }
 
     public String getUsername() {

@@ -4,15 +4,16 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import net.kprod.mn.transcript.NamedEntity;
+import net.kprod.mn.data.dto.DtoNamedEntity;
+import net.kprod.mn.transcript.NamedEntityVerb;
 
 @Entity(name="named_entity")
 public class EntityNamedEntity {
     @EmbeddedId
-    IdNamedEntity idNamedEntity;
+    private IdNamedEntity idNamedEntity;
 
     @Enumerated(EnumType.STRING)
-    private NamedEntity.NamedEntityVerb verb;
+    private NamedEntityVerb verb;
     private String value;
     private int startIndex;
     private int endIndex;
@@ -29,11 +30,11 @@ public class EntityNamedEntity {
         return this;
     }
 
-    public NamedEntity.NamedEntityVerb getVerb() {
+    public NamedEntityVerb getVerb() {
         return verb;
     }
 
-    public EntityNamedEntity setVerb(NamedEntity.NamedEntityVerb verb) {
+    public EntityNamedEntity setVerb(NamedEntityVerb verb) {
         this.verb = verb;
         return this;
     }

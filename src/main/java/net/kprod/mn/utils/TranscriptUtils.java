@@ -1,7 +1,8 @@
 package net.kprod.mn.utils;
 
 import net.kprod.mn.data.File2Process;
-import net.kprod.mn.transcript.NamedEntity;
+import net.kprod.mn.data.dto.DtoNamedEntity;
+import net.kprod.mn.transcript.NamedEntityVerb;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -50,33 +51,33 @@ public class TranscriptUtils {
         return documentTitleDate;
     }
 
-    public static List<NamedEntity> identifyCommands(String text) {
+    public static List<DtoNamedEntity> identifyCommands(String text) {
         String regex = "\\[/((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
         Pattern p = Pattern.compile(regex);
 
         Matcher m = p.matcher(text);
-        List<NamedEntity> commands = new ArrayList<>();
+        List<DtoNamedEntity> commands = new ArrayList<>();
         while (m.find()) {
 
-            NamedEntity.NamedEntityVerb verb = NamedEntity.NamedEntityVerb.fromString(m.group(1));
+            NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(1));
             String value = m.group(3);
 
             Pattern patternDate = Pattern.compile("\\d\\d/\\d\\d/\\d\\d");
 
             if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {
-                if (verb.equals(NamedEntity.NamedEntityVerb.dateUs)) {
+                if (verb.equals(NamedEntityVerb.dateUs)) {
                     LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("yy/MM/dd"));
                     LocalDateTime ldt = ld.atStartOfDay();
                     Instant instant = ldt.toInstant(ZoneOffset.UTC);
                     value = DateTimeFormatter.ISO_INSTANT.format(instant);
-                } else if (verb.equals(NamedEntity.NamedEntityVerb.dateIntl)) {
+                } else if (verb.equals(NamedEntityVerb.dateIntl)) {
                     LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("dd/MM/yy"));
                     LocalDateTime ldt = ld.atStartOfDay();
                     Instant instant = ldt.toInstant(ZoneOffset.UTC);
                     value = DateTimeFormatter.ISO_INSTANT.format(instant);
                 }
             }
-            commands.add(new NamedEntity(verb, value, m.start(), m.end()));
+            commands.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
 
         }
         return commands;

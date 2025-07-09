@@ -36,6 +36,8 @@ public class IdNamedEntity {
         return username;
     }
 
+    public UUID getUuid() {return uuid;}
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

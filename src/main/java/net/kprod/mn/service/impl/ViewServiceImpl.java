@@ -7,6 +7,7 @@ import net.kprod.mn.data.entity.*;
 import net.kprod.mn.data.enums.FileType;
 import net.kprod.mn.data.enums.ViewOptionsCompletionStatus;
 import net.kprod.mn.data.repository.RepositoryFile;
+import net.kprod.mn.data.repository.RepositoryNamedEntity;
 import net.kprod.mn.data.repository.RepositoryTranscript;
 import net.kprod.mn.data.repository.RepositoryTranscriptPage;
 import net.kprod.mn.service.*;
@@ -34,7 +35,7 @@ public class ViewServiceImpl implements ViewService {
     private RepositoryTranscript repositoryTranscript;
 
     @Autowired
-    RepositoryTranscriptPage repositoryTranscriptPage;
+    private RepositoryTranscriptPage repositoryTranscriptPage;
 
     @Autowired
     private PdfService pdfService;
@@ -51,22 +52,12 @@ public class ViewServiceImpl implements ViewService {
     @Autowired
     private DriveUtilsService driveUtilsService;
 
+    @Autowired
+    private RepositoryNamedEntity repositoryNamedEntity;
+
     private IdFile idFile(String fileId) {
         return IdFile.createIdFile(authService.getUsernameFromContext(), fileId);
     }
-
-//    @Override
-//    public List<String> listAvailableTranscripts() {
-//        return repositoryTranscript.findAll().stream() //optimize request
-//                .filter(d -> d.getTranscripted_at() != null)
-//                .map(d -> {
-//                    return new StringBuilder()
-//                            //.append(d.getFileId()).append(" - ").append(d.getName())
-//                            .append(d.getIdFile().getFileId()).append(" - ").append(d.getName())
-//                            .toString();
-//                })
-//                .toList();
-//    }
 
     @Override
     public DtoTranscript getTranscript(String fileId, ViewOptions viewOptions) {
@@ -215,24 +206,32 @@ public class ViewServiceImpl implements ViewService {
     }
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
-        List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
+        //List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
+
+        //todo optimize ? include in all requests ? // remove n ?
+        //TODO replace optional ?
+
+        List<DtoTranscriptPage> listDtoTranscriptPages = new ArrayList<>();
 
         for(int n = 0; n < t.getPageCount(); n++) {
-            //todo optimize ? include in all requests ? // remove n ?
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n));
-                        listPages.add(optPage);
+
+            if(optPage.isPresent()) {
+                DtoTranscriptPage dtoTranscriptPage = DtoTranscriptPage.fromEntity(optPage.get());
+                List<DtoNamedEntity> namedEntities = repositoryNamedEntity.findBy(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n).stream()
+                    .map(ne -> DtoNamedEntity.fromEntity(ne))
+                    .toList();
+                dtoTranscriptPage.setListNamedEntities(namedEntities);
+                listDtoTranscriptPages.add(dtoTranscriptPage);
+            }
         }
 
-        DtoTranscript dtoTranscript = DtoTranscript.fromEntity(t,
-                listPages.stream()
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .toList());
+        DtoTranscript dtoTranscript = DtoTranscript.fromEntity(t, listDtoTranscriptPages);
 
-        List<DtoTranscriptPage> listP = dtoTranscript.getPages();
+        //List<DtoTranscriptPage> listP = dtoTranscript.getPages();
 
-        listP.stream()
+        listDtoTranscriptPages.stream()
             .map(page->{
                 try {
                     page.setImageUrl(utilsService.imageURL(authService.getUsernameFromContext(), page.getFileId(), page.getPageNumber()));
@@ -251,12 +250,12 @@ public class ViewServiceImpl implements ViewService {
             .toList();
 
         if (viewOptions.getCompletionStatus() == ViewOptionsCompletionStatus.failed) {
-            listP = listP.stream()
+            listDtoTranscriptPages = listDtoTranscriptPages.stream()
                     .filter(p -> !p.isCompleted())
                     .toList();
         }
 
-        dtoTranscript.setPages(listP);
+        dtoTranscript.setPages(listDtoTranscriptPages);
         //TODO this requires file entity ; is this really needed ?
         dtoTranscript.setDiscovered_at(file.getDiscovered_at());
 

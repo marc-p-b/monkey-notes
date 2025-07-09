@@ -3,7 +3,7 @@ package net.kprod.mn.service.impl;
 import com.google.api.services.drive.model.File;
 import net.kprod.mn.ServiceException;
 import net.kprod.mn.data.repository.RepositoryNamedEntity;
-import net.kprod.mn.transcript.NamedEntity;
+import net.kprod.mn.data.dto.DtoNamedEntity;
 import net.kprod.mn.utils.TranscriptUtils;
 import net.kprod.mn.utils.Utils;
 import net.kprod.mn.data.*;
@@ -163,17 +163,14 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             // Identify named entities
             // --------------------------------------
-
             try {
-
-
                 List<EntityNamedEntity> namedEntities = new ArrayList<>();
                 for (CompletionResponse completionResponse : listCompletionResponse) {
                     //remove namedEntities associated to this page
-                    repositoryNamedEntity.deleteByIdNamedEntity(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
+                    repositoryNamedEntity.delete(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
 
-                    List<NamedEntity> list = TranscriptUtils.identifyCommands(completionResponse.getTranscript());
-                    for (NamedEntity namedEntity : list) {
+                    List<DtoNamedEntity> list = TranscriptUtils.identifyCommands(completionResponse.getTranscript());
+                    for (DtoNamedEntity namedEntity : list) {
                         LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
                         IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(authService.getUsernameFromContext(), file2Process.getFileId(), completionResponse.getPageNumber());
                         namedEntities.add(new EntityNamedEntity()

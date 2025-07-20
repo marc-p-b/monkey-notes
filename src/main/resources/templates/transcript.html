@@ -85,23 +85,22 @@
             data.pages.forEach(page => {
                 let transcript = page.transcript;
 
-                console.log(transcript);
-//                 page.listNamedEntities.forEach(ne => {
-//                    /*
-// private UUID uuid;
-// private NamedEntityVerb verb;
-// private String value;
-// private int start;
-// private int end;
-//                     */
-//
-//
-//                     console.log(ne.verb + " " + ne.value);
-//
-//                     transcript = replaceSubstring(transcript, ne.start, ne.end, "<" + ne.value + ">")
-//
-//
-//                 });
+                let lFix = 0;
+                page.listNamedEntities.forEach(ne => {
+
+                    let repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
+                    lFix += transcript.length - repl.length;
+
+                    // console.log("-------");
+                    // console.log(transcript);
+                    // console.log(ne.verb);
+                    // console.log(lFix);
+                    // console.log(repl);
+                    transcript = repl;
+
+                });
+
+                transcript = transcript.replaceAll("\n", "<br/>");
 
                 const section = document.createElement('section');
 

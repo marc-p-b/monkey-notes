@@ -221,7 +221,8 @@ public class ViewServiceImpl implements ViewService {
                 DtoTranscriptPage dtoTranscriptPage = DtoTranscriptPage.fromEntity(optPage.get());
                 List<DtoNamedEntity> namedEntities = repositoryNamedEntity.findBy(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n).stream()
                     .map(ne -> DtoNamedEntity.fromEntity(ne))
-                    .toList();
+                        .sorted(Comparator.comparing(DtoNamedEntity::getStart))
+                        .toList();
                 dtoTranscriptPage.setListNamedEntities(namedEntities);
                 listDtoTranscriptPages.add(dtoTranscriptPage);
             }

@@ -32,6 +32,11 @@
 <script src="/js/request_link.js"></script>
 
 <script>
+
+    function replaceSubstring(str, start, end, replacement) {
+        return str.slice(0, start) + replacement + str.slice(end);
+    }
+
     function documentLoaded() {
 
         const container = document.getElementById('sections');
@@ -78,6 +83,26 @@
             const headerVersion = document.getElementById('headerVersion');
 
             data.pages.forEach(page => {
+                let transcript = page.transcript;
+
+                console.log(transcript);
+//                 page.listNamedEntities.forEach(ne => {
+//                    /*
+// private UUID uuid;
+// private NamedEntityVerb verb;
+// private String value;
+// private int start;
+// private int end;
+//                     */
+//
+//
+//                     console.log(ne.verb + " " + ne.value);
+//
+//                     transcript = replaceSubstring(transcript, ne.start, ne.end, "<" + ne.value + ">")
+//
+//
+//                 });
+
                 const section = document.createElement('section');
 
                 headerTitle.textContent = data.title;
@@ -108,11 +133,13 @@
                 h3.textContent = 'Page #' + (page.pageNumber + 1);
 
                 const p = document.createElement('p');
-                p.innerHTML = page.transcriptHtml;
+                //p.innerHTML = page.transcriptHtml;
+                p.innerHTML = transcript;
 
                 const aForceUpdate = document.createElement('a');
                 aForceUpdate.href = '/transcript/update/' + fileId + '/' + page.pageNumber;
                 aForceUpdate.textContent = 'Update page';
+                aForceUpdate.classList.add('clickableLink');
 
                 const aViewPage = document.createElement('a');
                 aViewPage.href = page.imageUrl;

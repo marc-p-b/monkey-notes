@@ -52,7 +52,7 @@ public class TranscriptUtils {
     }
 
     public static List<DtoNamedEntity> identifyCommands(String text) {
-        String regex = "\\[/((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
+        String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
         Pattern p = Pattern.compile(regex);
 
         Matcher m = p.matcher(text);

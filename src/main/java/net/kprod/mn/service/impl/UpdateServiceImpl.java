@@ -275,6 +275,7 @@ public class UpdateServiceImpl implements UpdateService {
         String fileId = file2Process.getFileId();
         boolean allowCompare = true;
 
+        // TODO do not retrieve when forced or disallowed compare
         // previous images
         Optional<EntityTranscript> transcript = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), file2Process.getFileId()));
         List<BufferedImage> previousImages = new ArrayList<>();
@@ -293,7 +294,7 @@ public class UpdateServiceImpl implements UpdateService {
         //compare with new images
         List<Image2Process> modifiedOrNewImages = new ArrayList<>();
         int changeAfter = 0;
-        if(allowCompare && transcript.isPresent()) {
+        if(allowCompare && file2Process.isForce() == false && transcript.isPresent()) {
             boolean isFileModified = false;
             if(previousImages.size() == newImages.size()) {
                 //same page count, we compare all images
@@ -649,7 +650,8 @@ public class UpdateServiceImpl implements UpdateService {
             File2Process file2Process = new File2Process(file)
                     .setFilePath(downloadFileFromDrive)
                     .setParentFolderId(fileParent.getId())
-                    .setParentFolderName(fileParent.getName());
+                    .setParentFolderName(fileParent.getName())
+                    .setForce(true);
 
             runListAsyncProcess(List.of(file2Process));
         } catch (ServiceException e) {

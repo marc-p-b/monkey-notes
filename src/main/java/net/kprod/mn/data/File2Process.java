@@ -16,8 +16,7 @@ public class File2Process {
     private String parentFolderId;
     private String parentFolderName;
     private String mimeType;
-
-
+    private boolean force;
 
     public File2Process(File file) {
         if(file == null) {
@@ -100,6 +99,15 @@ public class File2Process {
 
     public File2Process setMimeType(String mimeType) {
         this.mimeType = mimeType;
+        return this;
+    }
+
+    public boolean isForce() {
+        return force;
+    }
+
+    public File2Process setForce(boolean force) {
+        this.force = force;
         return this;
     }
 }

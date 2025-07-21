@@ -60,7 +60,7 @@ public class TranscriptUtils {
         while (m.find()) {
 
             NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(1));
-            String value = m.group(3);
+            String value = m.group(3).trim();
 
             Pattern patternDate = Pattern.compile("\\d\\d/\\d\\d/\\d\\d");
 

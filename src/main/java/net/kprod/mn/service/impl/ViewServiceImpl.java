@@ -11,6 +11,7 @@ import net.kprod.mn.data.repository.RepositoryNamedEntity;
 import net.kprod.mn.data.repository.RepositoryTranscript;
 import net.kprod.mn.data.repository.RepositoryTranscriptPage;
 import net.kprod.mn.service.*;
+import net.kprod.mn.transcript.NamedEntityVerb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -213,6 +214,7 @@ public class ViewServiceImpl implements ViewService {
 
         List<DtoTranscriptPage> listDtoTranscriptPages = new ArrayList<>();
 
+        Optional<String> optNextPageSchema = Optional.empty();
         for(int n = 0; n < t.getPageCount(); n++) {
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n));
@@ -224,6 +226,25 @@ public class ViewServiceImpl implements ViewService {
                         .sorted(Comparator.comparing(DtoNamedEntity::getStart))
                         .toList();
                 dtoTranscriptPage.setListNamedEntities(namedEntities);
+
+
+//                //schema ref from last page
+//                dtoTranscriptPage.setOptSchemaTitle(optNextPageSchema);
+//                optNextPageSchema = Optional.empty();
+//
+//                //schema ref for next page
+//                optNextPageSchema = namedEntities.stream()
+//                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.refSchema))
+//                        .map(DtoNamedEntity::getValue)
+//                        .findFirst();
+//
+//                //schema for this page
+//                Optional<String> optSchema = namedEntities.stream()
+//                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.schema))
+//                        .map(DtoNamedEntity::getValue)
+//                        .findFirst();
+//                dtoTranscriptPage.setOptSchemaTitle(optSchema);
+
                 listDtoTranscriptPages.add(dtoTranscriptPage);
             }
         }

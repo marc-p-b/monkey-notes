@@ -82,23 +82,27 @@
             const headerPages = document.getElementById('headerPages');
             const headerVersion = document.getElementById('headerVersion');
 
+            let schema;
+            let refSchema;
             data.pages.forEach(page => {
+
+
                 let transcript = page.transcript;
 
                 let lFix = 0;
                 page.listNamedEntities.forEach(ne => {
-
                     let repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
                     lFix += transcript.length - repl.length;
-
-                    // console.log("-------");
-                    // console.log(transcript);
-                    // console.log(ne.verb);
-                    // console.log(lFix);
-                    // console.log(repl);
                     transcript = repl;
+                    if(ne.verb == 'refSchema') {
+                        refSchema = ne.value;
+                    }
+                    if(ne.verb == 'schema') {
+                        schema = ne.value;
+                    }
 
                 });
+
 
                 transcript = transcript.replaceAll("\n", "<br/>");
 
@@ -129,11 +133,20 @@
                 headerVersion.textContent = data.version;
 
                 const h3 = document.createElement('h3');
-                h3.textContent = 'Page #' + (page.pageNumber + 1);
-
                 const p = document.createElement('p');
-                //p.innerHTML = page.transcriptHtml;
-                p.innerHTML = transcript;
+
+                if (schema) {
+                    h3.textContent = 'Page #' + (page.pageNumber + 1) + ' - schema ' + schema;
+                    const img = document.createElement('img');
+                    img.src = page.imageUrl;
+                    p.appendChild(img);
+                    schema = undefined;
+                } else {
+                    h3.textContent = 'Page #' + (page.pageNumber + 1);
+                    p.innerHTML = transcript;
+                }
+
+                schema = refSchema;
 
                 const aForceUpdate = document.createElement('a');
                 aForceUpdate.href = '/transcript/update/' + fileId + '/' + page.pageNumber;

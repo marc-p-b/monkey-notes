@@ -4,8 +4,10 @@ import net.kprod.mn.data.entity.EntityTranscriptPage;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 public class DtoTranscriptPage {
+
     private String fileId;
     private String username;
     private int pageNumber;
@@ -19,6 +21,8 @@ public class DtoTranscriptPage {
     private URL imageUrl;
     private boolean completed;
     private List<DtoNamedEntity> listNamedEntities;
+
+    //private Optional<String> optSchemaTitle = Optional.empty();
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
         DtoTranscriptPage dto = new DtoTranscriptPage()
@@ -152,4 +156,13 @@ public class DtoTranscriptPage {
         this.completed = completed;
         return this;
     }
+
+//    public Optional<String> getOptSchemaTitle() {
+//        return optSchemaTitle;
+//    }
+//
+//    public DtoTranscriptPage setOptSchemaTitle(Optional<String> optSchemaTitle) {
+//        this.optSchemaTitle = optSchemaTitle;
+//        return this;
+//    }
 }

@@ -85,18 +85,19 @@
             let schema;
             let refSchema;
             data.pages.forEach(page => {
-
-
                 let transcript = page.transcript;
-
                 let lFix = 0;
                 page.listNamedEntities.forEach(ne => {
-
                     let repl = "";
                     if(ne.verb == 'h2') {
                         repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h2>" + ne.value + "</h2>");
+                    } else if(ne.verb == 'h3') {
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h3>" + ne.value + "</h3>");
+                    } else if(ne.verb == 'h4') {
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h4>" + ne.value + "</h4>");
+                    } else if(ne.verb == 'h5') {
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5>" + ne.value + "</h5>");
                     } else {
-
                         repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
                     }
                     lFix += transcript.length - repl.length;
@@ -107,16 +108,9 @@
                     if (ne.verb == 'schema') {
                         schema = ne.value;
                     }
-
-
                 });
-
-
                 transcript = transcript.replaceAll("\n", "<br/>");
-                //transcript = transcript.replaceAll("##\s*(.*)", "<h2>$1</h2>");
-
                 const section = document.createElement('section');
-
                 headerTitle.textContent = data.title;
                 headerAuthor.textContent = data.username;
 
@@ -141,15 +135,13 @@
                 headerPages.textContent = data.pageCount;
                 headerVersion.textContent = data.version;
 
-
                 const p = document.createElement('p');
-
                 if (schema) {
-                    const h3 = document.createElement('h3');
-                    h3.textContent = schema;
+                    const title = document.createElement('h2');
+                    title.textContent = schema;
                     const img = document.createElement('img');
                     img.src = page.imageUrl;
-                    section.appendChild(h3);
+                    section.appendChild(title);
                     p.appendChild(img);
                     schema = undefined;
                 } else {

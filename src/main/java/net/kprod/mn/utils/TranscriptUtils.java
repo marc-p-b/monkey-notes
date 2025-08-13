@@ -51,12 +51,19 @@ public class TranscriptUtils {
         return documentTitleDate;
     }
 
-    public static List<DtoNamedEntity> identifyCommands(String text) {
-        String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
+    public static List<DtoNamedEntity> identifyNamedIdentities(String text) {
+        //String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
+
+        String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L))(?:\\s*:\\s*([^\\]]+))?\\]";
+        //format [VERB:value] where VERB is XT, T, D, DU, P, @, SREF, S, L (upper or lower)
+        //with spaces or not :
+        // [ t: myTAG]
+        // [T : myTAG ]
+
         Pattern p = Pattern.compile(regex);
 
         Matcher m = p.matcher(text);
-        List<DtoNamedEntity> commands = new ArrayList<>();
+        List<DtoNamedEntity> identities = new ArrayList<>();
         while (m.find()) {
 
             NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(1));
@@ -77,9 +84,23 @@ public class TranscriptUtils {
                     value = DateTimeFormatter.ISO_INSTANT.format(instant);
                 }
             }
-            commands.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
-
+            identities.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
         }
-        return commands;
+        return identities;
+    }
+
+    public static List<DtoNamedEntity> identifyTitles(String text) {
+        String regex = "(#+)\\s*(.*)";
+
+        Pattern p = Pattern.compile(regex);
+
+        Matcher m = p.matcher(text);
+        List<DtoNamedEntity> identities = new ArrayList<>();
+        while (m.find()) {
+            NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(1));
+            String value = m.group(2).trim();
+            identities.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
+        }
+        return identities;
     }
 }

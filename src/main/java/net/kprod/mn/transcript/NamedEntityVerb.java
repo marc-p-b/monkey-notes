@@ -9,6 +9,11 @@ public enum NamedEntityVerb {
     schema("S"),
     refSchema("SREF"),
     noTranscript("XT"),
+    link("L"),
+    h2("##"),
+    h3("###"),
+    h4("####"),
+    h5("#####"),
     unknown("");
 
     private String command;

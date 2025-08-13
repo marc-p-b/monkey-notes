@@ -10,7 +10,7 @@
 </div>
 
 <div id="header">
-    <h2 id="headerTitle"></h2>
+    <h1 id="headerTitle"></h1>
     <p>
         by <span id="headerAuthor"></span>
         <span id="headerDDateContainer">, document date <span id="headerDDate"></span></span>
@@ -91,20 +91,29 @@
 
                 let lFix = 0;
                 page.listNamedEntities.forEach(ne => {
-                    let repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
+
+                    let repl = "";
+                    if(ne.verb == 'h2') {
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h2>" + ne.value + "</h2>");
+                    } else {
+
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
+                    }
                     lFix += transcript.length - repl.length;
                     transcript = repl;
-                    if(ne.verb == 'refSchema') {
+                    if (ne.verb == 'refSchema') {
                         refSchema = ne.value;
                     }
-                    if(ne.verb == 'schema') {
+                    if (ne.verb == 'schema') {
                         schema = ne.value;
                     }
+
 
                 });
 
 
                 transcript = transcript.replaceAll("\n", "<br/>");
+                //transcript = transcript.replaceAll("##\s*(.*)", "<h2>$1</h2>");
 
                 const section = document.createElement('section');
 
@@ -132,19 +141,22 @@
                 headerPages.textContent = data.pageCount;
                 headerVersion.textContent = data.version;
 
-                const h3 = document.createElement('h3');
+
                 const p = document.createElement('p');
 
                 if (schema) {
-                    h3.textContent = 'Page #' + (page.pageNumber + 1) + ' - schema ' + schema;
+                    const h3 = document.createElement('h3');
+                    h3.textContent = schema;
                     const img = document.createElement('img');
                     img.src = page.imageUrl;
+                    section.appendChild(h3);
                     p.appendChild(img);
                     schema = undefined;
                 } else {
-                    h3.textContent = 'Page #' + (page.pageNumber + 1);
                     p.innerHTML = transcript;
                 }
+                const pagination = document.createElement('span');
+                pagination.textContent = 'Page #' + (page.pageNumber + 1);
 
                 schema = refSchema;
 
@@ -159,8 +171,8 @@
 
                 const sectionLinks = document.createElement('div');
 
-                section.appendChild(h3);
                 section.appendChild(p);
+                section.appendChild(pagination)
                 section.appendChild(sectionLinks);
 
                 sectionLinks.appendChild(aForceUpdate);

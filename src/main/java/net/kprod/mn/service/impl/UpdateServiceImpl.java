@@ -169,8 +169,10 @@ public class UpdateServiceImpl implements UpdateService {
                     //remove namedEntities associated to this page
                     repositoryNamedEntity.delete(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
 
-                    List<DtoNamedEntity> list = TranscriptUtils.identifyCommands(completionResponse.getTranscript());
-                    for (DtoNamedEntity namedEntity : list) {
+                    List<DtoNamedEntity> listNE = TranscriptUtils.identifyNamedIdentities(completionResponse.getTranscript());
+                    listNE.addAll(TranscriptUtils.identifyTitles(completionResponse.getTranscript()));
+
+                    for (DtoNamedEntity namedEntity : listNE) {
                         LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
                         IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(authService.getUsernameFromContext(), file2Process.getFileId(), completionResponse.getPageNumber());
                         namedEntities.add(new EntityNamedEntity()

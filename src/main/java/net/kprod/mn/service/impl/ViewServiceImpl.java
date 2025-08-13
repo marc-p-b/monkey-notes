@@ -160,8 +160,9 @@ public class ViewServiceImpl implements ViewService {
         try {
             return listLevel(getRootFolder().getIdFile().getFileId());
         } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            LOG.error("Failed to list root level", e);
         }
+        return Collections.emptyList();
     }
 
     @Override

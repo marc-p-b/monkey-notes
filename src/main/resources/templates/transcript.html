@@ -97,6 +97,8 @@
                         repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h4>" + ne.value + "</h4>");
                     } else if(ne.verb == 'h5') {
                         repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5>" + ne.value + "</h5>");
+                    } else if(ne.verb == 'h6') {
+                        repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5>" + ne.value + "</h5>");
                     } else {
                         repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
                     }
@@ -172,6 +174,8 @@
                 sectionLinks.appendChild(aViewPage);
 
                 container.appendChild(section);
+
+                schema = undefined;
             });
         })
         .catch(error => console.error('Error:', error));

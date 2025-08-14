@@ -10,10 +10,11 @@ public enum NamedEntityVerb {
     refSchema("SREF"),
     noTranscript("XT"),
     link("L"),
-    h2("##"),
-    h3("###"),
-    h4("####"),
-    h5("#####"),
+    h2("#"),
+    h3("##"),
+    h4("###"),
+    h5("####"),
+    h6("#####"),
     unknown("");
 
     private String command;

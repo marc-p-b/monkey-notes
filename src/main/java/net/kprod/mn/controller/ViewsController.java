@@ -1,5 +1,6 @@
 package net.kprod.mn.controller;
 
+import net.kprod.mn.transcript.NamedEntityVerb;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,5 +35,11 @@ public class ViewsController {
     @GetMapping("/v/processing")
     public String viewProcessing() {
         return "processing";
+    }
+
+    @GetMapping("/v/ne/{verb}")
+    public String viewNamedEntities(Model model, @PathVariable NamedEntityVerb verb) {
+        model.addAttribute("verb", verb);
+        return "named-entities";
     }
 }

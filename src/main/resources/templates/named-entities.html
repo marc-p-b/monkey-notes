@@ -1,0 +1,69 @@
+<html>
+<head>
+    <title>Monkey notes</title>
+
+</head>
+<body>
+
+<div id="topLinks">
+    <a href="/">Home</a>
+</div>
+
+<div id="header">
+    <h1 id="headerTitle"></h1>
+    <p>
+        by <span id="headerAuthor"></span>
+        <span id="headerDDateContainer">, document date <span id="headerDDate"></span></span>
+        <span id="headerTDateContainer">, last update at <span id="headerTDate"></span></span>
+        <span id="headerODateContainer">, discovered date <span id="headerODate"></span></span>
+        (total pages <span id="headerPages"></span>, version <span id="headerVersion"></span>)
+    </p>
+</div>
+
+<div id="status"></div>
+
+<div id="sections"></div>
+
+<script th:inline="javascript">
+    let namedEntityVerb = /*[[${verb}]]*/ {};
+</script>
+
+<script src="/js/custom_dates.js"></script>
+<script src="/js/request_link.js"></script>
+
+<script>
+
+    function documentLoaded() {
+
+        const container = document.getElementById('sections');
+        const topLinks = document.getElementById('topLinks');
+
+        fetch('/ne/verb/' + namedEntityVerb, {
+            method: 'GET'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            data.forEach(ne => {
+               console.log(ne);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+
+        document.addEventListener('click', function(event) {
+            if (event.target.matches('a.clickableLink')) {
+                event.preventDefault();
+                requestLink(event, document.getElementById("status"));
+            }
+        });
+
+    }
+    document.addEventListener('DOMContentLoaded', documentLoaded);
+</script>
+
+</body>
+</html>

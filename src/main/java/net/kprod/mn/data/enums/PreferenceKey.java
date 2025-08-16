@@ -2,8 +2,11 @@ package net.kprod.mn.data.enums;
 
 public enum PreferenceKey {
     set,
+
     useDefaultPrompt,
     prompt,
+
+    agentInstructions,
 
     useDefaultModel,
     model,

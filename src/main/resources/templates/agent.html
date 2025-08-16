@@ -38,6 +38,8 @@
     <button id="buttonSend">send</button>
 </div>
 
+<script src="/js/custom_dates.js"></script>
+
 <script th:inline="javascript">
 
 let fileId = /*[[${fileId}]]*/ {};
@@ -49,6 +51,7 @@ let fileId = /*[[${fileId}]]*/ {};
     document.addEventListener("DOMContentLoaded", function() {
         let conversationBox = document.getElementById('conversation');
         let statusBox = document.getElementById('status');
+
 
         fetch('/agent/prepare/' + fileId, {
             method: 'GET'
@@ -63,25 +66,33 @@ let fileId = /*[[${fileId}]]*/ {};
             if(data.exists) {
                 data.messages.forEach(function (message, index) {
                     let pM = document.createElement("p")
-                    pM.textContent = 'from ' + message.messageDir + ' @ ' + message.createdAt + ' : ' + message.content;
+                    pM.textContent = 'from ' + message.messageDir + ' @ ' + formatDateTime(message.createdAt) + ' : ' + message.content;
                     conversationBox.appendChild(pM);
                 });
             }
+            let instructionInput = document.getElementById('textAreaInstructionsId');
+            instructionInput.value = data.instructions;
         })
         .catch(error => console.error('Error:', error));
 
         document.getElementById("buttonSend").addEventListener("click", function() {
-            let question = document.getElementById("textAreaQuestion").value;
+            let question = document.getElementById("textAreaQuestion");
+            let resetCheckbox = document.getElementById("inputResetId");
             let conversationBox = document.getElementById('conversation');
 
             let pQ = document.createElement("p")
-            pQ.textContent = question;
+            pQ.textContent = question.value;
             conversationBox.appendChild(pQ);
 
             let form = document.getElementById("formAgent");
             const formData = new FormData(form);
 
             statusBox.textContent = "Waiting for response...";
+
+            if(resetCheckbox.checked) {
+                conversationBox.replaceChildren();
+                resetCheckbox.checked = false;
+            }
 
             fetch('/agent/ask', {
                 method: 'POST',

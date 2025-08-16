@@ -2,13 +2,21 @@ package net.kprod.mn.service.impl;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import net.kprod.mn.ServiceException;
+import net.kprod.mn.data.ViewOptions;
+import net.kprod.mn.data.dto.DtoFile;
+import net.kprod.mn.data.dto.DtoTranscript;
 import net.kprod.mn.data.dto.agent.*;
 import net.kprod.mn.data.dto.DtoTranscriptPage;
 import net.kprod.mn.data.entity.EntityAgent;
+import net.kprod.mn.data.entity.EntityFile;
 import net.kprod.mn.data.entity.IdFile;
+import net.kprod.mn.data.enums.FileType;
 import net.kprod.mn.data.repository.RepositoryAgent;
+import net.kprod.mn.data.repository.RepositoryFile;
 import net.kprod.mn.service.AgentService;
 import net.kprod.mn.service.AuthService;
+import net.kprod.mn.service.PreferencesService;
 import net.kprod.mn.service.ViewService;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -53,10 +61,22 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private AuthService authService;
 
+//    @Autowired
+//    private PreferencesService prefsService;
+
+    @Autowired
+    private RepositoryFile repositoryFile;
+
+
+    @Value("${app.openai.assistant.defaults.instructions}")
+    private String dftOpenaiAssistantInstructions;
+
     //make this multiuser
     private SseEmitter emitter;
     private Long lastId = 0L;
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    @Autowired
+    private PreferencesService preferencesService;
 
     @Override
     public DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options) {
@@ -91,7 +111,14 @@ public class AgentServiceImpl implements AgentService {
             LOG.info("");
             return agentPrepare;
         } else {
-            return new DtoAgentPrepare();
+            String instructions = dftOpenaiAssistantInstructions;
+            try {
+                instructions = preferencesService.getAgentInstructions();
+            } catch (ServiceException e) {
+                LOG.error("Failed to get default instructions, get default value", e.getMessage());
+            }
+            return new DtoAgentPrepare()
+                .setInstructions(instructions);
         }
     }
 
@@ -99,20 +126,39 @@ public class AgentServiceImpl implements AgentService {
     public DtoAgent newAssistant(String fileId, DtoAssistantOptions options) {
         LOG.info("New agent based on fileId {}", fileId);
 
-        List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
-                .stream()
-                .map(t -> {
-                    return new JSONObject()
-                            .put("title", t.getTitle())
-                            .put("date", t.getDocumented_at())
-                            .put("pages", t.getPages().stream()
-                                    .map(DtoTranscriptPage::getTranscript)
-                                    .toList());
-                })
-                .toList();
+        //TODO create a service to do this kind of operations
+        Optional<EntityFile> f = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
-        JSONObject jsonObject = new JSONObject()
-                .put("documents", jsonList);
+        if(f.isPresent() == false) {
+            //error
+            return null;
+        }
+
+        JSONObject jsonObject = null;
+        if(f.get().getType().equals(FileType.folder)) {
+            List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
+                    .stream()
+                    .map(t -> {
+                        return new JSONObject()
+                                .put("title", t.getTitle())
+                                .put("date", t.getDocumented_at())
+                                .put("pages", t.getPages().stream()
+                                        .map(DtoTranscriptPage::getTranscript)
+                                        .toList());
+                    })
+                    .toList();
+            jsonObject = new JSONObject()
+                    .put("documents", jsonList);
+        } else {
+            DtoTranscript t = viewService.getTranscript(fileId, ViewOptions.all());
+
+            jsonObject = new JSONObject()
+                    .put("title", t.getTitle())
+                    .put("date", t.getDocumented_at())
+                    .put("pages", t.getPages().stream()
+                            .map(DtoTranscriptPage::getTranscript)
+                            .toList());
+        }
 
         String knowledgeFileId = uploadKnowledgeFile(jsonObject.toString());
         String vectorId = createKnowledgeVector(knowledgeFileId);

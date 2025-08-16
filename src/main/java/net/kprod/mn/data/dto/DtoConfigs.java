@@ -9,8 +9,11 @@ import java.util.List;
 
 public class DtoConfigs {
     private boolean set = false;
+
     private boolean useDefaultPrompt;
     private String  prompt;
+
+    private String agentInstructions;
 
     private boolean useDefaultModel;
     private String model;
@@ -27,11 +30,15 @@ public class DtoConfigs {
     private boolean useDefaultModelMaxTokens;
     private int modelMaxTokens;
 
+
+
     public List<EntityPreferences> toEntities(String username) {
         List<EntityPreferences> list = Arrays.asList(
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.set), Boolean.toString(set)),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.prompt), prompt),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultModel), Boolean.toString(useDefaultModel)),
+
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.agentInstructions), agentInstructions),
 
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.model), model),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultPrompt), Boolean.toString(useDefaultPrompt)),
@@ -58,6 +65,15 @@ public class DtoConfigs {
 
     public DtoConfigs setPrompt(String prompt) {
         this.prompt = prompt;
+        return this;
+    }
+
+    public String getAgentInstructions() {
+        return agentInstructions;
+    }
+
+    public DtoConfigs setAgentInstructions(String agentInstructions) {
+        this.agentInstructions = agentInstructions;
         return this;
     }
 

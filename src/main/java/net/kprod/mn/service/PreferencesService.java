@@ -18,6 +18,9 @@ public interface PreferencesService {
     String getPrompt() throws ServiceException;
 
     boolean useDefaultModel() throws ServiceException;
+
+    String getAgentInstructions() throws ServiceException;
+
     String getModel() throws ServiceException;
 
     String getInputFolderId() throws ServiceException;

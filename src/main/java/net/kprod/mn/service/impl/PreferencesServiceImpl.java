@@ -46,6 +46,9 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Value("${app.defaults.ai.read-timeout}")
     private int dftAiReadTimeout;
 
+    @Value("${app.openai.assistant.defaults.instructions}")
+    private String dftOpenaiAssistantInstructions;
+
     @Override
     public DtoConfigs listPreferences() {
 
@@ -61,11 +64,15 @@ public class PreferencesServiceImpl implements PreferencesService {
     private DtoConfigs fromMap(Map<String, String> map) {
         DtoConfigs dtoConfigs = new DtoConfigs();
         for (Map.Entry<String, String> entry : map.entrySet()) {
-
             try {
-
                 PreferenceKey key = PreferenceKey.valueOf(entry.getKey());
                 switch (key) {
+                    case set:
+                        dtoConfigs.setSet(Boolean.parseBoolean(entry.getValue()));
+                        break;
+                    case agentInstructions:
+                        dtoConfigs.setAgentInstructions(entry.getValue());
+                        break;
                     case prompt :
                         dtoConfigs.setPrompt(entry.getValue());
                         break;
@@ -77,9 +84,6 @@ public class PreferencesServiceImpl implements PreferencesService {
                         break;
                     case outputFolderId:
                         dtoConfigs.setOutputFolderId(entry.getValue());
-                        break;
-                    case set:
-                        dtoConfigs.setSet(Boolean.parseBoolean(entry.getValue()));
                         break;
                     case useDefaultPrompt:
                         dtoConfigs.setUseDefaultPrompt(Boolean.parseBoolean(entry.getValue()));
@@ -130,6 +134,7 @@ public class PreferencesServiceImpl implements PreferencesService {
                 .setPrompt(dftQwenPrompt)
                 .setUseDefaultPrompt(true)
                 .setModel(dftQwenModel)
+                .setAgentInstructions(dftOpenaiAssistantInstructions)
                 .setInputFolderId("")
                 .setOutputFolderId("")
                 .setUseDefaultAiConnectTimeout(true)
@@ -175,6 +180,11 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Override
     public String getPrompt() throws ServiceException {
         return getPreference(PreferenceKey.prompt);
+    }
+
+    @Override
+    public String getAgentInstructions() throws ServiceException {
+        return getPreference(PreferenceKey.agentInstructions);
     }
 
     @Override

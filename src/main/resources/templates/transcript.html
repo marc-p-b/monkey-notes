@@ -82,8 +82,8 @@
             const headerPages = document.getElementById('headerPages');
             const headerVersion = document.getElementById('headerVersion');
 
-            let schema;
-            let refSchema;
+            let schemaThisPage;
+            let schemaNextPage;
             data.pages.forEach(page => {
                 let transcript = page.transcript;
                 let lFix = 0;
@@ -105,10 +105,10 @@
                     lFix += transcript.length - repl.length;
                     transcript = repl;
                     if (ne.verb == 'refSchema') {
-                        refSchema = ne.value;
+                        schemaNextPage = ne.value;
                     }
                     if (ne.verb == 'schema') {
-                        schema = ne.value;
+                        schemaThisPage = ne.value;
                     }
                 });
                 transcript = transcript.replaceAll("\n", "<br/>");
@@ -138,21 +138,27 @@
                 headerVersion.textContent = data.version;
 
                 const p = document.createElement('p');
-                if (schema) {
+                if (schemaThisPage) {
                     const title = document.createElement('h2');
-                    title.textContent = schema;
+                    title.textContent = schemaThisPage;
                     const img = document.createElement('img');
                     img.src = page.imageUrl;
                     section.appendChild(title);
                     p.appendChild(img);
-                    schema = undefined;
                 } else {
                     p.innerHTML = transcript;
                 }
+
+                if(schemaNextPage) {
+                    schemaThisPage = schemaNextPage;
+                    schemaNextPage = undefined;
+                } else {
+                    schemaThisPage = undefined;
+                    schemaNextPage = undefined;
+                }
+
                 const pagination = document.createElement('span');
                 pagination.textContent = 'Page #' + (page.pageNumber + 1);
-
-                schema = refSchema;
 
                 const aForceUpdate = document.createElement('a');
                 aForceUpdate.href = '/transcript/update/' + fileId + '/' + page.pageNumber;
@@ -174,8 +180,6 @@
                 sectionLinks.appendChild(aViewPage);
 
                 container.appendChild(section);
-
-                schema = undefined;
             });
         })
         .catch(error => console.error('Error:', error));

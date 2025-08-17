@@ -52,6 +52,10 @@ public class TranscriptUtils {
     }
 
     public static List<DtoNamedEntity> identifyNamedIdentities(String text) {
+        if(text == null || text.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         //String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
 
         String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L))(?:\\s*:\\s*([^\\]]+))?\\]";
@@ -62,6 +66,7 @@ public class TranscriptUtils {
 
         Pattern p = Pattern.compile(regex);
 
+        //TODO text is null / empty
         Matcher m = p.matcher(text);
         List<DtoNamedEntity> identities = new ArrayList<>();
         while (m.find()) {

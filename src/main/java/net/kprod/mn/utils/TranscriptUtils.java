@@ -66,7 +66,6 @@ public class TranscriptUtils {
 
         Pattern p = Pattern.compile(regex);
 
-        //TODO text is null / empty
         Matcher m = p.matcher(text);
         List<DtoNamedEntity> identities = new ArrayList<>();
         while (m.find()) {
@@ -95,6 +94,10 @@ public class TranscriptUtils {
     }
 
     public static List<DtoNamedEntity> identifyTitles(String text) {
+        if(text == null || text.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         String regex = "(#+)\\s*(.*)";
 
         Pattern p = Pattern.compile(regex);

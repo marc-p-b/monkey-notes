@@ -4,7 +4,7 @@ import net.kprod.mn.data.dto.DtoNamedEntity;
 import net.kprod.mn.data.entity.EntityNamedEntity;
 import net.kprod.mn.data.repository.RepositoryNamedEntity;
 import net.kprod.mn.service.AuthService;
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

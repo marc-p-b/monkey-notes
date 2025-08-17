@@ -1,6 +1,6 @@
 package net.kprod.mn.controller;
 
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -2,7 +2,7 @@ package net.kprod.mn.utils;
 
 import net.kprod.mn.data.File2Process;
 import net.kprod.mn.data.dto.DtoNamedEntity;
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;

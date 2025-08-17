@@ -4,8 +4,7 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import net.kprod.mn.data.dto.DtoNamedEntity;
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 
 @Entity(name="named_entity")
 public class EntityNamedEntity {

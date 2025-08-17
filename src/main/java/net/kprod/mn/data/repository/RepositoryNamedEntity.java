@@ -2,8 +2,7 @@ package net.kprod.mn.data.repository;
 
 import net.kprod.mn.data.entity.EntityNamedEntity;
 import net.kprod.mn.data.entity.IdNamedEntity;
-import net.kprod.mn.data.dto.DtoNamedEntity;
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

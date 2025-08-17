@@ -1,7 +1,8 @@
 package net.kprod.mn.data.dto;
 
 import net.kprod.mn.data.entity.EntityNamedEntity;
-import net.kprod.mn.transcript.NamedEntityVerb;
+import net.kprod.mn.data.entity.IdNamedEntity;
+import net.kprod.mn.data.enums.NamedEntityVerb;
 
 import java.util.UUID;
 
@@ -15,6 +16,16 @@ public class DtoNamedEntity {
     public static DtoNamedEntity fromEntity(EntityNamedEntity entity) {
         return new DtoNamedEntity(entity.getVerb(), entity.getValue(), entity.getStartIndex(), entity.getEndIndex())
                 .setUuid(entity.getIdNamedEntity().getUuid());
+    }
+
+    public EntityNamedEntity toEntity(String username, String fileId, int pageNumber) {
+        IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(username, fileId, pageNumber);
+        return new EntityNamedEntity()
+                .setIdNamedEntity(idNamedEntity)
+                .setVerb(this.getVerb())
+                .setValue(this.getValue())
+                .setStartIndex(this.getStart())
+                .setEndIndex(this.getEnd());
     }
 
     public DtoNamedEntity(NamedEntityVerb verb, String value, Integer start, Integer end) {

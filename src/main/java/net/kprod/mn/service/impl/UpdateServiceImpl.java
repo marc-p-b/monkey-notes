@@ -83,7 +83,7 @@ public class UpdateServiceImpl implements UpdateService {
     private RepositoryTranscriptPage repositoryTranscriptPage;
 
     @Autowired
-    private RepositoryNamedEntity repositoryNamedEntity;
+    private NamedEntitiesService namedEntitiesService;
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
@@ -161,34 +161,6 @@ public class UpdateServiceImpl implements UpdateService {
             }
 
             // --------------------------------------
-            // Identify named entities
-            // --------------------------------------
-            try {
-                List<EntityNamedEntity> namedEntities = new ArrayList<>();
-                for (CompletionResponse completionResponse : listCompletionResponse) {
-                    //remove namedEntities associated to this page
-                    repositoryNamedEntity.delete(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
-
-                    List<DtoNamedEntity> listNE = TranscriptUtils.identifyNamedIdentities(completionResponse.getTranscript());
-                    listNE.addAll(TranscriptUtils.identifyTitles(completionResponse.getTranscript()));
-
-                    for (DtoNamedEntity namedEntity : listNE) {
-                        LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
-                        IdNamedEntity idNamedEntity = IdNamedEntity.createIdNamedEntity(authService.getUsernameFromContext(), file2Process.getFileId(), completionResponse.getPageNumber());
-                        namedEntities.add(new EntityNamedEntity()
-                                .setIdNamedEntity(idNamedEntity)
-                                .setVerb(namedEntity.getVerb())
-                                .setValue(namedEntity.getValue())
-                                .setStartIndex(namedEntity.getStart())
-                                .setEndIndex(namedEntity.getEnd()));
-                    }
-                }
-                repositoryNamedEntity.saveAll(namedEntities);
-            }catch (Exception e) {
-                LOG.error("ERROR updating images", e);
-            }
-
-            // --------------------------------------
             // Create transcript db entities
             // --------------------------------------
             saveTranscript(file2Process.getFileId(), listCompletionResponse, listImages.size());
@@ -197,6 +169,11 @@ public class UpdateServiceImpl implements UpdateService {
             // Create transcript page db entities
             // --------------------------------------
             saveTranscriptPages(file2Process.getFileId(), listCompletionResponse, modifiedOrNewImages);
+
+            // --------------------------------------
+            // Identify named entities
+            // --------------------------------------
+            namedEntitiesService.identifyNamedEntities(file2Process.getFileId(), listCompletionResponse);
         }
         createFileEntities(files2Process);
         LOG.info("Done processing files {}", files2Process.size());

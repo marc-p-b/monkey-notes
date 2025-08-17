@@ -11,7 +11,6 @@ import net.kprod.mn.data.repository.RepositoryNamedEntity;
 import net.kprod.mn.data.repository.RepositoryTranscript;
 import net.kprod.mn.data.repository.RepositoryTranscriptPage;
 import net.kprod.mn.service.*;
-import net.kprod.mn.transcript.NamedEntityVerb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

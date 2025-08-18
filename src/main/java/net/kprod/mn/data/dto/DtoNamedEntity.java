@@ -10,12 +10,14 @@ public class DtoNamedEntity {
     private UUID uuid;
     private NamedEntityVerb verb;
     private String value;
+    private String fileId;
     private int start;
     private int end;
 
     public static DtoNamedEntity fromEntity(EntityNamedEntity entity) {
         return new DtoNamedEntity(entity.getVerb(), entity.getValue(), entity.getStartIndex(), entity.getEndIndex())
-                .setUuid(entity.getIdNamedEntity().getUuid());
+                .setUuid(entity.getIdNamedEntity().getUuid())
+                .setFileId(entity.getIdNamedEntity().getFileId());
     }
 
     public EntityNamedEntity toEntity(String username, String fileId, int pageNumber) {
@@ -59,6 +61,15 @@ public class DtoNamedEntity {
     public int getEnd() {
             return end;
         }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public DtoNamedEntity setFileId(String fileId) {
+        this.fileId = fileId;
+        return this;
+    }
 
     @Override
     public String toString() {

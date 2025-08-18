@@ -1,5 +1,6 @@
 package net.kprod.mn.controller;
 
+import net.kprod.mn.data.dto.DtoNamedEntity;
 import net.kprod.mn.data.dto.DtoNamedEntityIndex;
 import net.kprod.mn.data.entity.EntityNamedEntity;
 import net.kprod.mn.data.entity.EntityNamedEntityIndex;
@@ -41,7 +42,15 @@ public class NamedEntityController {
                     return d;
                 })
                 .collect(Collectors.toList());
+        return ResponseEntity.ok().body(l);
+    }
 
+    @GetMapping("/ne/values/{verb}")
+    public ResponseEntity<List<DtoNamedEntity>> getValues(@PathVariable NamedEntityVerb verb) {
+        List<DtoNamedEntity> l = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb)
+                .stream()
+                .map(DtoNamedEntity::fromEntity)
+                .toList();
 
         return ResponseEntity.ok().body(l);
     }

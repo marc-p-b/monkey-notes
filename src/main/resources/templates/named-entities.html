@@ -37,6 +37,8 @@
 
         const container = document.getElementById('sections');
         const topLinks = document.getElementById('topLinks');
+        const ul = document.createElement('ul');
+        container.appendChild(ul);
 
         fetch('/ne/verb/' + namedEntityVerb, {
             method: 'GET'
@@ -49,7 +51,18 @@
         })
         .then(data => {
             data.forEach(ne => {
-               console.log(ne);
+                let li = document.createElement('li');
+                li.textContent = ne.value + ' count ' + ne.count;
+
+                let a = document.createElement('a');
+
+                a.href = '/ne/values/' + ne.verb;
+                a.textContent = 'list';
+                a.classList.add('clickableLink');
+
+                li.appendChild(a);
+
+                ul.appendChild(li);
             });
         })
         .catch(error => console.error('Error:', error));
@@ -57,7 +70,33 @@
         document.addEventListener('click', function(event) {
             if (event.target.matches('a.clickableLink')) {
                 event.preventDefault();
-                requestLink(event, document.getElementById("status"));
+                const linkHref = event.target.href;
+
+
+                fetch(linkHref, {
+                    method: 'GET'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    data.forEach(ne => {
+                        const a = document.createElement('a');
+                        a.textContent = 'doc';
+                        a.href = '/v/transcript/' + ne.fileId;
+
+                        event.target.appendChild(a);
+
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+
+
+
+
             }
         });
 

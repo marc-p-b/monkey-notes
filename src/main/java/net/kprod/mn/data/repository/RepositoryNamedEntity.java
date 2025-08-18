@@ -24,5 +24,7 @@ public interface RepositoryNamedEntity extends JpaRepository<EntityNamedEntity, 
 
     @Query("SELECT n FROM named_entity n where n.idNamedEntity.username = :username and n.verb = :verb")
     List<EntityNamedEntity> findByVerb(@Param("username") String username, @Param("verb")NamedEntityVerb verb);
+
+    long countByValue(String value);
 }
 

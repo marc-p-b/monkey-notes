@@ -12,13 +12,15 @@ public class DtoNamedEntity {
     private String value;
     private String fileId;
     private String fileName;
+    private int pageNumber;
     private int start;
     private int end;
 
     public static DtoNamedEntity fromEntity(EntityNamedEntity entity) {
         return new DtoNamedEntity(entity.getVerb(), entity.getValue(), entity.getStartIndex(), entity.getEndIndex())
                 .setUuid(entity.getIdNamedEntity().getUuid())
-                .setFileId(entity.getIdNamedEntity().getFileId());
+                .setFileId(entity.getIdNamedEntity().getFileId())
+                .setPageNumber(entity.getIdNamedEntity().getPageNumber());
     }
 
     public EntityNamedEntity toEntity(String username, String fileId, int pageNumber) {
@@ -38,8 +40,39 @@ public class DtoNamedEntity {
         this.end = end;
     }
 
-    private DtoNamedEntity setUuid(UUID uuid) {
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public DtoNamedEntity setUuid(UUID uuid) {
         this.uuid = uuid;
+        return this;
+    }
+
+    public NamedEntityVerb getVerb() {
+        return verb;
+    }
+
+    public DtoNamedEntity setVerb(NamedEntityVerb verb) {
+        this.verb = verb;
+        return this;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public DtoNamedEntity setValue(String value) {
+        this.value = value;
+        return this;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public DtoNamedEntity setFileId(String fileId) {
+        this.fileId = fileId;
         return this;
     }
 
@@ -52,32 +85,30 @@ public class DtoNamedEntity {
         return this;
     }
 
-    public UUID getUuid() {
-        return uuid;
+    public int getPageNumber() {
+        return pageNumber;
     }
 
-    public NamedEntityVerb getVerb() {
-            return verb;
-        }
-
-    public String getValue() {
-        return value;
+    public DtoNamedEntity setPageNumber(int pageNumber) {
+        this.pageNumber = pageNumber;
+        return this;
     }
 
     public int getStart() {
         return start;
     }
 
-    public int getEnd() {
-            return end;
-        }
-
-    public String getFileId() {
-        return fileId;
+    public DtoNamedEntity setStart(int start) {
+        this.start = start;
+        return this;
     }
 
-    public DtoNamedEntity setFileId(String fileId) {
-        this.fileId = fileId;
+    public int getEnd() {
+        return end;
+    }
+
+    public DtoNamedEntity setEnd(int end) {
+        this.end = end;
         return this;
     }
 

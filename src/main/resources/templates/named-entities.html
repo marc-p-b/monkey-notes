@@ -56,7 +56,7 @@
 
                 let a = document.createElement('a');
 
-                a.href = '/ne/values/' + ne.verb;
+                a.href = '/ne/values/' + ne.verb + '/' + ne.value;
                 a.textContent = 'list';
                 a.classList.add('clickableLink');
 
@@ -72,6 +72,8 @@
                 event.preventDefault();
                 const linkHref = event.target.href;
 
+                const ul = document.createElement('ul');
+                event.target.appendChild(ul);
 
                 fetch(linkHref, {
                     method: 'GET'
@@ -85,10 +87,14 @@
                 .then(data => {
                     data.forEach(ne => {
                         const a = document.createElement('a');
-                        a.textContent = ne.fileName;
+                        a.textContent = ne.fileName + ' page ' + (ne.pageNumber + 1);
                         a.href = '/v/transcript/' + ne.fileId;
 
-                        event.target.appendChild(a);
+                        const li = document.createElement('li');
+                        li.appendChild(a);
+                        ul.appendChild(li);
+
+
 
                     });
                 })

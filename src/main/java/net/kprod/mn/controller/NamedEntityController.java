@@ -50,9 +50,9 @@ public class NamedEntityController {
         return ResponseEntity.ok().body(l);
     }
 
-    @GetMapping("/ne/values/{verb}")
-    public ResponseEntity<List<DtoNamedEntity>> getValues(@PathVariable NamedEntityVerb verb) {
-        List<DtoNamedEntity> l = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb)
+    @GetMapping("/ne/values/{verb}/{value}")
+    public ResponseEntity<List<DtoNamedEntity>> getValues(@PathVariable NamedEntityVerb verb, @PathVariable String value) {
+        List<DtoNamedEntity> l = repositoryNamedEntity.findByVerbAndValue(authService.getUsernameFromContext(), verb, value)
                 .stream()
                 .map(DtoNamedEntity::fromEntity)
                 .map(ne -> {

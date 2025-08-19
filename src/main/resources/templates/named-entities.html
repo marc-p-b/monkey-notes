@@ -85,7 +85,7 @@
                 .then(data => {
                     data.forEach(ne => {
                         const a = document.createElement('a');
-                        a.textContent = 'doc';
+                        a.textContent = ne.fileName;
                         a.href = '/v/transcript/' + ne.fileId;
 
                         event.target.appendChild(a);

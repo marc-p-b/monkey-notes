@@ -1,5 +1,6 @@
 package net.kprod.mn.controller;
 
+import net.kprod.mn.data.ViewOptions;
 import net.kprod.mn.data.dto.DtoNamedEntity;
 import net.kprod.mn.data.dto.DtoNamedEntityIndex;
 import net.kprod.mn.data.entity.EntityNamedEntity;
@@ -8,6 +9,7 @@ import net.kprod.mn.data.enums.NamedEntityVerb;
 import net.kprod.mn.data.repository.RepositoryNamedEntity;
 import net.kprod.mn.data.repository.RepositoryNamedEntityIndex;
 import net.kprod.mn.service.AuthService;
+import net.kprod.mn.service.ViewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,9 @@ public class NamedEntityController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private ViewService viewService;
 
     @Autowired
     private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
@@ -50,7 +55,14 @@ public class NamedEntityController {
         List<DtoNamedEntity> l = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb)
                 .stream()
                 .map(DtoNamedEntity::fromEntity)
+                .map(ne -> {
+                    //TODO check for exc
+                    String fileName = viewService.getTranscript(ne.getFileId(), ViewOptions.all()).getName();
+                    ne.setFileName(fileName);
+                    return ne;
+                })
                 .toList();
+
 
         return ResponseEntity.ok().body(l);
     }

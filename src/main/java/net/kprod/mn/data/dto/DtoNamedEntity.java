@@ -11,6 +11,7 @@ public class DtoNamedEntity {
     private NamedEntityVerb verb;
     private String value;
     private String fileId;
+    private String fileName;
     private int start;
     private int end;
 
@@ -39,6 +40,15 @@ public class DtoNamedEntity {
 
     private DtoNamedEntity setUuid(UUID uuid) {
         this.uuid = uuid;
+        return this;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public DtoNamedEntity setFileName(String fileName) {
+        this.fileName = fileName;
         return this;
     }
 

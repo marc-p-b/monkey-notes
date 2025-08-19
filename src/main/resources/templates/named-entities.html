@@ -51,17 +51,21 @@
         })
         .then(data => {
             data.forEach(ne => {
-                let li = document.createElement('li');
-                li.textContent = ne.value + ' count ' + ne.count;
+                const name = ne.value + ' count ' + ne.count;
 
-                let a = document.createElement('a');
+                const li = document.createElement('li');
 
+                const a = document.createElement('a');
                 a.href = '/ne/values/' + ne.verb + '/' + ne.value;
-                a.textContent = 'list';
+                a.textContent = 'view';
                 a.classList.add('clickableLink');
 
-                li.appendChild(a);
+                const span = document.createElement('span');
+                span.appendChild(document.createTextNode(name))
+                span.appendChild(document.createTextNode(' - '))
+                span.appendChild(a);
 
+                li.appendChild(span);
                 ul.appendChild(li);
             });
         })

@@ -27,6 +27,8 @@ public class ImageController {
 
     @GetMapping(value = "/image/{username}/{fileId}/{imageNum}")
     public ResponseEntity<StreamingResponseBody> getImageWithMediaType(@PathVariable String username, @PathVariable String fileId, @PathVariable int imageNum) throws IOException {
+
+        LOG.info("IMAGE STREAMING -- USER: {} FILE: {} IMAGE: {}", username, fileId, imageNum);
         File file = utilsService.imagePath(username, fileId, imageNum).toFile();
 
         StreamingResponseBody stream = outputStream -> {
@@ -43,6 +45,8 @@ public class ImageController {
 
     @GetMapping(value = "/imagetemp/{username}/{fileId}/{imageNum}")
     public ResponseEntity<StreamingResponseBody> getImageWithMediaTypeTemp(@PathVariable String username, @PathVariable String fileId, @PathVariable int imageNum) throws IOException {
+
+        LOG.info("IMAGE TEMP STREAMING -- USER: {} FILE: {} IMAGE: {}", username, fileId, imageNum);
         File file = utilsService.tempImagePath(username, fileId, imageNum).toFile();
 
         StreamingResponseBody stream = outputStream -> {

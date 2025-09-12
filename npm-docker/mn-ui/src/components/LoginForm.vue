@@ -37,13 +37,15 @@ export default {
 
         const data = await response.json();
 
+        console.log("set token " + data.token);
+
         // store JWT in localStorage
         localStorage.setItem("token", data.token);
 
         // redirect or update UI
-        //this.$router.push("/dashboard");
+        this.$router.push("/");
 
-        this.error = "LOGIN OK";
+
 
       } catch (err) {
         this.error = "Invalid username or password";

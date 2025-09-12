@@ -31,23 +31,48 @@ const transcripts = ref<DtoTranscript[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-// Fetch data using default fetch
-async function fetchTranscripts() {
-  loading.value = true;
-  error.value = null;
-  try {
-    const response = await fetch("http://localhost:8080/test/recent");
-    if (!response.ok) throw new Error("Network response was not ok");
-    const data: DtoTranscript[] = await response.json();
-    //transcripts.value = data;
-    console.log(data);
-  } catch (err: any) {
-    console.error(err);
-    error.value = "Failed to load transcripts.";
-  } finally {
-    loading.value = false;
+async function authFetch(url, options = {}) {
+  const token = localStorage.getItem("token");
+
+  const headers = {
+    ...(options.headers || {}),
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    // optional: handle expired/invalid token
+    localStorage.removeItem("token");
+    window.location.href = "/login";
   }
+
+  console.log(response.json());
+
+  return response;
 }
+
+const response = await authFetch("http://localhost:8080/test/recent");
+
+
+// // Fetch data using default fetch
+// async function fetchTranscripts() {
+//   loading.value = true;
+//   error.value = null;
+//   try {
+//     const response = await fetch("http://localhost:8080/test/recent", { ...init, headers });
+//     if (!response.ok) throw new Error("Network response was not ok");
+//     const data: DtoTranscript[] = await response.json();
+//     //transcripts.value = data;
+//     console.log(data);
+//   } catch (err: any) {
+//     console.error(err);
+//     error.value = "Failed to load transcripts.";
+//   } finally {
+//     loading.value = false;
+//   }
+// }
 
 // Load on mount
 onMounted(() => {

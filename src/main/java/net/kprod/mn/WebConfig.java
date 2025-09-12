@@ -12,10 +12,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private PreferencesInterceptor preferencesInterceptor;
 
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(preferencesInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns("/v/preferences","/preferences/**", "/login", "/logout", "/error", "/static/**", "/grant-callback", "/notify", "/image/**", "/imagetemp/**");
     }
+
+
 }

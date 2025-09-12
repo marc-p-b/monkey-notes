@@ -27,7 +27,7 @@
 <script>
 
     async function fetchRecentTranscripts() {
-        const response = await fetch('/transcript/recent');
+        const response = await fetch('transcript/recent');
         const elements = await response.json();
         const container = document.getElementById('recent-container');
 
@@ -179,88 +179,6 @@
         }
     }
 
-
-    // async function fetchAndRenderTree() {
-    //     const response = await fetch('/folder/list');
-    //     const fileNodes = await response.json();
-    //     const container = document.getElementById('folder-container');
-    //     container.appendChild(buildTree(fileNodes));
-    // }
-    //
-    // function buildTree(nodes) {
-    //     const ul = document.createElement('ul');
-    //
-    //     nodes.forEach(node => {
-    //         const li = document.createElement('li');
-    //
-    //         const nameSpan = document.createElement('span');
-    //         nameSpan.textContent = node.name;
-    //         li.appendChild(nameSpan);
-    //
-    //         if (node.folder) {
-    //             const refreshLink = document.createElement('a');
-    //             refreshLink.href = `/update/folder/${node.dtoFile.fileId}`;
-    //             refreshLink.textContent = 'refresh';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(refreshLink);
-    //
-    //             const folderPdf = document.createElement('a');
-    //             folderPdf.href = `/folder/pdf/${node.dtoFile.fileId}`;
-    //             folderPdf.textContent = 'pdf';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(folderPdf);
-    //
-    //         } else {
-    //             const pagesSpan = document.createElement('span');
-    //             pagesSpan.textContent = `(${node.dtoTranscript.pageCount} pages)`;
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(pagesSpan);
-    //
-    //             const transcriptLink = document.createElement('a');
-    //             transcriptLink.href = `/transcript/${node.dtoFile.fileId}`;
-    //             transcriptLink.textContent = 'view';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(transcriptLink);
-    //
-    //             const failedLink = document.createElement('a');
-    //             failedLink.href = `/transcript/${node.dtoFile.fileId}/failed`;
-    //             failedLink.textContent = 'view failed';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(failedLink);
-    //
-    //             const forceUpdateLink = document.createElement('a');
-    //             forceUpdateLink.href = `/transcript/force-update/${node.dtoFile.fileId}`;
-    //             forceUpdateLink.textContent = 'force update';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(forceUpdateLink);
-    //
-    //             const pdfLink = document.createElement('a');
-    //             pdfLink.href = `/transcript/pdf/${node.dtoFile.fileId}`;
-    //             pdfLink.textContent = 'pdf';
-    //             li.appendChild(document.createTextNode(' - '));
-    //             li.appendChild(pdfLink);
-    //         }
-    //
-    //         const agentLink = document.createElement('a');
-    //         agentLink.href = `/agent/${node.dtoFile.fileId}`;
-    //         agentLink.textContent = 'agent';
-    //         li.appendChild(document.createTextNode(' - '));
-    //         li.appendChild(agentLink);
-    //
-    //         const delLink = document.createElement('a');
-    //         delLink.href = `/delete/${node.dtoFile.fileId}`;
-    //         delLink.textContent = 'delete';
-    //         li.appendChild(document.createTextNode(' - '));
-    //         li.appendChild(delLink);
-    //
-    //         if (node.folder && node.children && node.children.length > 0) {
-    //             li.appendChild(buildTree(node.children));
-    //         }
-    //
-    //         ul.appendChild(li);
-    //     });
-    //     return ul;
-    // }
     document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
 

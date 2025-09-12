@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import HelloWorld from './components/HelloWorld.vue'
 import Recents from "./components/Recents.vue";
+import LoginForm from "./components/LoginForm.vue";
 </script>
 
 <template>
 
 <!--  <HelloWorld msg="Vite + Vue" />-->
-  <Recents/>
+  <LoginForm/>
 </template>
 
 <style scoped>

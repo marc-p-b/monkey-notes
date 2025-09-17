@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import NotFound from "./components/404.vue";
 import Recents from "./components/Recents.vue";
 import LoginForm from "./components/LoginForm.vue";
 
@@ -17,17 +17,22 @@ window.addEventListener('hashchange', () => {
 })
 
 const currentView = computed(() => {
-  return routes[currentPath.value.slice(1) || '/'] || Recents //Recents here is not found page !
+
+  const token = localStorage.getItem("token");
+  console.log("token " + token);
+  if (!token) {
+    console.log("no token, login");
+    return LoginForm;
+  }
+  return routes[currentPath.value.slice(1) || '/'] || NotFound;
 })
 
 </script>
 
 <template>
-<!--  <LoginForm/>-->
 
   <a href="#/">Recents</a> |
   <a href="#/login">Login</a> |
-<!--  <a href="#/non-existent-path">Broken Link</a>-->
   <component :is="currentView" />
 
 </template>

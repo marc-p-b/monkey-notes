@@ -13,9 +13,9 @@
 
     <ul v-else >
       <li
-          v-for="transcript in transcripts" :key="transcript.fileId"
+          v-for="transcript in transcripts" :key="transcript.transcript.fileId"
       >
-        {{ transcript.name }}
+        {{ transcript.transcript.name }}
       </li>
     </ul>
   </div>
@@ -54,7 +54,7 @@ async function authFetch(url, options = {}) {
     window.location.href = "/login";
   }
 
-  console.log(response.json());
+  //console.log(response.json());
 
   return response;
 }
@@ -68,13 +68,11 @@ async function fetchTranscripts() {
   error.value = null;
   try {
     const response = await authFetch("http://localhost:8080/transcript/recent");
-    if (!response.ok) throw new Error("Network response was not ok");
-
-
+    //if (!response.ok) throw new Error("Network response was not ok");
     //const data: DtoTranscript[] = await response.json();
     //const data = await response.json();
-    //transcripts.value = data;
-    console.log(data);
+    transcripts.value = await response.json();
+    //console.log(data);
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load transcripts.";

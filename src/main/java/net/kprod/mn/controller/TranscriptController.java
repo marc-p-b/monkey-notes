@@ -48,7 +48,6 @@ public class TranscriptController {
 
     @GetMapping("/transcript/recent")
     public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
-        System.out.println("HEEY!!!!!");
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 

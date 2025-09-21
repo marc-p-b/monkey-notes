@@ -1,7 +1,3 @@
-
-
-
-
 <template>
 
   <div class="login">
@@ -12,7 +8,7 @@
       <button type="submit">login</button>
     </form>
 
-    <p v-if="error">{{ error }}</p>
+    <p v-if="errorMessage">{{ error }}</p>
     <p v-if="infoMessage">{{ infoMessage }}</p>
 
   </div>
@@ -20,6 +16,9 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const username = ref("");
 const password = ref("");
@@ -41,7 +40,9 @@ async function handleLogin() {
       errorMessage.value = "Invalid credentials";
       return;
     } else {
-      infoMessage.value = "ok !"
+      infoMessage.value = "Login successfull, redirect is 2 secs"
+
+
     }
 
     const data = await response.json();
@@ -49,8 +50,18 @@ async function handleLogin() {
 
     localStorage.setItem("token", token);
 
-    // Redirect to dashboard
-    //router.push("/dashboard");
+    console.log("req after login " + localStorage.getItem("requestedPath"))
+
+
+    if (localStorage.getItem("requestedPath")) {
+      //await delay(2000); //TODO add a delay here
+      const afterLoginPath = localStorage.getItem("requestedPath")
+      localStorage.removeItem("requestedPath")
+      //window.location.href = afterLoginPath;
+      router.push(afterLoginPath)
+    }
+
+
   } catch (err) {
     errorMessage.value = "Server error";
     console.error(err);

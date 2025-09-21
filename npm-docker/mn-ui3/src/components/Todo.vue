@@ -1,7 +1,3 @@
-
-
-
-
 <template>
 
   <form action="" @submit.prevent="addTask">

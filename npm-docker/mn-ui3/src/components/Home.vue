@@ -1,10 +1,4 @@
-
-
-
-
 <template>
-
-
   <div>
     <h2>Transcripts</h2>
 

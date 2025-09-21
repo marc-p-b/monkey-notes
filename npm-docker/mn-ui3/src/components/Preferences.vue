@@ -1,7 +1,7 @@
 <template xmlns="http://www.w3.org/1999/html">
 <h2>prefs</h2>
 
-  <form action="" @submit.prevent="save">
+  <form @submit.prevent="submitForm">
     <fieldset role="group">
       <label>Use Default prompt ?</label>
       <input type="checkbox" v-model="prefs.useDefaultPrompt" />
@@ -94,13 +94,39 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 
 
-const save = () => {
-  console.log("save !")
-
-  
 
 
-}
+
+  const submitForm = async () => {
+
+    console.log("save !")
+
+    try {
+      const response = await authFetch("http://localhost:8080/preferences/form", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(prefs.value),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Response:", data);
+      //success.value = true;
+    } catch (err: any) {
+
+      console.log("err " + err)
+
+      //error.value = err.message || "Something went wrong.";
+    } finally {
+      console.log("fin")
+      //loading.value = false;
+    }
+  }
 
 const reset = () => {
   console.log("reset !")

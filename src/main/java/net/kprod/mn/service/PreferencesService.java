@@ -1,14 +1,12 @@
 package net.kprod.mn.service;
 
 import net.kprod.mn.ServiceException;
-import net.kprod.mn.data.dto.DtoConfigs;
-
-import java.util.Map;
+import net.kprod.mn.data.dto.DtoPreferences;
 
 public interface PreferencesService {
-    DtoConfigs listPreferences();
+    DtoPreferences listPreferences();
 
-    void setPreference(DtoConfigs prefs);
+    void setPreference(DtoPreferences prefs);
     void resetPreference();
 
     boolean isParametersSet();

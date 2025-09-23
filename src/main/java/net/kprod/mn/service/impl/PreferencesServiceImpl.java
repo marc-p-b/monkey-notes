@@ -1,7 +1,7 @@
 package net.kprod.mn.service.impl;
 
 import net.kprod.mn.ServiceException;
-import net.kprod.mn.data.dto.DtoConfigs;
+import net.kprod.mn.data.dto.DtoPreferences;
 import net.kprod.mn.data.entity.EntityPreferences;
 import net.kprod.mn.data.entity.EntityPreferencesId;
 import net.kprod.mn.data.enums.PreferenceKey;
@@ -50,7 +50,7 @@ public class PreferencesServiceImpl implements PreferencesService {
     private String dftOpenaiAssistantInstructions;
 
     @Override
-    public DtoConfigs listPreferences() {
+    public DtoPreferences listPreferences() {
 
         if(isParametersSet() == false) {
             return initPreferences(authService.getUsernameFromContext());
@@ -61,14 +61,15 @@ public class PreferencesServiceImpl implements PreferencesService {
         }
     }
 
-    private DtoConfigs fromMap(Map<String, String> map) {
-        DtoConfigs dtoConfigs = new DtoConfigs();
+    private DtoPreferences fromMap(Map<String, String> map) {
+        //TODO simplify ? remove map may be possible
+        DtoPreferences dtoConfigs = new DtoPreferences();
         for (Map.Entry<String, String> entry : map.entrySet()) {
             try {
                 PreferenceKey key = PreferenceKey.valueOf(entry.getKey());
                 switch (key) {
                     case set:
-                        dtoConfigs.setSet(Boolean.parseBoolean(entry.getValue()));
+                        dtoConfigs.setInitialized(Boolean.parseBoolean(entry.getValue()));
                         break;
                     case agentInstructions:
                         dtoConfigs.setAgentInstructions(entry.getValue());
@@ -127,9 +128,9 @@ public class PreferencesServiceImpl implements PreferencesService {
         return !isParametersSet();
     }
 
-    private DtoConfigs initPreferences(String username) {
+    private DtoPreferences initPreferences(String username) {
 
-        DtoConfigs dtoConfigs = new DtoConfigs()
+        DtoPreferences dtoConfigs = new DtoPreferences()
                 .setUseDefaultPrompt(true)
                 .setPrompt(dftQwenPrompt)
                 .setUseDefaultPrompt(true)
@@ -143,7 +144,7 @@ public class PreferencesServiceImpl implements PreferencesService {
                 .setAiReadTimeout(dftAiReadTimeout)
                 .setUseDefaultModelMaxTokens(true)
                 .setModelMaxTokens(dftQwenMaxTokens)
-                .setSet(false);
+                .setInitialized(false);
 
         List<EntityPreferences> list = dtoConfigs.toEntities(username);
         repositoryConfig.saveAll(list);
@@ -164,10 +165,8 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     @Override
-    public void setPreference(DtoConfigs prefs) {
-        //DtoConfigs dtoConfigs = fromMap(formData)
-        //    .setSet(true);
-        prefs.setSet(true);
+    public void setPreference(DtoPreferences prefs) {
+        prefs.setInitialized(true);
         repositoryConfig.saveAll(prefs.toEntities(authService.getUsernameFromContext()));
     }
 

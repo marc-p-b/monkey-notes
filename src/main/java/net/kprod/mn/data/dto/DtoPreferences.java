@@ -7,8 +7,8 @@ import net.kprod.mn.data.enums.PreferenceKey;
 import java.util.Arrays;
 import java.util.List;
 
-public class DtoConfigs {
-    private boolean set = false;
+public class DtoPreferences {
+    private boolean initialized = false;
 
     private boolean useDefaultPrompt;
     private String  prompt;
@@ -34,7 +34,7 @@ public class DtoConfigs {
 
     public List<EntityPreferences> toEntities(String username) {
         List<EntityPreferences> list = Arrays.asList(
-                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.set), Boolean.toString(set)),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.set), Boolean.toString(initialized)),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.prompt), prompt),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.useDefaultModel), Boolean.toString(useDefaultModel)),
 
@@ -58,12 +58,12 @@ public class DtoConfigs {
         return list;
     }
 
-    public DtoConfigs setSet(boolean set) {
-        this.set = set;
+    public DtoPreferences setInitialized(boolean set) {
+        this.initialized = set;
         return this;
     }
 
-    public DtoConfigs setPrompt(String prompt) {
+    public DtoPreferences setPrompt(String prompt) {
         this.prompt = prompt;
         return this;
     }
@@ -72,68 +72,68 @@ public class DtoConfigs {
         return agentInstructions;
     }
 
-    public DtoConfigs setAgentInstructions(String agentInstructions) {
+    public DtoPreferences setAgentInstructions(String agentInstructions) {
         this.agentInstructions = agentInstructions;
         return this;
     }
 
-    public DtoConfigs setUseDefaultModel(boolean useDefaultModel) {
+    public DtoPreferences setUseDefaultModel(boolean useDefaultModel) {
         this.useDefaultModel = useDefaultModel;
         return this;
     }
 
-    public DtoConfigs setModel(String model) {
+    public DtoPreferences setModel(String model) {
         this.model = model;
         return this;
     }
 
-    public DtoConfigs setUseDefaultPrompt(boolean useDefaultPrompt) {
+    public DtoPreferences setUseDefaultPrompt(boolean useDefaultPrompt) {
         this.useDefaultPrompt = useDefaultPrompt;
         return this;
     }
 
-    public DtoConfigs setInputFolderId(String inputFolderId) {
+    public DtoPreferences setInputFolderId(String inputFolderId) {
         this.inputFolderId = inputFolderId;
         return this;
     }
 
-    public DtoConfigs setOutputFolderId(String outputFolderId) {
+    public DtoPreferences setOutputFolderId(String outputFolderId) {
         this.outputFolderId = outputFolderId;
         return this;
     }
 
-    public DtoConfigs setUseDefaultAiConnectTimeout(boolean useDefaultAiConnectTimeout) {
+    public DtoPreferences setUseDefaultAiConnectTimeout(boolean useDefaultAiConnectTimeout) {
         this.useDefaultAiConnectTimeout = useDefaultAiConnectTimeout;
         return this;
     }
 
-    public DtoConfigs setAiConnectTimeout(int aiConnectTimeout) {
+    public DtoPreferences setAiConnectTimeout(int aiConnectTimeout) {
         this.aiConnectTimeout = aiConnectTimeout;
         return this;
     }
 
-    public DtoConfigs setUseDefaultAiReadTimeout(boolean useDefaultAiReadTimeout) {
+    public DtoPreferences setUseDefaultAiReadTimeout(boolean useDefaultAiReadTimeout) {
         this.useDefaultAiReadTimeout = useDefaultAiReadTimeout;
         return this;
     }
 
-    public DtoConfigs setAiReadTimeout(int aiReadTimeout) {
+    public DtoPreferences setAiReadTimeout(int aiReadTimeout) {
         this.aiReadTimeout = aiReadTimeout;
         return this;
     }
 
-    public DtoConfigs setUseDefaultModelMaxTokens(boolean useDefaultModelMaxTokens) {
+    public DtoPreferences setUseDefaultModelMaxTokens(boolean useDefaultModelMaxTokens) {
         this.useDefaultModelMaxTokens = useDefaultModelMaxTokens;
         return this;
     }
 
-    public DtoConfigs setModelMaxTokens(int modelMaxTokens) {
+    public DtoPreferences setModelMaxTokens(int modelMaxTokens) {
         this.modelMaxTokens = modelMaxTokens;
         return this;
     }
 
-    public boolean isSet() {
-        return set;
+    public boolean isInitialized() {
+        return initialized;
     }
 
     public String getPrompt() {

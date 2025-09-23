@@ -8,7 +8,7 @@ import java.util.Map;
 public interface PreferencesService {
     DtoConfigs listPreferences();
 
-    void setPreference(Map<String, String> formData);
+    void setPreference(DtoConfigs prefs);
     void resetPreference();
 
     boolean isParametersSet();

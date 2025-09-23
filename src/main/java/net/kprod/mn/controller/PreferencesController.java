@@ -50,11 +50,11 @@ public class PreferencesController {
     }
 
     @PostMapping("/preferences/form")
-    public String savePreferences(Model model, @RequestBody Object o) {
-        //preferencesService.setPreference(formData);
+    public ResponseEntity<String> savePreferences(@RequestBody DtoConfigs prefs) {
+        preferencesService.setPreference(prefs);
         //model.addAttribute("preferences", preferencesService.listPreferences());
         //return "preferences";
-        return "ok";
+        return ResponseEntity.ok("saved");
     }
 
 //    @PostMapping("/preferences/form")

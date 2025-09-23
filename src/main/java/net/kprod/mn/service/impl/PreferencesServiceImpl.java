@@ -164,10 +164,11 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     @Override
-    public void setPreference(Map<String, String> formData) {
-        DtoConfigs dtoConfigs = fromMap(formData)
-            .setSet(true);
-        repositoryConfig.saveAll(dtoConfigs.toEntities(authService.getUsernameFromContext()));
+    public void setPreference(DtoConfigs prefs) {
+        //DtoConfigs dtoConfigs = fromMap(formData)
+        //    .setSet(true);
+        prefs.setSet(true);
+        repositoryConfig.saveAll(prefs.toEntities(authService.getUsernameFromContext()));
     }
 
     @Override

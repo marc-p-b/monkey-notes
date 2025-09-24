@@ -5,6 +5,7 @@ import com.google.api.services.drive.Drive;
 import java.util.Optional;
 
 public interface DriveService {
+    void resetMap();
     Optional<String> requireAuth();
     String requiredNewAuth();
     void grantCallback(String code);

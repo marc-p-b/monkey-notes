@@ -53,6 +53,8 @@ public class AuthWebhooksController {
         String code = request.getParameter("code");
         String state = request.getParameter("state");
 
+
+
         String token = state.split("=")[1];
 
         if (JwtUtil.validateToken(token)) {
@@ -60,6 +62,10 @@ public class AuthWebhooksController {
             var auth = new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
+
+        //TODO keep ?
+        //reset map is mandatory when redirecting to vue app
+        driveService.resetMap();
 
         driveService.grantCallback(code);
 

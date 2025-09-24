@@ -78,6 +78,10 @@ public class DriveServiceImpl implements DriveService {
 
     private Map<String, Drive> mapDrive = new HashMap<>();
 
+    public void resetMap(){
+        mapDrive = new HashMap<>();
+    }
+
     private Credential getCredential(){
         //LOG.info("Get credential user {}", authService.getUsernameFromContext());
         return mapCredentials.get(authService.getUsernameFromContext());

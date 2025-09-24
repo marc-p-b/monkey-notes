@@ -1,6 +1,11 @@
 <template xmlns="http://www.w3.org/1999/html">
 <h2>prefs</h2>
 
+  <div v-if="googleConnectRequired">
+    <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
+    <a :href="googleAuthUrl">Google Drive auth</a>
+  </div>
+
   <form @submit.prevent="submitForm">
     <fieldset role="group">
       <label>Use Default prompt ?</label>
@@ -89,13 +94,12 @@ export interface Prefs {
   modelMaxTokens: number;
 }
 
-const prefs = ref<Prefs[]>([]);
-const loading = ref(true);
-const error = ref<string | null>(null);
+const prefs = ref<Prefs[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
 
-
-
-
+const googleConnectRequired = ref(false)
+const googleAuthUrl = ref<string | null>(null)
 
   const submitForm = async () => {
 
@@ -116,6 +120,7 @@ const error = ref<string | null>(null);
 
       const data = await response.json();
       console.log("Response:", data);
+
       //success.value = true;
     } catch (err: any) {
 
@@ -163,7 +168,29 @@ async function fetchPreferences() {
     prefs.value = await response.json();
   } catch (err: any) {
     console.error(err);
-    error.value = "Failed to load transcripts.";
+    error.value = "Failed to load preferences.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function fetchGoogleAuth() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await authFetch("http://localhost:8080/preferences/authGoogleDrive");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const g = await response.json();
+    //console.log(g)
+
+    googleConnectRequired.value = !g.connected
+    googleAuthUrl.value = g.url
+
+
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to load google auth status.";
   } finally {
     loading.value = false;
   }
@@ -171,6 +198,7 @@ async function fetchPreferences() {
 
 // Load on mount
 onMounted(() => {
+  fetchGoogleAuth();
   fetchPreferences();
 });
 

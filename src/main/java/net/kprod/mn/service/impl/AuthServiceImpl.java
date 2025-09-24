@@ -9,7 +9,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -52,5 +51,16 @@ public class AuthServiceImpl implements AuthService {
         //TODO cannot cast !
         UsernamePasswordAuthenticationToken u = (UsernamePasswordAuthenticationToken) optionalAuthentication.get();//.getPrincipal();
         return u.getPrincipal().toString();
+    }
+
+    @Override
+    public Optional<String> getCurrentAuthToken() {
+        Optional<Authentication> optionalAuthentication = getLoggedAuthentication();
+
+        if(optionalAuthentication.isPresent()) {
+            UsernamePasswordAuthenticationToken u = (UsernamePasswordAuthenticationToken) optionalAuthentication.get();
+            return  Optional.of(u.getCredentials().toString());
+        }
+        return Optional.empty();
     }
 }

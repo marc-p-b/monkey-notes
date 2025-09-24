@@ -163,9 +163,20 @@ public class DriveServiceImpl implements DriveService {
     }
 
     public String requiredNewAuth() {
+
+
+        //.setState("token=" + authService.getCurrentAuthToken())
+
+        String token = "token=";
+        if (authService.getCurrentAuthToken().isPresent()) {
+            token = "token=" + authService.getCurrentAuthToken().get();
+        }
+
+
         String url = authFlow
                 .newAuthorizationUrl()
                 .setRedirectUri(appHost + oauthCallbackPath)
+                .setState(token)
                 .build();
 
         return url;

@@ -41,27 +41,18 @@ async function handleLogin() {
       return;
     } else {
       infoMessage.value = "Login successfull, redirect is 2 secs"
-
-
     }
 
     const data = await response.json();
     const token = data.token; // adjust to match backend
-
     localStorage.setItem("token", token);
-
-    console.log("req after login " + localStorage.getItem("requestedPath"))
-
 
     if (localStorage.getItem("requestedPath")) {
       //await delay(2000); //TODO add a delay here
       const afterLoginPath = localStorage.getItem("requestedPath")
       localStorage.removeItem("requestedPath")
-      //window.location.href = afterLoginPath;
       router.push(afterLoginPath)
     }
-
-
   } catch (err) {
     errorMessage.value = "Server error";
     console.error(err);

@@ -78,24 +78,17 @@ import { authFetch } from "@/requests.ts";
 
 export interface Prefs {
   set: boolean;
-
   useDefaultPrompt: boolean;
   prompt?: string;
-
   agentInstructions?: string;
-
   useDefaultModel: boolean;
   model?: string;
-
   inputFolderId?: string;
   outputFolderId?: string;
-
   useDefaultAiConnectTimeout: boolean;
   aiConnectTimeout: number;
-
   useDefaultAiReadTimeout: boolean;
   aiReadTimeout: number;
-
   useDefaultModelMaxTokens: boolean;
   modelMaxTokens: number;
 }
@@ -110,9 +103,6 @@ const googleAuthUrl = ref<string | null>(null)
 const message = ref(<string>"")
 
   const submitForm = async () => {
-
-    console.log("save !")
-
     try {
       const response = await authFetch("http://localhost:8080/preferences/form", {
         method: "POST",
@@ -125,26 +115,17 @@ const message = ref(<string>"")
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
-
-      const data = await response.json();
-      console.log("Response:", data);
-
-      //success.value = true;
+      //const data = await response.json();
     } catch (err: any) {
-
-      console.log("err " + err)
-
-      //error.value = err.message || "Something went wrong.";
+      error.value = err.message || "Something went wrong.";
     } finally {
-      console.log("fin")
-      //loading.value = false;
+      loading.value = false;
     }
   }
 
 const reset = () => {
   console.log("reset !")
 }
-
 
 async function googleDisconnect() {
   loading.value = true;
@@ -187,13 +168,9 @@ async function fetchGoogleAuth() {
   try {
     const response = await authFetch("http://localhost:8080/preferences/authGoogleDrive");
     if (!response.ok) throw new Error("Network response was not ok");
-    const g = await response.json();
-    //console.log(g)
-
-    googleConnectRequired.value = !g.connected
-    googleAuthUrl.value = g.url
-
-
+    const data = await response.json();
+    googleConnectRequired.value = !data.connected
+    googleAuthUrl.value = data.url
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load google auth status.";
@@ -202,11 +179,8 @@ async function fetchGoogleAuth() {
   }
 }
 
-// Load on mount
 onMounted(() => {
   fetchGoogleAuth();
   fetchPreferences();
 });
-
-
 </script>

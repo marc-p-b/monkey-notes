@@ -19,8 +19,8 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
+import { authFetch } from "@/requests.ts";
 
-// Define the minimal DTO for TypeScript
 interface DtoTranscript {
   fileId: string;
   name: string;
@@ -31,27 +31,27 @@ const transcripts = ref<DtoTranscript[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-async function authFetch(url, options = {}) {
-  const token = localStorage.getItem("token");
-
-  const headers = {
-    ...(options.headers || {}),
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  };
-
-  const response = await fetch(url, { ...options, headers });
-
-  if (response.status === 401) {
-    // optional: handle expired/invalid token
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  }
-
-  //console.log(response.json());
-
-  return response;
-}
+// async function authFetch(url, options = {}) {
+//   const token = localStorage.getItem("token");
+//
+//   const headers = {
+//     ...(options.headers || {}),
+//     "Content-Type": "application/json",
+//     ...(token ? { Authorization: `Bearer ${token}` } : {})
+//   };
+//
+//   const response = await fetch(url, { ...options, headers });
+//
+//   if (response.status === 401) {
+//     // optional: handle expired/invalid token
+//     localStorage.removeItem("token");
+//     window.location.href = "/login";
+//   }
+//
+//   //console.log(response.json());
+//
+//   return response;
+// }
 
 //const response = await authFetch("http://localhost:8080/test/recent");
 
@@ -62,7 +62,7 @@ async function fetchTranscripts() {
   error.value = null;
   try {
     const response = await authFetch("http://localhost:8080/transcript/recent");
-    //if (!response.ok) throw new Error("Network response was not ok");
+    if (!response.ok) throw new Error("Network response was not ok");
     //const data: DtoTranscript[] = await response.json();
     //const data = await response.json();
     transcripts.value = await response.json();

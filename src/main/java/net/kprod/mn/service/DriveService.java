@@ -12,4 +12,5 @@ public interface DriveService {
     void refreshToken();
     Drive getDrive();
     void connectCallback(Runnable callback);
+    void disconnect();
 }

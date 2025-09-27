@@ -1,6 +1,7 @@
 package net.kprod.mn.controller;
 
 import net.kprod.mn.JwtUtil;
+import net.kprod.mn.service.DriveService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,24 +12,28 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/jwt")
+
 public class AuthController {
-
-
     private Logger LOG = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserDetailsService userRepository;
 
+    @Autowired
+    private DriveService driveService;
+
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    @PostMapping(value = "/login", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/drive/disconnect", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> disconnect() {
+        driveService.disconnect();
+        return ResponseEntity.status(HttpStatus.OK).body("Disconnected");
+    }
+
+    @PostMapping(value = "/jwt/login", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         LOG.info("Login request user: {}", request.getUsername());
         UserDetails ud = userRepository.loadUserByUsername(request.getUsername());

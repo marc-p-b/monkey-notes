@@ -10,6 +10,7 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+import net.kprod.mn.data.entity.EntityGDriveCredential;
 import net.kprod.mn.data.gdrive.GDriveJpaDataStoreFactory;
 import net.kprod.mn.data.repository.RepositoryGDriveCredential;
 import net.kprod.mn.service.AuthService;
@@ -77,6 +78,8 @@ public class DriveServiceImpl implements DriveService {
     private Map<String, Credential> mapCredentials = new HashMap<>();
 
     private Map<String, Drive> mapDrive = new HashMap<>();
+    @Autowired
+    private RepositoryGDriveCredential repositoryGDriveCredential;
 
     public void resetMap(){
         mapDrive = new HashMap<>();
@@ -268,4 +271,11 @@ public class DriveServiceImpl implements DriveService {
         return mapGetDrive();
     }
 
+    @Override
+    public void disconnect() {
+        EntityGDriveCredential e = repositoryGDriveCredential.getReferenceById(authService.getUsernameFromContext());
+        repositoryGDriveCredential.delete(e);
+        mapCredentials.remove(authService.getUsernameFromContext());
+        LOG.info("Disconnected from Google Drive");
+    }
 }

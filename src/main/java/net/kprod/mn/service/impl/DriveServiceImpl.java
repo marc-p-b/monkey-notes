@@ -273,9 +273,11 @@ public class DriveServiceImpl implements DriveService {
 
     @Override
     public void disconnect() {
-        EntityGDriveCredential e = repositoryGDriveCredential.getReferenceById(authService.getUsernameFromContext());
+        String login = authService.getUsernameFromContext();
+        EntityGDriveCredential e = repositoryGDriveCredential.getReferenceById(login);
         repositoryGDriveCredential.delete(e);
-        mapCredentials.remove(authService.getUsernameFromContext());
+        mapCredentials.remove(login);
+        mapDrive.remove(login);
         LOG.info("Disconnected from Google Drive");
     }
 }

@@ -65,6 +65,11 @@
 
   </form>
 
+  <button @click.prevent="googleDisconnect">Disconnect from Google Drive</button>
+  <button @click.prevent="logout">Logout from Monkey Notes</button>
+
+  <p>{{message}}</p>
+
 </template>
 
 <script lang="ts" setup>
@@ -100,6 +105,8 @@ const error = ref<string | null>(null)
 
 const googleConnectRequired = ref(false)
 const googleAuthUrl = ref<string | null>(null)
+
+const message = ref(<string>"")
 
   const submitForm = async () => {
 
@@ -157,6 +164,25 @@ async function authFetch(url, options = {}) {
   //console.log(response.json());
 
   return response;
+}
+
+async function googleDisconnect() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("http://localhost:8080/drive/disconnect");
+    if (!response.ok) throw new Error("Network response was not ok");
+    message.value="Disconnected from Google Drive Account"
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to load preferences.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+function logout() {
+  window.location.href = "/logout";
 }
 
 async function fetchPreferences() {

@@ -1,5 +1,14 @@
 <template>
 
+  <h2>Recent transcripts</h2>
+  <div v-if="loading">Loading...</div>
+  <ul v-else>
+    <li v-for="transcript in transcripts" :key="transcript.fileId">
+      {{transcript.transcript.name}}
+    </li>
+  </ul>
+
+  <h2>Transcripts</h2>
   <TreeView />
 
 </template>
@@ -8,6 +17,7 @@
 import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
+
 
 interface DtoTranscript {
   fileId: string;

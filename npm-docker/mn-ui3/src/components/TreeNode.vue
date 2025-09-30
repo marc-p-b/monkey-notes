@@ -19,7 +19,7 @@
 
     <template v-else>
       <a href="#" @click.prevent="clickedTranscript(node.dtoFile.fileId)">
-        📄 Transcript {{ node.name }}
+        📄 Transcript {{ node.name }} - {{node.dtoFile.fileId}}
       </a>
     </template>
   </li>
@@ -28,7 +28,6 @@
 
 <script setup lang="ts">
 import TreeNode from "./TreeNode.vue";
-
 import { defineProps, defineEmits } from "vue";
 
 interface Node {

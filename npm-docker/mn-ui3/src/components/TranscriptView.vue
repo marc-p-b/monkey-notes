@@ -6,8 +6,7 @@
     <h2>{{transcript.title}}</h2>
 
     <div v-for="page in transcript.pages">
-      page {{page.pageNumber+1}}
-      <p>{{page.transcript}}</p>
+      <TranscriptPage :page="page"/>
     </div>
   </div>
 
@@ -18,6 +17,7 @@
 import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
 import { defineProps } from 'vue'
+import TranscriptPage from "./TranscriptPage.vue";
 
 const props = defineProps<{ fileId: string }>()
 
@@ -28,21 +28,12 @@ interface DtoTranscript {
   username: string
   fileId: string
   name: string
-
-  // last update (images -> transcript)
   transcripted_at: string // use string if coming from JSON (ISO date format)
-
-  // date from title (regex)
   documented_at: string
-
-  // file first discovery // todo replace with drive date ?
   discovered_at: string
-
   pageCount: number
   version: number
-
-  pages: DtoTranscriptPage[]
-
+  pages: Page[]
   title: string
 }
 

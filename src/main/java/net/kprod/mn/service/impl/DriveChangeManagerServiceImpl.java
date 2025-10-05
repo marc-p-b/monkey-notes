@@ -160,23 +160,25 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .setChannel(responseChannel)
                 .setLastPageToken(lastPageToken);
 
+            //probably because watchData is null ! -- moved
+            watchData.setFutureFlush(taskScheduler.schedule(new RefreshWatchTask(ctx, username), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant()));
+            watchData.setWatchChanges(true);
+
+            if(mapChannelIdWatchData == null) {
+                mapChannelIdWatchData = new HashMap<>();
+            }
+            if(mapUsernameWatchData == null) {
+                mapUsernameWatchData = new HashMap<>();
+            }
+
+            mapUsernameWatchData.put(username, watchData);
+            mapChannelIdWatchData.put(channelId, watchData);
+            LOG.info("Watch ok for user {}", username);
         } catch (IOException e) {
+            //exc here when startup failed / token expired / works when restarted ? - might be resolved, moved the part using null watchData
             LOG.error("Failed to create watch channel", e);
         }
 
-        watchData.setFutureFlush(taskScheduler.schedule(new RefreshWatchTask(ctx, username), ZonedDateTime.now().plusSeconds(changesWatchExpiration).toInstant()));
-        watchData.setWatchChanges(true);
-
-        if(mapChannelIdWatchData == null) {
-            mapChannelIdWatchData = new HashMap<>();
-        }
-        if(mapUsernameWatchData == null) {
-            mapUsernameWatchData = new HashMap<>();
-        }
-
-        mapUsernameWatchData.put(username, watchData);
-        mapChannelIdWatchData.put(channelId, watchData);
-        LOG.info("Watch ok for user {}", username);
     }
 
     @Override

@@ -58,11 +58,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
 
   if (isTokenValid(localStorage.getItem("token")) && to.path === "/logout") {
-    console.log("logout !")
+    //console.log("logout !")
     localStorage.removeItem("token");
     next("/login");
   } else if (!isTokenValid(localStorage.getItem("token")) && to.path !== "/login") {
-    console.log("token is invalid, req is " + to.path)
+    //console.log("token is invalid, req is " + to.path)
 
     next("/login");
   } else {

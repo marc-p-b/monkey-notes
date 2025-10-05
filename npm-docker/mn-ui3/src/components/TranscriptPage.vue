@@ -2,12 +2,15 @@
 
 
   <p v-html="text"></p>
-  page {{page.pageNumber}}
+  <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a>
+  <a @click.prevent="runAction(page)">update</a>
+
 
 </template>
 
 <script lang="ts" setup>
 import {ref, defineProps} from "vue";
+import {authFetch} from "@/requests";
 
 interface NamedEntity {
   uuid: string
@@ -40,9 +43,32 @@ function replaceSubstring(str, start, end, replacement) {
   return str.slice(0, start) + replacement + str.slice(end);
 }
 
-const props = defineProps<{ page: Page }>();
 
+async function runAction(page) {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("http://localhost:8080/transcript/update/" + page.fileId + '/' + page.pageNumber);
+    if (!response.ok) throw new Error("Network response was not ok");
+    //transcript.value = await response.json();
+
+    console.log(response)
+
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to load transcripts.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+
+const props = defineProps<{ page: Page }>();
 const text = ref()
+//const linkUpdate = ref()
+
+const loading = ref(true)
+const error = ref<string | null>(null)
 
 let transcript = props.page.transcript;
 

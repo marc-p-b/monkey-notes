@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../components/Home.vue'
 import LoginView from '../components/Login.vue'
-import TranscriptView from '../components/TranscriptView.vue'
 import PreferencesView from "../components/Preferences.vue";
-import { jwtDecode } from "jwt-decode";
 import TranscriptView from "@/components/TranscriptView.vue";
+import AgentView from "@/components/AgentView.vue";
+import { jwtDecode } from "jwt-decode";
 
 interface JwtPayload {
   sub: string;
@@ -40,6 +40,12 @@ const router = createRouter({
       path: '/transcript/:fileId',
       name: 'transcript',
       component: TranscriptView,
+      props: true,
+    },
+    {
+      path: '/agent/:fileId',
+      name: 'agent',
+      component: AgentView,
       props: true,
     },
     {

@@ -13,13 +13,13 @@ public class CorsWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // allow CORS for all endpoints
-                //.allowedOrigins("http://localhost:8080") // your Vue dev server
+        registry.addMapping("/**")
                 .allowedOrigins("https://ohdbcfzqnn.a.pinggy.link")
-                .allowedOrigins("http://localhost:5173") // your Vue dev server
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // allowed HTTP methods
-                .allowedHeaders("*") // allow all headers
-                .allowCredentials(true); // allow cookies if needed
+                .allowedOrigins("http://localhost:5173") //TODO dev only
+                //.allowedOrigins("http://localhost") //TODO dev only
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 
 //    @Override

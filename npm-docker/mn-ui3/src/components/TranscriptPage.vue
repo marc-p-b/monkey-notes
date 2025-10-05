@@ -1,15 +1,13 @@
 <template>
 
-
   <p v-html="text"></p>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a>
   <a @click.prevent="runAction(page)">update</a>
 
-
 </template>
 
 <script lang="ts" setup>
-import {ref, defineProps} from "vue";
+import {ref, defineProps, onMounted} from "vue";
 import {authFetch} from "@/requests";
 
 interface NamedEntity {
@@ -50,7 +48,6 @@ async function runAction(page) {
   try {
     const response = await authFetch("http://localhost:8080/transcript/update/" + page.fileId + '/' + page.pageNumber);
     if (!response.ok) throw new Error("Network response was not ok");
-    //transcript.value = await response.json();
 
     console.log(response)
 
@@ -62,10 +59,8 @@ async function runAction(page) {
   }
 }
 
-
 const props = defineProps<{ page: Page }>();
 const text = ref()
-//const linkUpdate = ref()
 
 const loading = ref(true)
 const error = ref<string | null>(null)

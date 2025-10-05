@@ -104,7 +104,7 @@ const message = ref(<string>"")
 
   const submitForm = async () => {
     try {
-      const response = await authFetch("http://localhost:8080/preferences/form", {
+      const response = await authFetch("preferences/form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -131,7 +131,7 @@ async function googleDisconnect() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/drive/disconnect");
+    const response = await authFetch("drive/disconnect");
     if (!response.ok) throw new Error("Network response was not ok");
     message.value="Disconnected from Google Drive Account"
   } catch (err: any) {
@@ -150,7 +150,7 @@ async function fetchPreferences() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/preferences/get");
+    const response = await authFetch("preferences/get");
     if (!response.ok) throw new Error("Network response was not ok");
     prefs.value = await response.json();
   } catch (err: any) {
@@ -166,7 +166,7 @@ async function fetchGoogleAuth() {
   error.value = null;
 
   try {
-    const response = await authFetch("http://localhost:8080/preferences/authGoogleDrive");
+    const response = await authFetch("preferences/authGoogleDrive");
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
     googleConnectRequired.value = !data.connected

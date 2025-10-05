@@ -27,6 +27,7 @@ const infoMessage = ref("");
 
 async function handleLogin() {
   try {
+    //TODO replace complete url
     const response = await fetch("http://localhost:8080/jwt/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

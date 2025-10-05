@@ -1,5 +1,10 @@
-export async function authFetch(url, options = {}) {
+export async function authFetch(path, options = {}) {
     const token = localStorage.getItem("token");
+    const apiUrl = import.meta.env.VITE_API_URL
+
+    const url = apiUrl + '/' + path
+
+    console.log('req ' + path)
 
     const headers = {
         ...(options.headers || {}),

@@ -43,12 +43,9 @@ async function fetchTranscript() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/transcript/" + props.fileId);
+    const response = await authFetch("transcript/" + props.fileId);
     if (!response.ok) throw new Error("Network response was not ok");
     transcript.value = await response.json();
-
-    //console.log(response.json())
-
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load transcripts.";

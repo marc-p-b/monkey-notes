@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { authFetch } from "@/requests.ts";
+import {authFetch} from "@/requests";
 import TreeNode from "./TreeNode.vue";
 import {ref, onMounted} from "vue";
 import { useRouter } from 'vue-router'
@@ -44,9 +44,9 @@ async function fetchFolder(fileId : string, node?: Node) {
   try {
     let url = ""
     if(fileId.length === 0) {
-      url = "http://localhost:8080/transcript/folder/list"
+      url = "transcript/folder/list"
     } else {
-      url = "http://localhost:8080/transcript/folder/list/" + fileId
+      url = "transcript/folder/list/" + fileId
     }
     const response = await authFetch(url);
 

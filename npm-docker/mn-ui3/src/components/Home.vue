@@ -16,7 +16,7 @@
 <script lang="ts" setup>
 import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
-import { authFetch } from "@/requests.ts";
+import {authFetch} from "@/requests";
 
 
 interface DtoTranscript {
@@ -32,9 +32,10 @@ async function fetchRecentTranscripts() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/transcript/recent");
+    const response = await authFetch("transcript/recent");
     if (!response.ok) throw new Error("Network response was not ok");
     transcripts.value = await response.json();
+
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load transcripts.";

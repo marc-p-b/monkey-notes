@@ -48,7 +48,7 @@ async function prepareAgent() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/agent/prepare/' + fileId" + props.fileId);
+    const response = await authFetch("agent/prepare/' + fileId" + props.fileId);
     if (!response.ok) throw new Error("Network response was not ok");
     agentPrepare.value = await response.json();
 

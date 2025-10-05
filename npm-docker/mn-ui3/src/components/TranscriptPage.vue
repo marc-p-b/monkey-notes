@@ -1,14 +1,17 @@
 <template>
 
   <p v-html="text"></p>
-  <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a>
-  <a @click.prevent="runAction(page)">update</a>
+  <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
+  <a @click.prevent="runAction(page)">update</a> -
+  <a @click.prevent="agent(page.fileId)">agent</a>
 
 </template>
 
 <script lang="ts" setup>
 import {ref, defineProps, onMounted} from "vue";
 import {authFetch} from "@/requests";
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 interface NamedEntity {
   uuid: string
@@ -41,12 +44,11 @@ function replaceSubstring(str, start, end, replacement) {
   return str.slice(0, start) + replacement + str.slice(end);
 }
 
-
 async function runAction(page) {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch("http://localhost:8080/transcript/update/" + page.fileId + '/' + page.pageNumber);
+    const response = await authFetch("transcript/update/" + page.fileId + '/' + page.pageNumber);
     if (!response.ok) throw new Error("Network response was not ok");
 
     console.log(response)
@@ -57,6 +59,10 @@ async function runAction(page) {
   } finally {
     loading.value = false;
   }
+}
+
+function agent(fileId) {
+  router.push({ name: 'agent', params: { fileId } })
 }
 
 const props = defineProps<{ page: Page }>();

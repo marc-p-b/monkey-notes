@@ -9,6 +9,37 @@ public class DtoAgentPrepare {
         private String instructions;
         private List<DtoAgentMessage> messages;
         private OffsetDateTime createdAt;
+        //form posted
+        private String fileId;
+        private String question;
+        private boolean reset;
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public DtoAgentPrepare setFileId(String fileId) {
+        this.fileId = fileId;
+        return this;
+    }
+
+    public String getQuestion() {
+            return question;
+        }
+
+        public DtoAgentPrepare setQuestion(String question) {
+            this.question = question;
+            return this;
+        }
+
+        public boolean isReset() {
+            return reset;
+        }
+
+        public DtoAgentPrepare setReset(boolean reset) {
+            this.reset = reset;
+            return this;
+        }
 
         public String getModel() {
             return model;

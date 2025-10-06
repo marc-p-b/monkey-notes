@@ -1,7 +1,8 @@
 package net.kprod.mn.controller;
 
-import net.kprod.mn.data.dto.agent.DtoAgent;
+import net.kprod.mn.JwtUtil;
 import net.kprod.mn.data.dto.DtoURL;
+import net.kprod.mn.data.dto.agent.DtoAgent;
 import net.kprod.mn.data.dto.agent.DtoAgentPrepare;
 import net.kprod.mn.data.dto.agent.DtoAssistantOptions;
 import net.kprod.mn.service.AgentService;
@@ -11,14 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.Map;
 
 @Controller
 public class AgentController {
@@ -39,13 +36,9 @@ public class AgentController {
     }
 
     @PostMapping("/agent/ask")
-    public ResponseEntity<DtoURL> agentStreamLink(@RequestParam Map<String, String> formData) {
-        String question = formData.get("question");
-        String fileId = formData.get("fileId");
-        String newAssistantInstructions = formData.get("instructions");
-        String newAssistantModel = formData.get("model");
-        String resetStr = formData.get("reset");
-        boolean reset = resetStr != null ? resetStr.equals("on") : false;
+    public ResponseEntity<DtoURL> agentStreamLink(@RequestBody DtoAgentPrepare agentPrepare) {
+        String newAssistantInstructions = agentPrepare.getInstructions();
+        String newAssistantModel = agentPrepare.getModel();
 
         if(newAssistantModel == null || newAssistantModel.isEmpty()) {
             newAssistantModel = defaultModelName;
@@ -56,20 +49,27 @@ public class AgentController {
         }
 
         DtoAssistantOptions dtoOptions = new DtoAssistantOptions()
-                .setForceNew(reset)
+                .setForceNew(agentPrepare.isReset())
                 .setModel(newAssistantModel)
                 .setInstructions(newAssistantInstructions);
 
-        DtoAgent dtoAgent = agentService.getOrCreateAssistant(fileId, dtoOptions);
-        agentService.addMessage(dtoAgent.getThreadId(), question);
+        DtoAgent dtoAgent = agentService.getOrCreateAssistant(agentPrepare.getFileId(), dtoOptions);
+        agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getQuestion());
         String runId = agentService.createRun(dtoAgent);
-        String streamLink = "/agent/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
+        String streamLink = "agent/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
 
         return ResponseEntity.ok().body(new DtoURL(streamLink));
+
     }
 
-    @GetMapping("/agent/subscribe/{threadId}/{runId}")
-    public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId) throws IOException {
+    @GetMapping("/agent/subscribe/{threadId}/{runId}/{token}")
+    public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId, @PathVariable String token) throws IOException {
+
+        if(JwtUtil.validateToken(token) == false) {
+            LOG.error("Invalid token");
+            return null;
+        }
+
         return agentService.threadRunPolling(threadId, runId);
     }
 

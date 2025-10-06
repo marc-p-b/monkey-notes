@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/agent/subscribe/*/*/*").permitAll() //auth with get token param
                         .requestMatchers("/jwt/login").permitAll()
                         .requestMatchers("/grant-callback").permitAll()  // Public endpoints
                         .requestMatchers("/notify").permitAll()

@@ -102,20 +102,19 @@ const googleAuthUrl = ref<string | null>(null)
 
 const message = ref(<string>"")
 
-  const submitForm = async () => {
-    try {
-      const response = await authFetch("preferences/form", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(prefs.value),
-      });
+const submitForm = async () => {
+  try {
+    const response = await authFetch("preferences/form", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(prefs.value),
+    });
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-      //const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
     } catch (err: any) {
       error.value = err.message || "Something went wrong.";
     } finally {

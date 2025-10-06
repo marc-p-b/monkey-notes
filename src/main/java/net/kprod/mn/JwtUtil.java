@@ -7,6 +7,7 @@ import java.security.Key;
 
 public class JwtUtil {
 
+    //TODO update the secret !!!
     private static final String SECRET_KEY = "mysecretkeymysecretkeymysecretkey"; // minimum 256-bit for HS256
     private static final long EXPIRATION_TIME = 86400000; // 1 day in ms
 

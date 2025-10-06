@@ -109,6 +109,7 @@ public class AgentServiceImpl implements AgentService {
                     .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
                     .toList());
             LOG.info("");
+            agentPrepare.setFileId(fileId);
             return agentPrepare;
         } else {
             String instructions = dftOpenaiAssistantInstructions;
@@ -118,6 +119,7 @@ public class AgentServiceImpl implements AgentService {
                 LOG.error("Failed to get default instructions, get default value", e.getMessage());
             }
             return new DtoAgentPrepare()
+                .setFileId(fileId)
                 .setInstructions(instructions);
         }
     }

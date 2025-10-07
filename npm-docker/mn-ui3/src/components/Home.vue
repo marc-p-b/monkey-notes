@@ -1,10 +1,14 @@
 <template>
 
+<!--      <a href="/v/processing">Processes</a> --->
+
   <h2>Recent transcripts</h2>
   <div v-if="loading">Loading...</div>
   <ul v-else>
     <li v-for="transcript in transcripts" :key="transcript.fileId">
-      {{transcript.transcript.name}}
+      <a href="#" @click.prevent="clickedTranscript(transcript.transcript.fileId)">
+        📄 Transcript {{ transcript.transcript.name }}
+      </a>
     </li>
   </ul>
 
@@ -17,7 +21,8 @@
 import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
 import {authFetch} from "@/requests";
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 interface DtoTranscript {
   fileId: string;
@@ -42,6 +47,10 @@ async function fetchRecentTranscripts() {
   } finally {
     loading.value = false;
   }
+}
+
+function clickedTranscript(fileId) {
+  router.push({ name: 'transcript', params: { fileId } })
 }
 
 onMounted(() => {

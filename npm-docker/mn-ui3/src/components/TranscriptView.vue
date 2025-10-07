@@ -4,6 +4,10 @@
 
   <div v-else>
     <h2>{{transcript.title}}</h2>
+    <a @click.prevent="agent(transcript.fileId)">agent</a>
+
+<!--    '/transcript/update/' + fileId;-->
+<!--    '/transcript/pdf/' + fileId;-->
 
     <div v-for="page in transcript.pages">
       <TranscriptPage :page="page"/>
@@ -18,6 +22,8 @@ import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
 import { defineProps } from 'vue'
 import TranscriptPage from "./TranscriptPage.vue";
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const props = defineProps<{ fileId: string }>()
 
@@ -52,6 +58,10 @@ async function fetchTranscript() {
   } finally {
     loading.value = false;
   }
+}
+
+function agent(fileId) {
+  router.push({ name: 'agent', params: { fileId } })
 }
 
 onMounted(() => {

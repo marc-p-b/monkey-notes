@@ -2,16 +2,15 @@
 
   <p v-html="text"></p>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
-  <a @click.prevent="runAction(page)">update</a> -
-  <a @click.prevent="agent(page.fileId)">agent</a>
+  <a @click.prevent="runAction(page)">update</a>
 
 </template>
 
 <script lang="ts" setup>
 import {ref, defineProps, onMounted} from "vue";
 import {authFetch} from "@/requests";
-import { useRouter } from 'vue-router'
-const router = useRouter()
+// import { useRouter } from 'vue-router'
+// const router = useRouter()
 
 interface NamedEntity {
   uuid: string
@@ -55,14 +54,10 @@ async function runAction(page) {
 
   } catch (err: any) {
     console.error(err);
-    error.value = "Failed to load transcripts.";
+    error.value = "Failed to update transcript.";
   } finally {
     loading.value = false;
   }
-}
-
-function agent(fileId) {
-  router.push({ name: 'agent', params: { fileId } })
 }
 
 const props = defineProps<{ page: Page }>();

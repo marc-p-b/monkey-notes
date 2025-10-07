@@ -5,6 +5,7 @@
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/preferences">Preferences</RouterLink>
+        <RouterLink to="/processes">Processes</RouterLink>
       </nav>
     </div>
   </header>

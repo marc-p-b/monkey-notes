@@ -9,8 +9,8 @@
   <div v-else>
     <ul>
       <li v-for="process in processes">
-        <p v-if="process.status !== 'running'">{{process.name}} (completed, ran for {{process.duration}})</p>
-        <p v-else> running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
+        <p v-if="process.status !== 'running'">{{process.name}} {{process.description}} (completed, ran for {{process.duration}})</p>
+        <p v-else> {{process.name}} ({{process.description}}) running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
       </li>
     </ul>
   </div>

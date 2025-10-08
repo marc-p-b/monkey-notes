@@ -1,7 +1,5 @@
 <template>
 
-<!--      <a href="/v/processing">Processes</a> --->
-
   <h2>Recent transcripts</h2>
   <div v-if="loading">Loading...</div>
   <ul v-else>

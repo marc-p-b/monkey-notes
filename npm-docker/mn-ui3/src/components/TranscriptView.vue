@@ -26,8 +26,6 @@ const router = useRouter()
 
 const props = defineProps<{ fileId: string }>()
 
-//const pdfLink = ref(import.meta.env.VITE_API_URL + '/transcript/pdf/' + props.fileId)
-
 const loading = ref(true)
 const error = ref<string | null>(null)
 

@@ -4,10 +4,9 @@
 
   <div v-else>
     <h2>{{transcript.title}}</h2>
-    <a @click.prevent="agent(transcript.fileId)">agent</a>
-
-<!--    '/transcript/update/' + fileId;-->
-<!--    '/transcript/pdf/' + fileId;-->
+    <a @click.prevent="agent(transcript.fileId)">agent</a> -
+    <a @click.prevent="updateTranscript(transcript.fileId)">update</a> -
+    <a @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
 
     <div v-for="page in transcript.pages">
       <TranscriptPage :page="page"/>
@@ -26,6 +25,8 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const props = defineProps<{ fileId: string }>()
+
+//const pdfLink = ref(import.meta.env.VITE_API_URL + '/transcript/pdf/' + props.fileId)
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -57,6 +58,57 @@ async function fetchTranscript() {
     error.value = "Failed to load transcripts.";
   } finally {
     loading.value = false;
+  }
+}
+
+async function updateTranscript(fileId) {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("transcript/update/" + fileId);
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    console.log(response)
+
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to update transcript.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+const downloadFile = async (fileId: string) => {
+  try {
+
+    const response = await authFetch('transcript/pdf/' + props.fileId)
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
+    }
+
+    // Convert to Blob (binary data)
+    const blob = await response.blob()
+
+    // Extract filename from Content-Disposition header (if provided)
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let fileName = 'downloaded-file'
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/)
+      if (match) fileName = match[1]
+    }
+
+    // Create a temporary link and trigger download
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Download failed:', err)
   }
 }
 

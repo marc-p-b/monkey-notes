@@ -2,7 +2,7 @@
 
   <p v-html="text"></p>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
-  <a @click.prevent="runAction(page)">update</a>
+  <a @click.prevent="updatePage(page)">update</a>
 
 </template>
 
@@ -43,7 +43,7 @@ function replaceSubstring(str, start, end, replacement) {
   return str.slice(0, start) + replacement + str.slice(end);
 }
 
-async function runAction(page) {
+async function updatePage(page) {
   loading.value = true;
   error.value = null;
   try {
@@ -54,7 +54,7 @@ async function runAction(page) {
 
   } catch (err: any) {
     console.error(err);
-    error.value = "Failed to update transcript.";
+    error.value = "Failed to update transcript page.";
   } finally {
     loading.value = false;
   }

@@ -6,13 +6,13 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
-    <groupId>net.kprod</groupId>
-    <artifactId>dsb</artifactId>
+    <groupId>fr.monkeynotes</groupId>
+    <artifactId>mn</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>dsb</name>
-    <description>Demo project for Spring Boot</description>
+    <name>Monkey Notes</name>
+    <description>Monkey Notes OCR and transcript exploration</description>
 
     <properties>
         <java.version>17</java.version>
@@ -24,10 +24,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.boot</groupId>-->
-<!--            <artifactId>spring-boot-starter-thymeleaf</artifactId>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
@@ -122,18 +118,6 @@
             <artifactId>opencv</artifactId>
             <version>4.8.1-0</version>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>org.boofcv</groupId>-->
-<!--            <artifactId>boofcv-core</artifactId>-->
-<!--            <version>0.43</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.boofcv</groupId>-->
-<!--            <artifactId>boofcv-swing</artifactId>-->
-<!--            <version>0.43</version>-->
-<!--        </dependency>-->
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -143,7 +127,6 @@
     </dependencies>
 
     <build>
-<!--        <finalName>app</finalName>-->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

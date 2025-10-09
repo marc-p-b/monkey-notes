@@ -51,7 +51,7 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, onMounted, defineProps} from "vue";
+import {ref, onMounted} from "vue";
 import { authFetch } from "@/requests.ts";
 
 interface DtoAgentMessage {

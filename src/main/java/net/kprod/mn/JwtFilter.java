@@ -12,18 +12,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class JwtFilter extends OncePerRequestFilter {
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             if (JwtUtil.validateToken(token)) {
                 String username = JwtUtil.extractUsername(token);
-
                 UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
                 SecurityContextHolder.getContext().setAuthentication(auth);

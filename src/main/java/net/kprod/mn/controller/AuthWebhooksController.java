@@ -29,39 +29,17 @@ public class AuthWebhooksController {
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
 
-//    @GetMapping("/grant-callback")
-//    public ResponseEntity<String> grantCallback(HttpServletRequest request) throws IOException {
-//        String code = request.getParameter("code");
-//        String state = request.getParameter("state");
-//
-//        String token = state.split("=")[1];
-//
-//        if (JwtUtil.validateToken(token)) {
-//            String username = JwtUtil.extractUsername(token);
-//            var auth = new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
-//            SecurityContextHolder.getContext().setAuthentication(auth);
-//        }
-//
-//        driveService.grantCallback(code);
-//        return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY)
-//                .header("Location", "/").build();
-//        //return "redirect:localhost:5173";
-//    }
-
     @GetMapping("/grant-callback")
     public String grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
         String state = request.getParameter("state");
-
-
-
         String token = state.split("=")[1];
-
         if (JwtUtil.validateToken(token)) {
             String username = JwtUtil.extractUsername(token);
             var auth = new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
+        //TODO else ?
 
         //TODO keep ?
         //reset map is mandatory when redirecting to vue app

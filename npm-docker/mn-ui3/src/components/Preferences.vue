@@ -6,6 +6,8 @@
     <a :href="googleAuthUrl">Google Drive auth</a>
   </div>
 
+  <a @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
+
   <form @submit.prevent="submitForm">
     <fieldset role="group">
       <label>Use Default prompt ?</label>
@@ -173,6 +175,23 @@ async function fetchGoogleAuth() {
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load google auth status.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function updateAllTranscripts() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("transcript/update/all");
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    console.log(response)
+
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to update all transcripts.";
   } finally {
     loading.value = false;
   }

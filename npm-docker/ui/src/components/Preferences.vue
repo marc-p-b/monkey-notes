@@ -1,71 +1,106 @@
 <template xmlns="http://www.w3.org/1999/html">
-<h2>prefs</h2>
 
-  <div v-if="googleConnectRequired">
-    <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
-    <a :href="googleAuthUrl">Google Drive auth</a>
+  <div class="main-wrapper">
+    <h2>Preferences</h2>
+    <div v-if="googleConnectRequired">
+      <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
+      <a :href="googleAuthUrl">Google Drive auth</a>
+    </div>
+
+    <a @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
+
+    <form @submit.prevent="submitForm">
+      <!-- Use Default Prompt -->
+      <Fieldset legend="Use Default Prompt">
+        <ToggleButton
+            v-model="prefs.useDefaultPrompt"
+            onLabel="Yes"
+            offLabel="No"
+            onIcon="pi pi-check"
+            offIcon="pi pi-times"
+        />
+      </Fieldset>
+
+      <!-- Default Prompt -->
+      <Fieldset legend="Default Prompt">
+        <InputText v-model="prefs.prompt" class="w-full" />
+      </Fieldset>
+
+      <!-- Default Agent Instruction -->
+      <Fieldset legend="Default Agent Instruction">
+        <InputText v-model="prefs.agentInstructions" class="w-full" />
+      </Fieldset>
+
+      <!-- Default Model -->
+      <Fieldset legend="Default Model">
+        <InputText v-model="prefs.model" class="w-full" />
+      </Fieldset>
+
+      <!-- Input Folder ID -->
+      <Fieldset legend="Input Folder ID">
+        <InputText
+            v-model="prefs.inputFolderId"
+            placeholder="google drive id"
+            class="w-full"
+        />
+      </Fieldset>
+
+      <!-- Output Folder ID -->
+      <Fieldset legend="Output Folder ID">
+        <InputText
+            v-model="prefs.outputFolderId"
+            placeholder="google drive id"
+            class="w-full"
+        />
+      </Fieldset>
+
+      <!-- Use Default AI Connect Timeout -->
+      <Fieldset legend="Use Default AI Connect Timeout">
+        <ToggleButton
+            v-model="prefs.useDefaultAiConnectTimeout"
+            onLabel="Yes"
+            offLabel="No"
+            onIcon="pi pi-check"
+            offIcon="pi pi-times"
+        />
+      </Fieldset>
+
+      <!-- AI Read Timeout -->
+      <Fieldset legend="AI Read Timeout">
+        <InputText
+            v-model="prefs.aiConnectTimeout"
+            placeholder="timeout"
+            class="w-full"
+        />
+      </Fieldset>
+
+      <!-- Use Default Model Max Token -->
+      <Fieldset legend="Use Default Model Max Token">
+        <ToggleButton
+            v-model="prefs.useDefaultModelMaxTokens"
+            onLabel="Yes"
+            offLabel="No"
+            onIcon="pi pi-check"
+            offIcon="pi pi-times"
+        />
+      </Fieldset>
+
+      <!-- Model Max Token -->
+      <Fieldset legend="Model Max Token">
+        <InputText
+            v-model="prefs.modelMaxTokens"
+            placeholder="timeout"
+            class="w-full"
+        />
+      </Fieldset>
+
+      <!-- Buttons -->
+      <Fieldset>
+        <Button label="Save" type="submit" class="mr-2" />
+        <Button label="Reset" type="button" @click="reset" class="p-button-secondary" />
+      </Fieldset>
+    </form>
   </div>
-
-  <a @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
-
-  <form @submit.prevent="submitForm">
-    <fieldset role="group">
-      <label>Use Default prompt ?</label>
-      <input type="checkbox" v-model="prefs.useDefaultPrompt" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Default prompt</label>
-      <input type="text" v-model="prefs.prompt" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Default agent instruction</label>
-      <input type="text" v-model="prefs.agentInstructions" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Default model</label>
-      <input type="text" v-model="prefs.model" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Input folder id</label>
-      <input type="text" v-model="prefs.inputFolderId" placeholder="google drive id"/>
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Output folder id</label>
-      <input type="text" v-model="prefs.outputFolderId" placeholder="google drive id"/>
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Use default Ai connect timeout</label>
-      <input type="checkbox" v-model="prefs.useDefaultAiConnectTimeout" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Ai read timeout</label>
-      <input type="text" v-model="prefs.aiConnectTimeout" placeholder="timeout"/>
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Use default model max token</label>
-      <input type="checkbox" v-model="prefs.useDefaultModelMaxTokens" />
-    </fieldset>
-
-    <fieldset role="group">
-      <label>Model max token</label>
-      <input type="text" v-model="prefs.modelMaxTokens" placeholder="timeout"/>
-    </fieldset>
-
-    <fieldset role="group">
-
-      <button>Save</button>
-      <button @click.prevent="reset">Reset</button>
-    </fieldset>
-
-  </form>
 
   <button @click.prevent="googleDisconnect">Disconnect from Google Drive</button>
   <button @click.prevent="logout">Logout from Monkey Notes</button>
@@ -202,3 +237,14 @@ onMounted(() => {
   fetchPreferences();
 });
 </script>
+
+<style>
+.main-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+.w-full {
+  width: 100%;
+}
+</style>

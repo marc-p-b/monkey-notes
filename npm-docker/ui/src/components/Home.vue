@@ -1,17 +1,19 @@
 <template>
+  <div class="home-wrapper">
 
-  <h2>Recent transcripts</h2>
-  <div v-if="loading">Loading...</div>
-  <ul v-else>
-    <li v-for="transcript in transcripts" :key="transcript.fileId">
-      <a href="#" @click.prevent="clickedTranscript(transcript.transcript.fileId)">
-        📄 Transcript {{ transcript.transcript.name }}
-      </a>
-    </li>
-  </ul>
+    <h2>Recent transcripts</h2>
+    <div v-if="loading">Loading...</div>
+      <ul v-else>
+        <li v-for="transcript in transcripts" :key="transcript.fileId">
+          <a href="#" @click.prevent="clickedTranscript(transcript.transcript.fileId)">
+            {{ transcript.transcript.name }}
+          </a>
+        </li>
+      </ul>
 
-  <h2>Transcripts</h2>
-  <TreeView />
+  </div>
+<!--  <h2>Transcripts</h2>-->
+<!--  <TreeView />-->
 
 </template>
 
@@ -20,6 +22,7 @@ import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
 import {authFetch} from "@/requests";
 import { useRouter } from 'vue-router'
+import {traverseNode} from "@vue/compiler-core";
 const router = useRouter()
 
 interface DtoTranscript {
@@ -56,3 +59,11 @@ onMounted(() => {
 });
 
 </script>
+
+<style>
+.home-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+</style>

@@ -10,10 +10,10 @@
           </a>
         </li>
       </ul>
+  <h2>Transcripts</h2>
+  <TreeView />
 
   </div>
-<!--  <h2>Transcripts</h2>-->
-<!--  <TreeView />-->
 
 </template>
 

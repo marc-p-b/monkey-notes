@@ -2,13 +2,18 @@
 
   <div id="container">
 
-    <div v-if="connected">
-      <ul>
-        <li v-for="(msg, index) in streamMsg" :key="index">
-          {{ msg }}
-        </li>
-      </ul>
+  <!--    <div v-if="connected">-->
+  <!--      <ul>-->
+  <!--        <li v-for="(msg, index) in streamMsg" :key="index">-->
+  <!--          {{ msg }}-->
+  <!--        </li>-->
+  <!--      </ul>-->
 
+  <!--    </div>-->
+
+    <div v-if="requested">
+      <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="4" fill="transparent" animationDuration="2s" aria-label="Custom ProgressSpinner" />
+      <span>{{agentMessage}}</span>
     </div>
 
     <div>
@@ -76,8 +81,10 @@ const agentPrepare = <DtoAgentPrepare[]>ref([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const streamMsg = ref<string[]>([])
+//const streamMsg = ref<string[]>([])
+const agentMessage = ref<string>()
 const connected = ref(false)
+const requested = ref(false)
 let eventSource: EventSource | null = null
 
 async function prepareAgent() {
@@ -99,6 +106,8 @@ async function prepareAgent() {
 }
 
 const submitForm = async () => {
+  requested.value = true;
+  agentMessage.value = "Agent requested"
   try {
     const response = await authFetch("agent/ask", {
       method: "POST",
@@ -138,18 +147,31 @@ const initStream = (url: string) => {
   eventSource = new EventSource(url + '/' + token)
 
   eventSource.onopen = () => {
-    streamMsg.value.push('🔗 Connected to authenticated stream.')
+    //streamMsg.value.push('🔗 Connected to authenticated stream.')
     connected.value = true
   }
 
   eventSource.onmessage = (event) => {
-    console.log("sse msg" + event.data)
+    const sseMsg = event.data
+      console.log("sse msg " + sseMsg)
     if(event.data === 'waiting') {
-      streamMsg.value.push(event.data)
+      //streamMsg.value.push(sseMsg)
+
     } else {
-      streamMsg.value.push('done !')
+      //streamMsg.value.push('done !')
+
+      const t: DtoAgentMessage = {
+        messageDir: 'assistant',
+        content: sseMsg,
+        createdAt: new Date().toISOString()
+      }
+
+      if (!agentPrepare.value.messages || agentPrepare.value.messages.length === 0) {
+        agentPrepare.value.messages = []
+      }
+
+      agentPrepare.value.messages.push(t)
       eventSource.close()
-      agentPrepare.value.messages.push(event.data)
     }
   }
 

@@ -3,8 +3,8 @@
 <template>
   <li>
     <template v-if="node.folder">
-      <a href="#" @click.prevent="clickedNodeFolder(node.dtoFile.fileId)">
-        📁 Folder {{ node.name }}
+      <a href="#" @click.prevent="clickedNodeFolder(node)">
+        📁 Folder {{ node.name }} {{node.dtoFile.fileId}}
       </a> - <a @click.prevent="updateFolder(node.dtoFile.fileId)">update</a>
       <ul v-if="node.children && node.children.length">
         <TreeNode
@@ -14,6 +14,7 @@
             @folder-clicked="emit('folder-clicked', $event)"
             @transcript-clicked="emit('transcript-clicked', $event)"
         />
+
       </ul>
     </template>
 
@@ -69,8 +70,8 @@ const emit = defineEmits<{
   (e: "transcript-clicked", fileId: string | number): void;
 }>();
 
-const clickedNodeFolder = (fileId: string | number) => {
-  emit("folder-clicked", fileId);
+const clickedNodeFolder = (node: Node) => {
+  emit("folder-clicked", node);
 };
 
 const clickedTranscript = (fileId: string | number) => {

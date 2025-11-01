@@ -166,11 +166,20 @@ public class ViewServiceImpl implements ViewService {
 
     @Override
     public List<FileNode> listLevel(String folderId) {
+
+        LOG.info("folderId {}", folderId);
+
+        List l = repositoryFile.findAllByParentFolderId(folderId);
+
         return repositoryFile.findAllByParentFolderId(folderId).stream()
                 .map(f -> {
                     FileNode node = new FileNode(DtoFile.fromEntity(f));
 
+                    LOG.info("node {} {} id {}", node.isFolder() ? "folder" : "file", node.getName(), f.getIdFile().getFileId());
+
                     Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(f.getIdFile());
+
+                    LOG.info("transcript {}", optTranscript.isPresent() ? "T" : "no T");
                     if(optTranscript.isPresent()) {
                         node.setDtoTranscript(buildDtoTranscript(optTranscript.get(), f, ViewOptions.all()));
                     }

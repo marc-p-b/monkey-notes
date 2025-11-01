@@ -5,7 +5,7 @@
         v-for="node in nodes"
         :key="node.dtoFile.fileId"
         :node="node"
-        @folder-clicked="handleFolderClick(node)"
+        @folder-clicked="handleFolderClick"
         @transcript-clicked="handleTranscriptClick"
     />
   </ul>
@@ -32,30 +32,27 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const handleFolderClick = async (node: Node) => {
-  fetchFolder(node.dtoFile.fileId, node)
+  await fetchFolder(node)
 };
 
 const handleTranscriptClick = (fileId: string | number) => {
-  //console.log("Transcript clicked:", fileId);
   router.push({ name: 'transcript', params: { fileId } })
 };
 
-async function fetchFolder(fileId : string, node?: Node) {
+async function fetchFolder(node: Node) {
   try {
     let url = ""
-    if(fileId.length === 0) {
-      url = "transcript/folder/list"
+    if(node) {
+      url = "transcript/folder/list/" + node.dtoFile.fileId
     } else {
-      url = "transcript/folder/list/" + fileId
+      url = "transcript/folder/list"
     }
     const response = await authFetch(url);
-
     if (!response.ok) throw new Error("Network response was not ok");
-
-    if(fileId.length === 0) {
-      nodes.value = await response.json()
-    } else {
+    if(node) {
       node.children = await response.json();
+    } else {
+      nodes.value = await response.json()
     }
   } catch (err: any) {
     console.error(err);

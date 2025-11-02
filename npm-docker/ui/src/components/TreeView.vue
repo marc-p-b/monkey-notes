@@ -14,9 +14,11 @@
 <script setup lang="ts">
 import {authFetch} from "@/requests";
 import TreeNode from "./TreeNode.vue";
-import {ref, onMounted} from "vue";
+import {ref, onMounted, defineEmits} from "vue";
 import { useRouter } from 'vue-router'
 const router = useRouter()
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
 
 interface Node {
   name: string;
@@ -28,8 +30,15 @@ interface Node {
 }
 
 const nodes = ref<Node[]>([])
-const loading = ref(true)
 const error = ref<string | null>(null)
+
+const emit = defineEmits<{
+  (e: "loading-status", status: boolean): void;
+}>();
+
+// const endLoading = () => {
+//   emit("loading-end", true);
+// };
 
 const handleFolderClick = async (node: Node) => {
   await fetchFolder(node)
@@ -40,6 +49,7 @@ const handleTranscriptClick = (fileId: string | number) => {
 };
 
 async function fetchFolder(node: Node) {
+  emit("loading-status", true);
   try {
     let url = ""
     if(node) {
@@ -58,7 +68,8 @@ async function fetchFolder(node: Node) {
     console.error(err);
     error.value = "Failed to load transcripts.";
   } finally {
-    loading.value = false;
+    //store.setLoading(false)
+    emit("loading-status", false);
   }
 }
 

@@ -122,9 +122,6 @@ public class TranscriptController {
     @GetMapping("/transcript/folder/list/{folderId}")
     public ResponseEntity<List<FileNode>> viewFolder(@PathVariable String folderId) throws IOException {
         List<FileNode> l = viewService.listLevel(folderId);
-
-        System.out.println("folder fileId " + folderId + " count " + l.size());
-
         return ResponseEntity.ok().body(l);
     }
 

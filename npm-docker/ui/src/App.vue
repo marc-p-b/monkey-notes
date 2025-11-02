@@ -1,6 +1,10 @@
 
 <template>
-  <Menubar :model="menuItems" />
+  <Menubar :model="menuItems">
+    <template #end>
+      <ProgressSpinner v-if="store.loading" style="width: 30px; height: 30px" strokeWidth="8" animationDuration="2s"/>
+    </template>
+  </Menubar>
   <RouterView/>
 </template>
 
@@ -8,6 +12,8 @@
 import { ref } from "vue"
 import { useRouter } from 'vue-router'
 const router = useRouter()
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
 
 const menuItems = ref([
   {

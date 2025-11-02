@@ -31,8 +31,9 @@
 import TreeNode from "./TreeNode.vue";
 import {authFetch} from "@/requests";
 import {defineProps, defineEmits, ref} from "vue";
+//import { useUiStore } from '@/composables/store.js'
+//const store = useUiStore()
 
-const loading = ref(true)
 const error = ref<string | null>(null)
 
 interface Node {
@@ -49,19 +50,17 @@ const props = defineProps<{
 }>();
 
 async function updateFolder(fileId) {
-  loading.value = true;
+  //store.setLoading(true)
   error.value = null;
   try {
     const response = await authFetch("transcript/folder/update/" + fileId);
     if (!response.ok) throw new Error("Network response was not ok");
 
-    console.log(response)
-
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to update transcript.";
   } finally {
-    loading.value = false;
+    //store.setLoading(false)
   }
 }
 

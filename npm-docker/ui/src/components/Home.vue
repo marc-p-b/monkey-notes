@@ -11,7 +11,9 @@
         </li>
       </ul>
   <h2>Transcripts</h2>
-  <TreeView />
+    <TreeView
+        @loading-status="loadingStatus"
+    ></TreeView>
 
   </div>
 
@@ -22,8 +24,9 @@ import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
 import {authFetch} from "@/requests";
 import { useRouter } from 'vue-router'
-import {traverseNode} from "@vue/compiler-core";
 const router = useRouter()
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
 
 interface DtoTranscript {
   fileId: string;
@@ -31,11 +34,13 @@ interface DtoTranscript {
 }
 
 const transcripts = ref<DtoTranscript[]>([])
-const loading = ref(true)
 const error = ref<string | null>(null)
 
+let recentLoading: boolean = false
+let foldersLoading: boolean = false
+
 async function fetchRecentTranscripts() {
-  loading.value = true;
+  recentLoading = true
   error.value = null;
   try {
     const response = await authFetch("transcript/recent");
@@ -46,12 +51,30 @@ async function fetchRecentTranscripts() {
     console.error(err);
     error.value = "Failed to load transcripts.";
   } finally {
-    loading.value = false;
+    recentLoading = false
+    homeLoading()
   }
 }
 
 function clickedTranscript(fileId) {
   router.push({ name: 'transcript', params: { fileId } })
+}
+
+function loadingStatus(status: boolean) {
+  if(status) {
+    foldersLoading = true
+  } else {
+    foldersLoading = false
+  }
+  homeLoading()
+}
+
+function homeLoading() {
+  if(foldersLoading || recentLoading) {
+    store.setLoading(true)
+  } else {
+    store.setLoading(false)
+  }
 }
 
 onMounted(() => {

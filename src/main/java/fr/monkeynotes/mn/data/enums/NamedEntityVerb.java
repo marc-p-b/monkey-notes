@@ -38,4 +38,17 @@ public enum NamedEntityVerb {
     public boolean isIndexable() {
         return indexable;
     }
+
+    static public boolean isToc(NamedEntityVerb verb) {
+        switch (verb) {
+            case h2, h3, h4, h5, h6-> {
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+
 }

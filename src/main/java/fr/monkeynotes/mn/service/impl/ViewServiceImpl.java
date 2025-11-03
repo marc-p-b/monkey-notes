@@ -5,6 +5,7 @@ import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.*;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.FileType;
+import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 import fr.monkeynotes.mn.data.enums.ViewOptionsCompletionStatus;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
@@ -279,6 +280,16 @@ public class ViewServiceImpl implements ViewService {
         dtoTranscript.setPages(listDtoTranscriptPages);
         //TODO this requires file entity ; is this really needed ?
         dtoTranscript.setDiscovered_at(file.getDiscovered_at());
+
+        dtoTranscript.setTags(dtoTranscript.getPages().stream()
+                .flatMap(p -> p.getListNamedEntities().stream())
+                .filter(ne -> ne.getVerb().equals(NamedEntityVerb.tag))
+                .collect(Collectors.toList()));
+
+        dtoTranscript.setToc(dtoTranscript.getPages().stream()
+                .flatMap(p -> p.getListNamedEntities().stream())
+                .filter(ne -> NamedEntityVerb.isToc(ne.getVerb()))
+                .collect(Collectors.toList()));
 
         return dtoTranscript;
     }

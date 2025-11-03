@@ -18,6 +18,9 @@ public class DtoTranscript {
     private int pageCount;
     private int version;
     private List<DtoTranscriptPage> pages;
+    //duplicates of page tags for easier access from ui
+    private List<DtoNamedEntity> tags;
+    private List<DtoNamedEntity> toc;
 
     private String title;
 
@@ -107,6 +110,24 @@ public class DtoTranscript {
 
     public DtoTranscript setDiscovered_at(OffsetDateTime discovered_at) {
         this.discovered_at = discovered_at;
+        return this;
+    }
+
+    public List<DtoNamedEntity> getTags() {
+        return tags;
+    }
+
+    public DtoTranscript setTags(List<DtoNamedEntity> tags) {
+        this.tags = tags;
+        return this;
+    }
+
+    public List<DtoNamedEntity> getToc() {
+        return toc;
+    }
+
+    public DtoTranscript setToc(List<DtoNamedEntity> toc) {
+        this.toc = toc;
         return this;
     }
 }

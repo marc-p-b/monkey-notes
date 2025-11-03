@@ -6,15 +6,54 @@
     <div v-else>
       <h1>{{transcript.title}}</h1>
 
-      <p>transcripted : {{formatDate(transcript.transcripted_at)}}</p>
-      <p>documented : {{formatDate(transcript.documented_at)}}</p>
-      <p>discovered : {{formatDate(transcript.discovered_at)}}</p>
-      <p>pages : {{transcript.pages.length}}</p>
-      <p>version : {{transcript.version}}</p>
 
+
+
+        <div class="card">
+          <Tabs value="0">
+            <TabList>
+              <Tab value="0">Properties</Tab>
+              <Tab value="1">Tags</Tab>
+              <Tab value="2">TOC</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel value="0">
+                <p class="m-0">
+      <ul class="tags">
+        <li>transcripted : {{formatDate(transcript.transcripted_at)}}</li>
+        <li>documented : {{formatDate(transcript.documented_at)}}</li>
+        <li>discovered : {{formatDate(transcript.discovered_at)}}</li>
+        <li>pages : {{transcript.pages.length}}</li>
+        <li>version : {{transcript.version}}</li>
+      </ul>
       <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
       <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
       <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
+                </p>
+              </TabPanel>
+              <TabPanel value="1">
+                <p class="m-0">
+      <ul class="tags">
+        <li v-for="tag in transcript.tags">
+          {{tag.value}} (p. {{tag.pageNumber+1}})
+        </li>
+      </ul>
+                </p>
+              </TabPanel>
+              <TabPanel value="2">
+                <p class="m-0">
+      <ul class="toc">
+        <li v-for="item in transcript.toc"
+            :style="{ marginLeft: getIndent(item.verb) + 'px' }">
+          {{item.value}}
+        </li>
+      </ul>
+                </p>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </div>
+
 
       <div v-for="page in transcript.pages">
         <TranscriptPage :page="page"/>
@@ -24,6 +63,39 @@
 
 
 </template>
+
+<style scoped>
+
+.tags li {
+  display: inline;         /* ✅ inline display */
+  margin-right: 1rem;      /* spacing between items */
+}
+
+.tags {
+  list-style: none; /* ✅ removes dots */
+  padding-left: 0;  /* ✅ removes default left padding */
+  margin: 0;
+}
+
+.toc {
+  list-style: none; /* ✅ removes dots */
+  padding-left: 0;  /* ✅ removes default left padding */
+
+}
+
+.toc li {
+  line-height: 1.6;
+  list-style: none;
+
+}
+.toc-title {
+  font-weight: 500;
+}
+.toc-page {
+  color: #666;
+  font-size: 0.9em;
+}
+</style>
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from "vue";
@@ -38,6 +110,8 @@ const props = defineProps<{ fileId: string }>()
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const transcript = ref<DtoTranscript>(null)
+
 interface DtoTranscript {
   username: string
   fileId: string
@@ -49,10 +123,20 @@ interface DtoTranscript {
   version: number
   pages: Page[]
   title: string
+  tags: NamedEntity[]
+  toc: NamedEntity[]
 }
 
-const transcript = ref<DtoTranscript>(null)
-
+interface NamedEntity {
+  uuid: string
+  verb: string
+  value: string
+  fileId: string
+  fileName: string
+  pageNumber: number
+  start: number
+  end: number
+}
 
 // ✅ utility function for consistent date formatting
 function formatDate(dateStr: string): string {
@@ -62,6 +146,17 @@ function formatDate(dateStr: string): string {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(date)
+}
+
+function getIndent(verb: string): number {
+  switch (verb) {
+    case 'h2': return 0
+    case 'h3': return 20
+    case 'h4': return 40
+    case 'h5': return 60
+    case 'h6': return 80
+    default: return 0
+  }
 }
 
 async function fetchTranscript() {

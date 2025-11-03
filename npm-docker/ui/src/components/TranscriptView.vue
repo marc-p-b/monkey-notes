@@ -1,15 +1,24 @@
 <template>
 
-  <div v-if="loading">Loading...</div>
+  <div class="home-wrapper">
+    <div v-if="loading">Loading...</div>
 
-  <div v-else>
-    <h2>{{transcript.title}}</h2>
-    <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
-    <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
-    <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
+    <div v-else>
+      <h1>{{transcript.title}}</h1>
 
-    <div v-for="page in transcript.pages">
-      <TranscriptPage :page="page"/>
+      <p>transcripted : {{formatDate(transcript.transcripted_at)}}</p>
+      <p>documented : {{formatDate(transcript.documented_at)}}</p>
+      <p>discovered : {{formatDate(transcript.discovered_at)}}</p>
+      <p>pages : {{transcript.pages.length}}</p>
+      <p>version : {{transcript.version}}</p>
+
+      <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
+      <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
+      <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
+
+      <div v-for="page in transcript.pages">
+        <TranscriptPage :page="page"/>
+      </div>
     </div>
   </div>
 
@@ -17,7 +26,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { authFetch } from "@/requests.ts";
 import { defineProps } from 'vue'
 import TranscriptPage from "./TranscriptPage.vue";
@@ -43,6 +52,17 @@ interface DtoTranscript {
 }
 
 const transcript = ref<DtoTranscript>(null)
+
+
+// ✅ utility function for consistent date formatting
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date)
+}
 
 async function fetchTranscript() {
   loading.value = true;

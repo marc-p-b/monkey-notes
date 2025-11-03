@@ -7,7 +7,7 @@
       <a :href="googleAuthUrl">Google Drive auth</a>
     </div>
 
-    <a @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
+    <a href="#" @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
 
     <form @submit.prevent="submitForm">
       <!-- Use Default Prompt -->

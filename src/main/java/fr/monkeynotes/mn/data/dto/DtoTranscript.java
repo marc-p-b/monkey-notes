@@ -37,24 +37,6 @@ public class DtoTranscript {
         return dto;
     }
 
-//    public static DtoTranscript fromEntity(EntityTranscript transcript, List<EntityTranscriptPage> pages) {
-//        DtoTranscript dto = new DtoTranscript();
-//        dto.username = transcript.getIdFile().getUsername();
-//        dto.fileId = transcript.getIdFile().getFileId();
-//        dto.name = transcript.getName();
-//        dto.title = transcript.getName();
-//        dto.transcripted_at = transcript.getTranscripted_at();
-//        dto.documented_at = transcript.getDocumented_at();
-//        dto.pageCount = transcript.getPageCount();
-//        dto.version = transcript.getVersion();
-//
-//        dto.setPages(pages.stream()
-//                .map(DtoTranscriptPage::fromEntity)
-//                .toList());
-//
-//        return dto;
-//    }
-
     public static DtoTranscript fromEntity(EntityTranscript transcript) {
         DtoTranscript dto = new DtoTranscript();
         dto.username = transcript.getIdFile().getUsername();
@@ -67,8 +49,6 @@ public class DtoTranscript {
         dto.version = transcript.getVersion();
         return dto;
     }
-
-
 
     public String getUsername() {
         return username;

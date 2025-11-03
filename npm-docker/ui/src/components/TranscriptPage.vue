@@ -2,7 +2,7 @@
 
   <p v-html="text"></p>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
-  <a @click.prevent="updatePage(page)">update</a>
+  <a href="#" @click.prevent="updatePage(page)">update</a>
 
 </template>
 

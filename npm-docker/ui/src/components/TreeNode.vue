@@ -5,7 +5,7 @@
     <template v-if="node.folder">
       <a href="#" @click.prevent="clickedNodeFolder(node)">
         📁 {{ node.name }}
-      </a> - <a @click.prevent="updateFolder(node.dtoFile.fileId)">update</a>
+      </a> - <a href="#" @click.prevent="updateFolder(node.dtoFile.fileId)">update</a>
       <ul v-if="node.children && node.children.length">
         <TreeNode
             v-for="child in node.children"

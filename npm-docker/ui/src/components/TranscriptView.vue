@@ -4,9 +4,9 @@
 
   <div v-else>
     <h2>{{transcript.title}}</h2>
-    <a @click.prevent="agent(transcript.fileId)">agent</a> -
-    <a @click.prevent="updateTranscript(transcript.fileId)">update</a> -
-    <a @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
+    <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
+    <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
+    <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
 
     <div v-for="page in transcript.pages">
       <TranscriptPage :page="page"/>

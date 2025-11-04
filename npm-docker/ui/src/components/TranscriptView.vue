@@ -5,10 +5,6 @@
 
     <div v-else>
       <h1>{{transcript.title}}</h1>
-
-
-
-
         <div class="card">
           <Tabs value="0">
             <TabList>
@@ -19,35 +15,37 @@
             <TabPanels>
               <TabPanel value="0">
                 <p class="m-0">
-      <ul class="tags">
-        <li>transcripted : {{formatDate(transcript.transcripted_at)}}</li>
-        <li>documented : {{formatDate(transcript.documented_at)}}</li>
-        <li>discovered : {{formatDate(transcript.discovered_at)}}</li>
-        <li>pages : {{transcript.pages.length}}</li>
-        <li>version : {{transcript.version}}</li>
-      </ul>
-      <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
-      <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
-      <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
+                  <ul class="tags">
+                    <li>transcripted : {{formatDate(transcript.transcripted_at)}}</li>
+                    <li>documented : {{formatDate(transcript.documented_at)}}</li>
+                    <li>discovered : {{formatDate(transcript.discovered_at)}}</li>
+                    <li>pages : {{transcript.pages.length}}</li>
+                    <li>version : {{transcript.version}}</li>
+                  </ul>
+                  <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
+                  <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
+                  <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
                 </p>
               </TabPanel>
               <TabPanel value="1">
                 <p class="m-0">
-      <ul class="tags">
-        <li v-for="tag in transcript.tags">
-          {{tag.value}} (p. {{tag.pageNumber+1}})
-        </li>
-      </ul>
+                  <ul class="tags">
+                    <p v-if="transcript.tags.length === 0">No tags</p>
+                    <li v-for="tag in transcript.tags">
+                      {{tag.value}} (p. {{tag.pageNumber+1}})
+                    </li>
+                  </ul>
                 </p>
               </TabPanel>
               <TabPanel value="2">
                 <p class="m-0">
-      <ul class="toc">
-        <li v-for="item in transcript.toc"
-            :style="{ marginLeft: getIndent(item.verb) + 'px' }">
-          {{item.value}}
-        </li>
-      </ul>
+                  <p v-if="transcript.toc.length === 0">No toc</p>
+                  <ul class="toc">
+                    <li v-for="item in transcript.toc"
+                        :style="{ marginLeft: getIndent(item.verb) + 'px' }">
+                      {{item.value}} <a :href="'#' + item.uuid"><i class="pi pi-link"></i></a>
+                    </li>
+                  </ul>
                 </p>
               </TabPanel>
             </TabPanels>

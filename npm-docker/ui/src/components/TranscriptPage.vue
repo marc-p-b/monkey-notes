@@ -72,15 +72,15 @@ let lFix = 0;
 props.page.listNamedEntities.forEach(ne => {
   let repl = "";
   if(ne.verb == 'h2') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h2>" + ne.value + "</h2>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h2 id='"+ne.uuid+"'>" + ne.value + "</h2>");
   } else if(ne.verb == 'h3') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h3>" + ne.value + "</h3>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h3 id='"+ne.uuid+"'>" + ne.value + "</h3>");
   } else if(ne.verb == 'h4') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h4>" + ne.value + "</h4>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h4 id='"+ne.uuid+"'>" + ne.value + "</h4>");
   } else if(ne.verb == 'h5') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5>" + ne.value + "</h5>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5 id='"+ne.uuid+"'>" + ne.value + "</h5>");
   } else if(ne.verb == 'h6') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5>" + ne.value + "</h5>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='"+ne.uuid+"'>" + ne.value + "</h6>");
   } else {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
   }

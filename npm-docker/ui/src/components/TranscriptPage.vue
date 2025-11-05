@@ -1,6 +1,8 @@
 <template>
 
   <p v-html="text"></p>
+  <textarea v-model="text2"></textarea>
+  <button @click.prevent="save">ok</button>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a>
 
@@ -60,13 +62,38 @@ async function updatePage(page) {
   }
 }
 
+const save = async () => {
+  const fileId = props.page.fileId
+  const pageNumber = props.page.pageNumber
+
+  try {
+    const response = await authFetch("transcript/edit/" + fileId + "/" + pageNumber, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: text2.value,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+  } catch (err: any) {
+    error.value = err.message || "Something went wrong.";
+  } finally {
+    loading.value = false;
+  }
+}
+
 const props = defineProps<{ page: Page }>();
 const text = ref()
+const text2 = ref()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 let transcript = props.page.transcript;
+text2.value = transcript
 
 let lFix = 0;
 props.page.listNamedEntities.forEach(ne => {
@@ -91,6 +118,7 @@ props.page.listNamedEntities.forEach(ne => {
 transcript = transcript.replaceAll("\n", "<br/>");
 
 text.value = transcript
+
 
 
 </script>

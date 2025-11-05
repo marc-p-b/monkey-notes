@@ -1,9 +1,10 @@
 package fr.monkeynotes.mn.service.impl;
 
-import fr.monkeynotes.mn.data.entity.EntityFile;
-import fr.monkeynotes.mn.data.entity.EntityUser;
-import fr.monkeynotes.mn.data.entity.IdFile;
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.Patch;
+import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
+import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;
@@ -21,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Optional;
 
 @Service
@@ -47,10 +49,11 @@ public class UtilsServiceImpl implements UtilsService {
     @Autowired
     private RepositoryFile repositoryFile;
 
+    @Autowired
+    private RepositoryTranscriptPage repositoryTranscriptPage;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
-
-
         repositoryUser.deleteAll();
 
         EntityUser u1 = new EntityUser()

@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
@@ -32,6 +34,9 @@ public class TranscriptController {
 
     @Autowired
     private UpdateService updateService;
+
+    @Autowired
+    private EditService editService;
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
@@ -73,21 +78,24 @@ public class TranscriptController {
         return ResponseEntity.ok().body("Update root folder requested");
     }
 
-    //@GetMapping("/update/folder/{folderId}")
     @GetMapping("/transcript/folder/update/{folderId}")
     public ResponseEntity<String> updateFolder(@PathVariable String folderId) {
         updateService.updateFolder(folderId);
         return ResponseEntity.ok().body("Folder update is requested");
     }
 
-    //@GetMapping("/update/transcript/{fileId}/{pageNumber}")
     @GetMapping("/transcript/update/{fileId}/{pageNumber}")
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
         updateService.forcePageUpdate(fileId, pageNumber);
         return ResponseEntity.ok().body("OK");
     }
 
-    //@GetMapping(value = "/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @PostMapping("/transcript/edit/{fileId}/{pageNumber}")
+    public ResponseEntity<String> formEditTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestBody String content) {
+        editService.edit(fileId, pageNumber, content);
+        return ResponseEntity.ok().body("OK");
+    }
+
     @GetMapping(value = "/transcript/folder/pdf/{folderId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> getFolderPdf(@PathVariable String folderId) throws IOException {
         File file = viewService.createTranscriptPdfFromFolder(folderId);

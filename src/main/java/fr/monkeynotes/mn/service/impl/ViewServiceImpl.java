@@ -1,5 +1,10 @@
 package fr.monkeynotes.mn.service.impl;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.github.difflib.patch.*;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.*;
@@ -7,10 +12,7 @@ import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 import fr.monkeynotes.mn.data.enums.ViewOptionsCompletionStatus;
-import fr.monkeynotes.mn.data.repository.RepositoryFile;
-import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
+import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -261,12 +263,14 @@ public class ViewServiceImpl implements ViewService {
                     LOG.error("Failed to create image URL fileId {} page {}", page.getFileId(), page.getPageNumber());
                 }
 
-                String[] lines = page.getTranscript().split("\n");
-                StringBuilder sb = new StringBuilder();
-                for(String line : lines) {
-                    sb.append(line).append("<br/>");
-                }
-                page.setTranscriptHtml(sb.toString());
+                page = editService.applyPatch(page);
+
+//                String[] lines = page.getTranscript().split("\n");
+//                StringBuilder sb = new StringBuilder();
+//                for(String line : lines) {
+//                    sb.append(line).append("<br/>");
+//                }
+//                page.setTranscriptHtml(sb.toString());
                 return page;
             })
             .toList();
@@ -293,6 +297,10 @@ public class ViewServiceImpl implements ViewService {
 
         return dtoTranscript;
     }
+
+    @Autowired
+    private EditService editService;
+
 
     @Override
     public File createTranscriptPdf(String fileId) throws IOException {

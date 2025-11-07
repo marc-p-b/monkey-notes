@@ -90,6 +90,7 @@ public class EditServiceImpl implements EditService {
             try {
                 Patch<String> patch = fromJson(etpd.getDiff());
                 LOG.info("Applying patch deltas {} to page {}", patch.getDeltas().size(), page.getPageNumber());
+                page.setDeltas(patch.getDeltas().size());
                 List<String> lines = Arrays.stream(page.getTranscript().split("\n")).toList();
                 lines = patch.applyTo(lines);
                 page.setTranscript(lines.stream().collect(Collectors.joining("\n")));

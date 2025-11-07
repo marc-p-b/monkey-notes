@@ -2,11 +2,13 @@
 
   <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
   <div v-else>
-    <Textarea v-model="text2" auto-resize rows="5" cols="30"></Textarea>
+    <Textarea v-model="text2" auto-resize :rows="page.rows" :cols="page.cols" cols="30"></Textarea>
     <button @click.prevent="save">ok</button>
   </div>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
-  <a href="#" @click.prevent="updatePage(page)">update</a>
+  <a href="#" @click.prevent="updatePage(page)">update</a> -
+  <span v-if="page.deltas === 1">{{page.deltas}} delta</span>
+  <span v-else-if="page.deltas > 1">{{page.deltas}} deltas</span>
 
 </template>
 
@@ -32,7 +34,7 @@ interface Page {
   username: string
   pageNumber: number
   transcript: string
-  transcriptHtml: string
+  //transcriptHtml: string
   transcriptTook: number
   tokensPrompt: number
   tokensResponse: number
@@ -41,6 +43,9 @@ interface Page {
   imageUrl: string
   completed: boolean
   listNamedEntities: NamedEntity[]
+  cols: number
+  rows: number
+  deltas: number
 }
 
 function replaceSubstring(str, start, end, replacement) {

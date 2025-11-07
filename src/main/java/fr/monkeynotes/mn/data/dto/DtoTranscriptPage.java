@@ -3,6 +3,7 @@ package fr.monkeynotes.mn.data.dto;
 import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
 
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 
 public class DtoTranscriptPage {
@@ -11,7 +12,7 @@ public class DtoTranscriptPage {
     private String username;
     private int pageNumber;
     private String transcript;
-    private String transcriptHtml;
+    //private String transcriptHtml;
     private long transcriptTook;
     private int tokensPrompt;
     private int tokensResponse;
@@ -20,22 +21,35 @@ public class DtoTranscriptPage {
     private URL imageUrl;
     private boolean completed;
     private List<DtoNamedEntity> listNamedEntities;
+    private int cols;
+    private int rows;
+    private int deltas;
 
     //private Optional<String> optSchemaTitle = Optional.empty();
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
+        String[]lines = page.getTranscript().split("\n");
+        int rows = lines.length;
+        int cols = Arrays.stream(lines)
+                .map(String::length)
+                .max(Integer::compareTo)
+                .orElse(0);
+
         DtoTranscriptPage dto = new DtoTranscriptPage()
                 .setUsername(page.getIdTranscriptPage().getUsername())
                 .setFileId(page.getIdTranscriptPage().getFileId())
                 .setPageNumber(page.getIdTranscriptPage().getPageNumber())
                 .setVersion(page.getVersion())
                 .setTranscript(page.getTranscript())
-                .setTranscriptHtml(page.getTranscript())
+                //.setTranscriptHtml(page.getTranscript())
                 .setAiModel(page.getAiModel())
                 .setTranscriptTook(page.getTranscriptTook())
                 .setTokensPrompt(page.getTokensPrompt())
                 .setTokensResponse(page.getTokensResponse())
-                .setCompleted(page.isCompleted());
+                .setCompleted(page.isCompleted())
+                .setCols(cols)
+                .setRows(rows);
+
         return dto;
     }
 
@@ -84,14 +98,14 @@ public class DtoTranscriptPage {
         return this;
     }
 
-    public String getTranscriptHtml() {
-        return transcriptHtml;
-    }
-
-    public DtoTranscriptPage setTranscriptHtml(String transcriptHtml) {
-        this.transcriptHtml = transcriptHtml;
-        return this;
-    }
+//    public String getTranscriptHtml() {
+//        return transcriptHtml;
+//    }
+//
+//    public DtoTranscriptPage setTranscriptHtml(String transcriptHtml) {
+//        this.transcriptHtml = transcriptHtml;
+//        return this;
+//    }
 
     public long getTranscriptTook() {
         return transcriptTook;
@@ -164,4 +178,32 @@ public class DtoTranscriptPage {
 //        this.optSchemaTitle = optSchemaTitle;
 //        return this;
 //    }
+
+
+    public int getCols() {
+        return cols;
+    }
+
+    public DtoTranscriptPage setCols(int cols) {
+        this.cols = cols;
+        return this;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public DtoTranscriptPage setRows(int rows) {
+        this.rows = rows;
+        return this;
+    }
+
+    public int getDeltas() {
+        return deltas;
+    }
+
+    public DtoTranscriptPage setDeltas(int deltas) {
+        this.deltas = deltas;
+        return this;
+    }
 }

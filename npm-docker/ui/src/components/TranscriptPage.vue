@@ -1,8 +1,10 @@
 <template>
 
-  <p v-html="text"></p>
-  <textarea v-model="text2"></textarea>
-  <button @click.prevent="save">ok</button>
+  <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
+  <div v-else>
+    <Textarea v-model="text2" auto-resize rows="5" cols="30"></Textarea>
+    <button @click.prevent="save">ok</button>
+  </div>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a>
 
@@ -62,9 +64,14 @@ async function updatePage(page) {
   }
 }
 
+const switchEdit = async () => {
+  editMode.value = true
+}
+
 const save = async () => {
   const fileId = props.page.fileId
   const pageNumber = props.page.pageNumber
+  editMode.value = false;
 
   try {
     const response = await authFetch("transcript/edit/" + fileId + "/" + pageNumber, {
@@ -91,6 +98,8 @@ const text2 = ref()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const editMode = ref(false)
 
 let transcript = props.page.transcript;
 text2.value = transcript

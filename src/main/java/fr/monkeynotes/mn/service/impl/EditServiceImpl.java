@@ -1,9 +1,7 @@
 package fr.monkeynotes.mn.service.impl;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.*;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
@@ -13,6 +11,7 @@ import fr.monkeynotes.mn.data.entity.IdTranscriptPage;
 import fr.monkeynotes.mn.data.entity.IdTranscriptPageDiff;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPageDiff;
+import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.EditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +34,9 @@ public class EditServiceImpl implements EditService {
 
     @Autowired
     private RepositoryTranscriptPageDiff repositoryTranscriptPageDiff;
+
+    @Autowired
+    private AuthService authService;
 
     public record DeltaDTO(String type, int sourcePos, List<String> sourceLines, int targetPos, List<String> targetLines) {}
 
@@ -76,8 +78,6 @@ public class EditServiceImpl implements EditService {
     }
 
     public DtoTranscriptPage applyPatch(DtoTranscriptPage page) {
-        ObjectMapper mapper = new ObjectMapper();
-
         IdTranscriptPageDiff idTranscriptPageDiff = IdTranscriptPageDiff.createIdTranscriptPageDiff(
                 page.getUsername(),
                 page.getFileId(),
@@ -86,37 +86,25 @@ public class EditServiceImpl implements EditService {
 
         Optional<EntityTranscriptPageDiff> opt = repositoryTranscriptPageDiff.findById(idTranscriptPageDiff);
         if(opt.isPresent()) {
-
             EntityTranscriptPageDiff etpd = opt.get();
-
             try {
-
-                System.out.println(etpd.getDiff());
-
                 Patch<String> patch = fromJson(etpd.getDiff());
-
+                LOG.info("Applying patch deltas {} to page {}", patch.getDeltas().size(), page.getPageNumber());
                 List<String> lines = Arrays.stream(page.getTranscript().split("\n")).toList();
                 lines = patch.applyTo(lines);
-
                 page.setTranscript(lines.stream().collect(Collectors.joining("\n")));
-
-
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
             } catch (PatchFailedException e) {
                 throw new RuntimeException(e);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
-
         }
         return page;
     }
 
     @Override
     public void edit(String fileId, int pageNumber, String content) {
-        IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage("marc", "17zAMnepi8cVfRmsdi35IkIMFGKzeppup", pageNumber);
+        IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, pageNumber);
 
         Optional<EntityTranscriptPage> oetp = repositoryTranscriptPage.findById(idTranscriptPage);
         if(oetp.isPresent()) {
@@ -126,33 +114,18 @@ public class EditServiceImpl implements EditService {
             String original = etp.getTranscript();
             String target = content;
 
-
             Patch<String> patch = DiffUtils.diff(Arrays.stream(original.split("\n")).toList(), Arrays.stream(target.split("\n")).toList());
-
-
-            //List<AbstractDelta<String>> deltas = patch.getDeltas();
             try {
                 String json = toJson(patch);
-
-                System.out.println(json);
-
                 IdTranscriptPageDiff id = IdTranscriptPageDiff.fromIdTranscriptPage(idTranscriptPage, etp.getVersion());
-
                 EntityTranscriptPageDiff etpd = new EntityTranscriptPageDiff()
                         .setIdTranscriptPageDiff(id)
                         .setCreatedAt(OffsetDateTime.now())
                         .setDiff(json);
-
                 repositoryTranscriptPageDiff.save(etpd);
-
-
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
-
         }
     }
 }

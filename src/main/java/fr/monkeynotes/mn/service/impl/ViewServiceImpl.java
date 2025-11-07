@@ -264,13 +264,6 @@ public class ViewServiceImpl implements ViewService {
                 }
 
                 page = editService.applyPatch(page);
-
-//                String[] lines = page.getTranscript().split("\n");
-//                StringBuilder sb = new StringBuilder();
-//                for(String line : lines) {
-//                    sb.append(line).append("<br/>");
-//                }
-//                page.setTranscriptHtml(sb.toString());
                 return page;
             })
             .toList();

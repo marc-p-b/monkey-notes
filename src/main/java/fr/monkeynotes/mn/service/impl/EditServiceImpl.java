@@ -116,6 +116,7 @@ public class EditServiceImpl implements EditService {
             String target = content;
 
             Patch<String> patch = DiffUtils.diff(Arrays.stream(original.split("\n")).toList(), Arrays.stream(target.split("\n")).toList());
+
             try {
                 String json = toJson(patch);
                 IdTranscriptPageDiff id = IdTranscriptPageDiff.fromIdTranscriptPage(idTranscriptPage, etp.getVersion());

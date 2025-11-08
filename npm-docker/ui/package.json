@@ -10,6 +10,7 @@
     "dependencies": {
         "@primeuix/themes": "^1.0.0",
         "@primevue/core": "^4.2.5",
+        "@primevue/forms": "^4.4.1",
         "chart.js": "^4.4.7",
         "jwt-decode": "^4.0.0",
         "pinia": "^3.0.3",

@@ -37,19 +37,39 @@ public class NamedEntitiesServiceImpl implements NamedEntitiesService {
 
         List<EntityNamedEntity> namedEntities = new ArrayList<>();
         for (CompletionResponse completionResponse : listCompletionResponse) {
-            //remove namedEntities associated to this page
-            repositoryNamedEntity.delete(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
-
-            List<DtoNamedEntity> listNE = new ArrayList<>();
-            listNE.addAll(TranscriptUtils.identifyNamedIdentities(completionResponse.getTranscript()));
-            listNE.addAll(TranscriptUtils.identifyTitles(completionResponse.getTranscript()));
-
-            for (DtoNamedEntity namedEntity : listNE) {
-                LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
-                namedEntities.add(namedEntity.toEntity(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber()));
-                indexNamedEntity(namedEntity);
-            }
+//            //remove namedEntities associated to this page
+//            repositoryNamedEntity.delete(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber());
+//
+//            List<DtoNamedEntity> listNE = new ArrayList<>();
+//            listNE.addAll(TranscriptUtils.identifyNamedIdentities(completionResponse.getTranscript()));
+//            listNE.addAll(TranscriptUtils.identifyTitles(completionResponse.getTranscript()));
+//
+//            for (DtoNamedEntity namedEntity : listNE) {
+//                LOG.info("Pages {} command {}", completionResponse.getPageNumber(), namedEntity);
+//                namedEntities.add(namedEntity.toEntity(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber()));
+//                indexNamedEntity(namedEntity);
+//            }
+            identifyNamedEntities2(completionResponse.getFileId(), completionResponse.getPageNumber(), completionResponse.getTranscript());
         }
+        repositoryNamedEntity.saveAll(namedEntities);
+    }
+
+    @Override
+    public void identifyNamedEntities2(String fileId, int pageNumber, String content) {
+        List<EntityNamedEntity> namedEntities = new ArrayList<>();
+        //remove namedEntities associated to this page
+        repositoryNamedEntity.delete(authService.getUsernameFromContext(), fileId, pageNumber);
+
+        List<DtoNamedEntity> listNE = new ArrayList<>();
+        listNE.addAll(TranscriptUtils.identifyNamedIdentities(content));
+        listNE.addAll(TranscriptUtils.identifyTitles(content));
+
+        for (DtoNamedEntity namedEntity : listNE) {
+            LOG.info("Pages {} namedentity {}", pageNumber, namedEntity);
+            namedEntities.add(namedEntity.toEntity(authService.getUsernameFromContext(), fileId, pageNumber));
+            indexNamedEntity(namedEntity);
+        }
+
         repositoryNamedEntity.saveAll(namedEntities);
     }
 

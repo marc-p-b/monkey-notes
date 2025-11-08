@@ -2,19 +2,22 @@
 
   <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
   <div v-else>
-    <Textarea v-model="text2" auto-resize :rows="page.rows" :cols="page.cols" cols="30"></Textarea>
-    <button @click.prevent="save">ok</button>
+      <div class="flex flex-col gap-1">
+      <Textarea v-model="text2" auto-resize :rows="page.rows" :cols="page.cols" cols="30"></Textarea>
+      </div>
+      <Button @click.prevent="save" label="save" />
+    <Button @click.prevent="closeEdit" label="close" />
   </div>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a> -
   <span v-if="page.deltas === 1">{{page.deltas}} delta</span>
   <span v-else-if="page.deltas > 1">{{page.deltas}} deltas</span>
-
 </template>
 
 <script lang="ts" setup>
 import {ref, defineProps, onMounted} from "vue";
 import {authFetch} from "@/requests";
+
 // import { useRouter } from 'vue-router'
 // const router = useRouter()
 
@@ -71,6 +74,9 @@ async function updatePage(page) {
 
 const switchEdit = async () => {
   editMode.value = true
+}
+const closeEdit = async () => {
+  editMode.value = false
 }
 
 const save = async () => {

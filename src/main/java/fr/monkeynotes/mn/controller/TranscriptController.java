@@ -40,6 +40,8 @@ public class TranscriptController {
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
+    @Autowired
+    private NamedEntitiesService namedEntitiesService;
 
     @GetMapping("/transcript/{fileId}")
     public ResponseEntity<DtoTranscript> getTranscript(@PathVariable String fileId) throws IOException {
@@ -93,6 +95,7 @@ public class TranscriptController {
     @PostMapping("/transcript/edit/{fileId}/{pageNumber}")
     public ResponseEntity<String> formEditTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestBody String content) {
         editService.edit(fileId, pageNumber, content);
+        namedEntitiesService.identifyNamedEntities2(fileId, pageNumber, content);
         return ResponseEntity.ok().body("OK");
     }
 

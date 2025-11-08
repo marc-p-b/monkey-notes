@@ -33,7 +33,7 @@ public class NamedEntitiesServiceImpl implements NamedEntitiesService {
     private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
 
     @Override
-    public void identifyNamedEntities(String fileId, List<CompletionResponse> listCompletionResponse) {
+    public void saveNamedEntities(String fileId, List<CompletionResponse> listCompletionResponse) {
 
         List<EntityNamedEntity> namedEntities = new ArrayList<>();
         for (CompletionResponse completionResponse : listCompletionResponse) {
@@ -49,13 +49,13 @@ public class NamedEntitiesServiceImpl implements NamedEntitiesService {
 //                namedEntities.add(namedEntity.toEntity(authService.getUsernameFromContext(), completionResponse.getFileId(), completionResponse.getPageNumber()));
 //                indexNamedEntity(namedEntity);
 //            }
-            identifyNamedEntities2(completionResponse.getFileId(), completionResponse.getPageNumber(), completionResponse.getTranscript());
+            saveNamedEntitiesFromContent(completionResponse.getFileId(), completionResponse.getPageNumber(), completionResponse.getTranscript());
         }
         repositoryNamedEntity.saveAll(namedEntities);
     }
 
     @Override
-    public void identifyNamedEntities2(String fileId, int pageNumber, String content) {
+    public void saveNamedEntitiesFromContent(String fileId, int pageNumber, String content) {
         List<EntityNamedEntity> namedEntities = new ArrayList<>();
         //remove namedEntities associated to this page
         repositoryNamedEntity.delete(authService.getUsernameFromContext(), fileId, pageNumber);

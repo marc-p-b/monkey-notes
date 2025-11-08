@@ -171,7 +171,7 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             // Identify named entities
             // --------------------------------------
-            namedEntitiesService.identifyNamedEntities(file2Process.getFileId(), listCompletionResponse);
+            namedEntitiesService.saveNamedEntities(file2Process.getFileId(), listCompletionResponse);
         }
         createFileEntities(files2Process);
         LOG.info("Done processing files {}", files2Process.size());

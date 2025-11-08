@@ -95,7 +95,7 @@ public class TranscriptController {
     @PostMapping("/transcript/edit/{fileId}/{pageNumber}")
     public ResponseEntity<String> formEditTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestBody String content) {
         editService.edit(fileId, pageNumber, content);
-        namedEntitiesService.identifyNamedEntities2(fileId, pageNumber, content);
+        namedEntitiesService.saveNamedEntitiesFromContent(fileId, pageNumber, content);
         return ResponseEntity.ok().body("OK");
     }
 

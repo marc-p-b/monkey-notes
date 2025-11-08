@@ -1,5 +1,4 @@
 <template>
-
   <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
   <div v-else>
       <div class="flex flex-col gap-1">
@@ -128,6 +127,8 @@ props.page.listNamedEntities.forEach(ne => {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5 id='"+ne.uuid+"'>" + ne.value + "</h5>");
   } else if(ne.verb == 'h6') {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='"+ne.uuid+"'>" + ne.value + "</h6>");
+  } else if(ne.verb == 'tag') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<a href=''>" + ne.value + " <i class='pi pi-tag'></i></a>");
   } else {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
   }

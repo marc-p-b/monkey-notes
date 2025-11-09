@@ -57,7 +57,7 @@ async function cancelProcess(id) {
     const response = await authFetch("process/cancel/" + id);
     if (!response.ok) throw new Error("Network response was not ok");
 
-    console.log(response)
+    //console.log(response)
 
   } catch (err: any) {
     console.error(err);

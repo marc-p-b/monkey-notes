@@ -5,6 +5,7 @@ import PreferencesView from "../components/Preferences.vue";
 import TranscriptView from "@/components/TranscriptView.vue";
 import AgentView from "@/components/AgentView.vue";
 import ProcessesView from "@/components/ProcessesView.vue";
+import NamedEntitiesView from "@/components/NamedEntitiesView.vue";
 import { jwtDecode } from "jwt-decode";
 
 interface JwtPayload {
@@ -58,6 +59,11 @@ const router = createRouter({
       path: '/processes',
       name: 'processes',
       component: ProcessesView,
+    },
+    {
+      path: '/ne',
+      name: 'ne',
+      component: NamedEntitiesView,
     },
     {
       path: '/login',

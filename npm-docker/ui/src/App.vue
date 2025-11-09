@@ -27,6 +27,11 @@ const menuItems = ref([
     command: () => router.push('/preferences')
   },
   {
+    label: 'Named Entities',
+    icon: 'pi pi-tag',
+    command: () => router.push('/ne')
+  },
+  {
     label: 'Processes',
     icon: 'pi pi-briefcase',
     command: () => router.push('/processes')

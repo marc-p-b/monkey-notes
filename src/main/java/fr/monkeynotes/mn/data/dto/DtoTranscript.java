@@ -21,7 +21,6 @@ public class DtoTranscript {
     private int version;
     private List<DtoTranscriptPage> pages;
     //duplicates of page tags for easier access from ui
-    private List<DtoNamedEntity> tags;
     private Map<String, List<DtoNamedEntity>> tagsMap;
     private List<DtoNamedEntity> toc;
 
@@ -113,15 +112,6 @@ public class DtoTranscript {
 
     public DtoTranscript setDiscovered_at(OffsetDateTime discovered_at) {
         this.discovered_at = discovered_at;
-        return this;
-    }
-
-    public List<DtoNamedEntity> getTags() {
-        return tags;
-    }
-
-    public DtoTranscript setTags(List<DtoNamedEntity> tags) {
-        this.tags = tags;
         return this;
     }
 

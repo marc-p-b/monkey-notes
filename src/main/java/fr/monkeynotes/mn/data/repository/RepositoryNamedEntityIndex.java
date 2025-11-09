@@ -14,5 +14,8 @@ import java.util.List;
 public interface RepositoryNamedEntityIndex extends JpaRepository<EntityNamedEntityIndex, IdNamedEntityIndex> {
     @Query("SELECT n FROM named_entity_index n where n.idNamedEntityIndex.username = :username and n.idNamedEntityIndex.verb = :verb")
     List<EntityNamedEntityIndex> findByVerb(@Param("username") String username, @Param("verb") NamedEntityVerb verb);
+
+    @Query("SELECT count(n) FROM named_entity_index n where n.idNamedEntityIndex.username = :username and n.idNamedEntityIndex.verb = :verb")
+    Long countByVerb(@Param("username") String username, @Param("verb") NamedEntityVerb verb);
 }
 

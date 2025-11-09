@@ -1,20 +1,20 @@
 <template>
+  <div class="home-wrapper">
+    <h2>Processes</h2>
 
-  <h2>Processes</h2>
+    <p v-if="processes.length === 0">
+      No process currently running
+    </p>
 
-  <p v-if="processes.length === 0">
-    No process currently running
-  </p>
-
-  <div v-else>
-    <ul>
-      <li v-for="process in processes">
-        <p v-if="process.status !== 'running'">{{process.name}} {{process.description}} (completed, ran for {{process.duration}})</p>
-        <p v-else> {{process.name}} ({{process.description}}) running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
-      </li>
-    </ul>
+    <div v-else>
+      <ul>
+        <li v-for="process in processes">
+          <p v-if="process.status !== 'running'">{{process.name}} {{process.description}} (completed, ran for {{process.duration}})</p>
+          <p v-else> {{process.name}} ({{process.description}}) running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
+        </li>
+      </ul>
+    </div>
   </div>
-
 </template>
 
 <script lang="ts" setup>

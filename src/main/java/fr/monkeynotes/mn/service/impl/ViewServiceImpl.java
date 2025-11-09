@@ -279,19 +279,10 @@ public class ViewServiceImpl implements ViewService {
         //TODO this requires file entity ; is this really needed ?
         dtoTranscript.setDiscovered_at(file.getDiscovered_at());
 
-        dtoTranscript.setTags(dtoTranscript.getPages().stream()
-                .flatMap(p -> p.getListNamedEntities().stream())
-                .filter(ne -> ne.getVerb().equals(NamedEntityVerb.tag))
-                .collect(Collectors.toList()));
-
-
         dtoTranscript.setTagsMap(dtoTranscript.getPages().stream()
                 .flatMap(p -> p.getListNamedEntities().stream())
                 .filter(ne->ne.getVerb().equals(NamedEntityVerb.tag))
                 .collect(Collectors.groupingBy(DtoNamedEntity::getValue)));
-
-
-
 
         dtoTranscript.setToc(dtoTranscript.getPages().stream()
                 .flatMap(p -> p.getListNamedEntities().stream())

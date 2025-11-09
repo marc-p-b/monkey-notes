@@ -3,6 +3,7 @@ package fr.monkeynotes.mn.controller;
 import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntity;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntityIndex;
+import fr.monkeynotes.mn.data.entity.EntityNamedEntityIndex;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntityIndex;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
@@ -34,6 +37,31 @@ public class NamedEntityController {
 
     @Autowired
     private RepositoryNamedEntity repositoryNamedEntity;
+
+    @GetMapping("/ne/verbs")
+    public ResponseEntity<Map<NamedEntityVerb, Map<String, List<DtoNamedEntity>>>> getVerbs() {
+
+        Map<NamedEntityVerb, Map<String, List<DtoNamedEntity>>> map = new HashMap<>();
+        for(NamedEntityVerb verb : NamedEntityVerb.values()) {
+            //todo only indexable verbs should be indexed ! (check filter before insertion)
+            if(verb.isIndexable()) {
+                //long count = repositoryNamedEntityIndex.countByVerb(authService.getUsernameFromContext(), verb);
+
+                List<DtoNamedEntity> listNe = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb).stream()
+                        .map(ne -> DtoNamedEntity.fromEntity(ne))
+                        .toList();
+
+                Map<String, List<DtoNamedEntity>> map2 = listNe.stream()
+                        //.filter(ne->ne.getVerb().equals(NamedEntityVerb.tag))
+                        .collect(Collectors.groupingBy(DtoNamedEntity::getValue));
+
+
+                map.put(verb, map2);
+            }
+        }
+
+        return ResponseEntity.ok(map);
+    }
 
     @GetMapping("/ne/verb/{verb}")
     public ResponseEntity<List<DtoNamedEntityIndex>> getEntities(@PathVariable NamedEntityVerb verb) {

@@ -3,44 +3,24 @@
 
     <h2>Named Entities</h2>
 
-    <ul>
-      <li v-for="(mapValues, verb) in neMap">
-        {{verb}} :
-        <ul>
-          <li v-for="(dtos, value) in mapValues">
-            {{value}} :
-            <ul>
-              <li v-for="dto in dtos">
-                {{dto.uuid}}
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </li>
-    </ul>
-
-
     <TabView>
       <TabPanel
           v-for="(mapValues, verb) in neMap"
           :key="verb"
-          :header="`${verb} ()`"
+          :header="`${verb} (${Object.keys(mapValues).length})`"
       >
         <p>
-
+          {{}}
           <ul>
             <li v-for="(dtos, value) in mapValues">
               {{value}} :
               <ul>
                 <li v-for="dto in dtos">
-                  {{dto.uuid}}
+                  {{dto.fileName}} <a :href="`transcript/${dto.fileId}`"><i class="pi pi-link"/></a>
                 </li>
               </ul>
             </li>
           </ul>
-
-
-
         </p>
       </TabPanel>
     </TabView>
@@ -77,7 +57,10 @@ async function fetchVerbs() {
     const response = await authFetch("ne/verbs");
     if (!response.ok) throw new Error("Network response was not ok");
     neMap.value = await response.json()
-    console.log(neMap.value)
+    //console.log(neMap.value)
+
+    const c = Object.keys(neMap.value).length
+    console.log(c)
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load processes.";

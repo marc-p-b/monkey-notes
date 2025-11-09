@@ -3,8 +3,11 @@ package fr.monkeynotes.mn.controller;
 import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntity;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntityIndex;
+import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.EntityNamedEntityIndex;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
+import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntityIndex;
 import fr.monkeynotes.mn.service.AuthService;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -38,6 +42,9 @@ public class NamedEntityController {
     @Autowired
     private RepositoryNamedEntity repositoryNamedEntity;
 
+    @Autowired
+    private RepositoryFile repositoryFile;
+
     @GetMapping("/ne/verbs")
     public ResponseEntity<Map<NamedEntityVerb, Map<String, List<DtoNamedEntity>>>> getVerbs() {
 
@@ -45,17 +52,18 @@ public class NamedEntityController {
         for(NamedEntityVerb verb : NamedEntityVerb.values()) {
             //todo only indexable verbs should be indexed ! (check filter before insertion)
             if(verb.isIndexable()) {
-                //long count = repositoryNamedEntityIndex.countByVerb(authService.getUsernameFromContext(), verb);
-
                 List<DtoNamedEntity> listNe = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb).stream()
                         .map(ne -> DtoNamedEntity.fromEntity(ne))
                         .toList();
-
                 Map<String, List<DtoNamedEntity>> map2 = listNe.stream()
-                        //.filter(ne->ne.getVerb().equals(NamedEntityVerb.tag))
+                        .map(ne->{
+                            IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), ne.getFileId());
+                            Optional<EntityFile> oF = repositoryFile.findById(idFile);
+                            String filename = oF.isPresent() ? oF.get().getName() : "unknown";
+                            ne.setFileName(filename);
+                            return ne;
+                        })
                         .collect(Collectors.groupingBy(DtoNamedEntity::getValue));
-
-
                 map.put(verb, map2);
             }
         }

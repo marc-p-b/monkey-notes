@@ -128,7 +128,7 @@ props.page.listNamedEntities.forEach(ne => {
   } else if(ne.verb == 'h6') {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='"+ne.uuid+"'>" + ne.value + "</h6>");
   } else if(ne.verb == 'tag') {
-    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<a href=''>" + ne.value + " <i class='pi pi-tag'></i></a>");
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-tag'></i></span>");
   } else {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
   }

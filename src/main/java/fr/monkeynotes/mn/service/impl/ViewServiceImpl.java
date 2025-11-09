@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -282,6 +283,15 @@ public class ViewServiceImpl implements ViewService {
                 .flatMap(p -> p.getListNamedEntities().stream())
                 .filter(ne -> ne.getVerb().equals(NamedEntityVerb.tag))
                 .collect(Collectors.toList()));
+
+
+        dtoTranscript.setTagsMap(dtoTranscript.getPages().stream()
+                .flatMap(p -> p.getListNamedEntities().stream())
+                .filter(ne->ne.getVerb().equals(NamedEntityVerb.tag))
+                .collect(Collectors.groupingBy(DtoNamedEntity::getValue)));
+
+
+
 
         dtoTranscript.setToc(dtoTranscript.getPages().stream()
                 .flatMap(p -> p.getListNamedEntities().stream())

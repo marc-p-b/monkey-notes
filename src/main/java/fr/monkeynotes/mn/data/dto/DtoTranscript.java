@@ -1,9 +1,11 @@
 package fr.monkeynotes.mn.data.dto;
 
 import fr.monkeynotes.mn.data.entity.EntityTranscript;
+import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class DtoTranscript {
     private String username;
@@ -20,6 +22,7 @@ public class DtoTranscript {
     private List<DtoTranscriptPage> pages;
     //duplicates of page tags for easier access from ui
     private List<DtoNamedEntity> tags;
+    private Map<String, List<DtoNamedEntity>> tagsMap;
     private List<DtoNamedEntity> toc;
 
     private String title;
@@ -128,6 +131,15 @@ public class DtoTranscript {
 
     public DtoTranscript setToc(List<DtoNamedEntity> toc) {
         this.toc = toc;
+        return this;
+    }
+
+    public Map<String, List<DtoNamedEntity>> getTagsMap() {
+        return tagsMap;
+    }
+
+    public DtoTranscript setTagsMap(Map<String, List<DtoNamedEntity>> tagsMap) {
+        this.tagsMap = tagsMap;
         return this;
     }
 }

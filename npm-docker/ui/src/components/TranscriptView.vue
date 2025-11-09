@@ -30,9 +30,14 @@
               <TabPanel value="1">
                 <p class="m-0">
                   <ul class="tags">
-                    <p v-if="transcript.tags.length === 0">No tags</p>
-                    <li v-for="tag in transcript.tags">
-                      {{tag.value}} (p. {{tag.pageNumber+1}})
+                    <li v-for="(tags, name) in transcript.tagsMap">
+                      {{name}}
+                      <ul class="tags-page">
+                        pages :
+                        <li v-for="tag in tags">
+                          <a :href="'#' + tag.uuid">{{tag.pageNumber+1}}</a>
+                        </li>
+                      </ul>
                     </li>
                   </ul>
                 </p>
@@ -64,7 +69,7 @@
 
 <style scoped>
 
-.tags li {
+.tags-page li {
   display: inline;         /* ✅ inline display */
   margin-right: 1rem;      /* spacing between items */
 }
@@ -123,6 +128,7 @@ interface DtoTranscript {
   title: string
   tags: NamedEntity[]
   toc: NamedEntity[]
+  tagMap: Record<string, NamedEntity[]>;
 }
 
 interface NamedEntity {

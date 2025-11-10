@@ -1,10 +1,5 @@
 package fr.monkeynotes.mn.service.impl;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.github.difflib.patch.*;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.*;
@@ -12,11 +7,29 @@ import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 import fr.monkeynotes.mn.data.enums.ViewOptionsCompletionStatus;
-import fr.monkeynotes.mn.data.repository.*;
+import fr.monkeynotes.mn.data.repository.RepositoryFile;
+import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
+import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
+import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.service.*;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.*;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.ByteBuffersDirectory;
+import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -209,6 +221,26 @@ public class ViewServiceImpl implements ViewService {
                 .toList();
     }
 
+    @Override
+    public String getContent(DtoTranscript dtoTranscript) throws ServiceException {
+        if(dtoTranscript == null) {
+            throw new ServiceException("dtoTranscript is null");
+        }
+        StringBuilder sbContent = new StringBuilder();
+
+        for(int n = 0; n < dtoTranscript.getPageCount(); n++) {
+            Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
+                    IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), dtoTranscript.getFileId(), n));
+
+            if (optPage.isPresent()) {
+                DtoTranscriptPage dtoTranscriptPage = DtoTranscriptPage.fromEntity(optPage.get());
+                dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
+                sbContent.append(dtoTranscriptPage.getTranscript());
+            }
+        }
+        return sbContent.toString();
+    }
+
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
         //List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
 
@@ -248,6 +280,7 @@ public class ViewServiceImpl implements ViewService {
 //                        .findFirst();
 //                dtoTranscriptPage.setOptSchemaTitle(optSchema);
 
+                dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
                 listDtoTranscriptPages.add(dtoTranscriptPage);
             }
         }
@@ -264,7 +297,7 @@ public class ViewServiceImpl implements ViewService {
                     LOG.error("Failed to create image URL fileId {} page {}", page.getFileId(), page.getPageNumber());
                 }
 
-                page = editService.applyPatch(page);
+                //page = editService.applyPatch(page);
                 return page;
             })
             .toList();

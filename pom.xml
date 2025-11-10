@@ -65,6 +65,17 @@
             <version>4.16</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>10.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>10.3.1</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.api-client</groupId>

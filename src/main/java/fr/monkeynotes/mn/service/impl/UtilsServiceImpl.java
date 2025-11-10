@@ -1,13 +1,29 @@
 package fr.monkeynotes.mn.service.impl;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.Patch;
-import fr.monkeynotes.mn.data.entity.*;
+import fr.monkeynotes.mn.ServiceException;
+import fr.monkeynotes.mn.data.entity.EntityFile;
+import fr.monkeynotes.mn.data.entity.EntityTranscript;
+import fr.monkeynotes.mn.data.entity.EntityUser;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
+import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;
+import fr.monkeynotes.mn.service.ViewService;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.*;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.ByteBuffersDirectory;
+import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +38,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -48,9 +65,6 @@ public class UtilsServiceImpl implements UtilsService {
 
     @Autowired
     private RepositoryFile repositoryFile;
-
-    @Autowired
-    private RepositoryTranscriptPage repositoryTranscriptPage;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {

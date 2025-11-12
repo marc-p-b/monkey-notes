@@ -3,7 +3,8 @@ import { defineStore } from 'pinia'
 export const useUiStore = defineStore('ui', {
     state: () => ({
         loading: false,
-        search: ''
+        search: '',
+        srPages: []
     }),
     actions: {
         setLoading(value) {
@@ -11,6 +12,9 @@ export const useUiStore = defineStore('ui', {
         },
         setSearch(value) {
             this.search = value
+        },
+        setSRPages(value) {
+            this.srPages = value
         }
     }
 })

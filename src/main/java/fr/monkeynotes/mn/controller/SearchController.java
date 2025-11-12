@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class SearchController {
@@ -20,7 +21,7 @@ public class SearchController {
     private SearchService searchService;
 
     @PostMapping("/search")
-    public ResponseEntity<List<DtoSearchResult>> search(@RequestBody String body) {
+    public ResponseEntity<Map<String, List<DtoSearchResult>>> search(@RequestBody String body) {
         return ResponseEntity.ok().body(searchService.search(body));
     }
 }

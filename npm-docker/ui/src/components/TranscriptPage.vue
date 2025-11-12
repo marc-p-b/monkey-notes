@@ -1,4 +1,5 @@
 <template>
+  <span :id="'pageNumber' + page.pageNumber" />
   <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
   <div v-else>
       <div class="flex flex-col gap-1">

@@ -108,7 +108,13 @@ import TranscriptPage from "./TranscriptPage.vue";
 import { useRouter } from 'vue-router'
 const router = useRouter()
 
-const props = defineProps<{ fileId: string }>()
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
+
+const props = defineProps<{
+  fileId: string
+  pageNumber: number
+}>()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -234,6 +240,12 @@ function agent(fileId) {
 }
 
 onMounted(() => {
+
+  //todo pages with search result
+  console.log("pageNumber : " + props.pageNumber + ", " + store.srPages)
+
+
+
   fetchTranscript();
 });
 

@@ -1,6 +1,5 @@
 package fr.monkeynotes.mn.service.impl;
 
-import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.dto.DtoSearchResult;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
@@ -10,10 +9,7 @@ import fr.monkeynotes.mn.service.EditService;
 import fr.monkeynotes.mn.service.SearchService;
 import fr.monkeynotes.mn.service.ViewService;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
@@ -21,7 +17,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
 import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
@@ -33,7 +28,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class SearchServiceImpl implements SearchService {
@@ -63,51 +61,36 @@ public class SearchServiceImpl implements SearchService {
             IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
             IndexWriter writter = new IndexWriter(memoryIndex, indexWriterConfig);
 
-            repositoryTranscriptPage.findAll().stream()
-                .map(e -> DtoTranscriptPage.fromEntity(e))
-                .forEach(dtoTranscriptPage -> {
-                    dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
 
-                    String pageId = dtoTranscriptPage.getFileId() + "/" + dtoTranscriptPage.getPageNumber();
+            repositoryTranscript.findAll().stream()
+                .map(e -> DtoTranscript.fromEntity(e))
+                    .forEach(dtoTranscript -> {
+                        LOG.info("indexing transcript {}", dtoTranscript.getName());
 
-                    Document document = new Document();
-                    //document.add(new TextField("title", dtoTranscript.getName(), Field.Store.YES));
-                    document.add(new TextField("content", dtoTranscriptPage.getTranscript(), Field.Store.NO));
-                    document.add(new TextField("pageId", pageId, Field.Store.YES));
 
-                    try {
-                        LOG.info("added " + pageId);
-                        writter.addDocument(document);
-                    } catch (IOException e) {
-                        LOG.error("Error while adding document", e);
-                    }
-                });
 
-//            List<DtoTranscript> l = repositoryTranscript.findAll().stream()
-//                    .map(e -> DtoTranscript.fromEntity(e))
-//                    .toList();
-//
-//            for (DtoTranscript dtoTranscript : l) {
-//                LOG.info("indexing transcript {}", dtoTranscript.getName());
-//
-//                String content = viewService.getContent(dtoTranscript);
-//
-//                Document document = new Document();
-//                document.add(new TextField("title", dtoTranscript.getName(), Field.Store.YES));
-//                //document.add(new TextField("content", content, Field.Store.YES));
-//                document.add(new TextField("id", dtoTranscript.getFileId(), Field.Store.YES));
-//
-//                FieldType type = new FieldType(TextField.TYPE_STORED);
-//                type.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
-//                //Document doc = new Document();
-//                document.add(new Field("content", content, type));
-//
-//                try {
-//                    writter.addDocument(document);
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
+
+                        repositoryTranscriptPage.findByIdTranscriptPage_FileId(dtoTranscript.getFileId()).stream()
+                            .map(e -> DtoTranscriptPage.fromEntity(e))
+                            .forEach(dtoTranscriptPage -> {
+                                Document document = new Document();
+                                //indexing transcript
+                                document.add(new TextField("id", dtoTranscript.getFileId(), Field.Store.YES));
+                                document.add(new TextField("title", dtoTranscript.getName(), Field.Store.YES));
+                                //indexing page (applying patches)
+                                document.add(new IntField("pageNumber", dtoTranscriptPage.getPageNumber(), Field.Store.YES));
+                                dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
+                                FieldType type = new FieldType(TextField.TYPE_STORED);
+                                type.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
+                                document.add(new Field("content", dtoTranscriptPage.getTranscript(), type));
+                                try {
+                                    writter.addDocument(document);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                    });
+
             writter.close();
 
 
@@ -117,7 +100,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
-    public List<DtoSearchResult> search(String queryString) {
+    public Map<String, List<DtoSearchResult>> search(String queryString) {
         String inField = "content";
 
         List<DtoSearchResult> dtoSearchResults = new ArrayList<>();
@@ -126,7 +109,7 @@ public class SearchServiceImpl implements SearchService {
 
             IndexReader indexReader = DirectoryReader.open(memoryIndex);
             IndexSearcher searcher = new IndexSearcher(indexReader);
-            TopDocs topDocs = searcher.search(query, 10);
+            TopDocs topDocs = searcher.search(query, 100);
 
 //            UnifiedHighlighter highlighter = new UnifiedHighlighter(searcher, analyzer);
 //            highlighter.setHighlightPhrasesStrictly(true);
@@ -141,15 +124,16 @@ public class SearchServiceImpl implements SearchService {
             for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
                 Document doc = storedFields.document(scoreDoc.doc);
                 DtoSearchResult dtoSearchResult = new DtoSearchResult()
-                        .setId(doc.get("pageId"));
-                        //.setTitle(doc.get("title"));
+                        .setId(doc.get("id"))
+                        .setTitle(doc.get("title"))
+                        .setPageNumber(Integer.valueOf(doc.get("pageNumber")));
 
                 dtoSearchResults.add(dtoSearchResult);
-
-
-
             }
-            return dtoSearchResults;
+
+            Map<String, List<DtoSearchResult>> mapResults = dtoSearchResults.stream()
+                    .collect(Collectors.groupingBy(DtoSearchResult::getTitle));
+            return mapResults;
         } catch (ParseException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {

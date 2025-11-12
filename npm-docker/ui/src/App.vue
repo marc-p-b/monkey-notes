@@ -2,8 +2,8 @@
 <template>
   <Menubar :model="menuItems">
     <template #end>
-      <InputText v-model="query" @keydown.enter="search"></InputText>
       <ProgressSpinner v-if="store.loading" style="width: 30px; height: 30px" strokeWidth="8" animationDuration="2s"/>
+      <InputText v-model="query" @keydown.enter="search"></InputText>
     </template>
   </Menubar>
   <RouterView/>

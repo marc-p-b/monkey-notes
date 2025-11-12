@@ -46,6 +46,12 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/transcript/:fileId',
+      name: 'transcriptSearchResult',
+      component: TranscriptView,
+      props: true,
+    },
+    {
       path: '/agent/:fileId',
       name: 'agent',
       component: AgentView,

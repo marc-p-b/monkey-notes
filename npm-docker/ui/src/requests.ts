@@ -1,7 +1,15 @@
+
+//TODO noAuthFetch()
+
+
 export async function authFetch(path, options = {}) {
     const token = localStorage.getItem("token");
+
+    //TODO env ??
     //const url = import.meta.env.VITE_API_URL + '/' + path
-    const url = 'http://localhost:8080' + '/' + path
+    const url = 'https://notes.monkeynotes.fr/api/' + path
+
+    //const url = 'http://localhost:8080' + '/' + path
 
     const headers = {
         ...(options.headers || {}),

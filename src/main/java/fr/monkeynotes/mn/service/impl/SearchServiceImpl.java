@@ -55,6 +55,8 @@ public class SearchServiceImpl implements SearchService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initLucene() {
+        if(true)
+            return;
         analyzer = new StandardAnalyzer();
         memoryIndex = new ByteBuffersDirectory();
         try {

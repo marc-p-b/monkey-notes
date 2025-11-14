@@ -27,6 +27,24 @@ public class AuthController {
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @GetMapping(value = "/test")
+    public ResponseEntity<String> test() {
+        LOG.info("-----test");
+        return ResponseEntity.status(HttpStatus.OK).body("HELLO !");
+    }
+
+    @GetMapping(value = "/api/test")
+    public ResponseEntity<String> test2() {
+        LOG.info("-----test2");
+        return ResponseEntity.status(HttpStatus.OK).body("HELLO 2!");
+    }
+
+    @GetMapping(value = "/jwt/test")
+    public ResponseEntity<String> test3() {
+        LOG.info("-----test3");
+        return ResponseEntity.status(HttpStatus.OK).body("HELLO 3!");
+    }
+
     @GetMapping(value = "/drive/disconnect", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> disconnect() {
         driveService.disconnect();
@@ -44,7 +62,8 @@ public class AuthController {
             return ResponseEntity.ok(new AuthResponse(token));
         }
         LOG.warn("Login refused");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        //TODO change me
+        return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).build();
     }
 }
 

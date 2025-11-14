@@ -22,15 +22,18 @@ public class SecurityConfig {
         //TODO improve insecure routes
         http
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
-                .cors(Customizer.withDefaults())
+                //.cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/agent/subscribe/*/*/*").permitAll() //auth with get token param
-                    .requestMatchers("/jwt/login").permitAll()
-                    .requestMatchers("/grant-callback").permitAll() //secure by token... TODO update AuthWebhooksController
-                    .requestMatchers("/notify").permitAll() //TODO more secured ?
-                    .requestMatchers("/image/*/*/*").permitAll() //todo secure ?
-                    .requestMatchers("/imagetemp/*/*/*").permitAll() //todo secure ?
-                    .anyRequest().authenticated()
+                        .anyRequest().permitAll()
+//                        .requestMatchers("/agent/subscribe/*/*/*").permitAll() //auth with get token param
+//                    .requestMatchers("/jwt/login").permitAll()
+//                    .requestMatchers("/test").permitAll() //TODO REMOVE ME
+//                    .requestMatchers("/jwt/test").permitAll() //TODO REMOVE ME
+//                    .requestMatchers("/grant-callback").permitAll() //secure by token... TODO update AuthWebhooksController
+//                    .requestMatchers("/notify").permitAll() //TODO more secured ?
+//                    .requestMatchers("/image/*/*/*").permitAll() //todo secure ?
+//                    .requestMatchers("/imagetemp/*/*/*").permitAll() //todo secure ?
+                    //.anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(new JwtFilter(), UsernamePasswordAuthenticationFilter.class);

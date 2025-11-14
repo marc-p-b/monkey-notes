@@ -5,19 +5,24 @@ import { PrimeVueResolver } from '@primevue/auto-import-resolver';
 import { fileURLToPath, URL } from 'node:url'
 
 
-// https://vitejs.dev/config/
-export default defineConfig({
-	plugins: [
-		vue(),
+export default defineConfig(({ mode }) => ({
+	plugins: [vue(),
 		Components({
 			resolvers: [
 				PrimeVueResolver()
 			]
 		})
-
-	],resolve: {
+	],
+	build: {
+		sourcemap: mode === 'debug',       // ✅ generate source maps
+		minify: mode === 'debug' ? false : 'esbuild', // ✅ no minify
+	},
+	define: {
+		__DEBUG__: mode === 'debug',
+	},resolve: {
 		alias: {
 			'@': fileURLToPath(new URL('./src', import.meta.url))
 		},
 	},
-});
+}))
+

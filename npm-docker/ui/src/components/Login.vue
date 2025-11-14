@@ -28,7 +28,8 @@ const infoMessage = ref("");
 async function handleLogin() {
   try {
     //TODO replace complete url
-    const response = await fetch("http://localhost:8080/jwt/login", {
+
+    const response = await fetch("https://notes.monkeynotes.fr/api/jwt/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

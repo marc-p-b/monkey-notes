@@ -9,17 +9,14 @@
     <Button @click.prevent="closeEdit" label="close" />
   </div>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
-  <a href="#" @click.prevent="updatePage(page)">update</a> -
-  <span v-if="page.deltas === 1">{{page.deltas}} delta</span>
-  <span v-else-if="page.deltas > 1">{{page.deltas}} deltas</span>
+  <a href="#" @click.prevent="updatePage(page)">update</a>
+  <span v-if="page.deltas === 1"> - {{page.deltas}} delta</span>
+  <span v-else-if="page.deltas > 1"> - {{page.deltas}} deltas</span>
 </template>
 
 <script lang="ts" setup>
 import {ref, defineProps, onMounted} from "vue";
 import {authFetch} from "@/requests";
-
-// import { useRouter } from 'vue-router'
-// const router = useRouter()
 
 interface NamedEntity {
   uuid: string

@@ -42,15 +42,12 @@ public class AuthWebhooksController {
             String username = JwtUtil.extractUsername(token);
             var auth = new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
             SecurityContextHolder.getContext().setAuthentication(auth);
+        } else {
+            return "redirect:" + frontendUrl + "/preferences";
         }
-        //TODO else ?
-
-        //TODO keep ?
         //reset map is mandatory when redirecting to vue app
         driveService.resetMap();
-
         driveService.grantCallback(code);
-
         return "redirect:" + frontendUrl + "/preferences";
     }
 

@@ -56,19 +56,6 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return targetFile;
     }
 
-//    @Override
-//    public void delete(String fileId) {
-//        LOG.info("delete file {}", fileId);
-//
-//        try {
-//            driveService.getDrive().files().delete(fileId).execute();
-//
-//            LOG.info("deleted file {}", fileId);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     @Override
     public String getFileName(String fileId) throws IOException {
         File file = driveService.getDrive().files().get(fileId).setFields("name").execute();

@@ -1,6 +1,8 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.JwtUtil;
+import fr.monkeynotes.mn.data.entity.EntityUser;
+import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.service.DriveService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +16,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+import java.util.UUID;
+
 @RestController
 
 public class AuthController {
@@ -23,27 +28,12 @@ public class AuthController {
     private UserDetailsService userRepository;
 
     @Autowired
+    private RepositoryUser repositoryUser;
+
+    @Autowired
     private DriveService driveService;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    @GetMapping(value = "/test")
-    public ResponseEntity<String> test() {
-        LOG.info("-----test");
-        return ResponseEntity.status(HttpStatus.OK).body("HELLO !");
-    }
-
-    @GetMapping(value = "/api/test")
-    public ResponseEntity<String> test2() {
-        LOG.info("-----test2");
-        return ResponseEntity.status(HttpStatus.OK).body("HELLO 2!");
-    }
-
-    @GetMapping(value = "/jwt/test")
-    public ResponseEntity<String> test3() {
-        LOG.info("-----test3");
-        return ResponseEntity.status(HttpStatus.OK).body("HELLO 3!");
-    }
 
     @GetMapping(value = "/drive/disconnect", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> disconnect() {
@@ -62,8 +52,41 @@ public class AuthController {
             return ResponseEntity.ok(new AuthResponse(token));
         }
         LOG.warn("Login refused");
-        //TODO change me
-        return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    @GetMapping("/user/{user}/password")
+    public ResponseEntity<String> setPassword(@PathVariable String user, @RequestParam String password) {
+
+        Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(user);
+        if (!optionalEntityUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("no user found");
+        }
+
+        EntityUser userEntity = optionalEntityUser.get();
+
+        userEntity.setPassword(passwordEncoder.encode(password));
+        repositoryUser.save(userEntity);
+
+        return ResponseEntity.status(HttpStatus.OK).body("Password set");
+    }
+
+    @GetMapping("/user/create/{user}")
+    public ResponseEntity<String> createUser(@PathVariable String user) {
+
+        Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(user);
+        if (optionalEntityUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("user already exists");
+        }
+        String rndPassword = UUID.randomUUID().toString();
+
+        EntityUser u = new EntityUser()
+                .setUsername(user)
+                .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
+                .setRoles("USER");
+        repositoryUser.save(u);
+
+        return ResponseEntity.status(HttpStatus.OK).body("User created");
     }
 }
 

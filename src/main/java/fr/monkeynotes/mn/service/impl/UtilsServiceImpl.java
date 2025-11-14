@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -38,9 +39,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class UtilsServiceImpl implements UtilsService {
@@ -66,28 +65,31 @@ public class UtilsServiceImpl implements UtilsService {
     @Autowired
     private RepositoryFile repositoryFile;
 
+    @Autowired
+    private Environment environment;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
-        repositoryUser.deleteAll();
+        String envInitUser = environment.getProperty("INIT_USERS");
 
-        EntityUser u1 = new EntityUser()
-                .setUsername("marc")
-                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
-                .setRoles("USER");
+        if((envInitUser!= null && envInitUser.equals("true"))
+                || Arrays.stream(environment.getActiveProfiles())
+                .filter(p -> p.equals("init_admin"))
+                .findFirst().isPresent()) {
+            repositoryUser.deleteAll();
+            String rndPassword = UUID.randomUUID().toString();
 
-        EntityUser u2 = new EntityUser()
-                .setUsername("celine")
-                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
-                .setRoles("USER");
+            LOG.info("****** ----------------------- **************");
+            LOG.info("****** Initializing admin user **************");
+            LOG.info("password " + rndPassword);
+            LOG.info("****** ----------------------- **************");
 
-        EntityUser u3 = new EntityUser()
-                .setUsername("marc-test")
-                .setPassword(new BCryptPasswordEncoder().encode("outsoon4242"))
-                .setRoles("USER");
-
-        repositoryUser.save(u1);
-        repositoryUser.save(u2);
-        repositoryUser.save(u3);
+            EntityUser u1 = new EntityUser()
+                    .setUsername("admin")
+                    .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
+                    .setRoles("USER,ADMIN");
+            repositoryUser.save(u1);
+        }
     }
 
 

@@ -16,6 +16,8 @@ spring:
       max-request-size: 500MB
 
 app:
+  security:
+    cors.origin: http://localhost:5173
   dry-run: false
   drive:
     auth:

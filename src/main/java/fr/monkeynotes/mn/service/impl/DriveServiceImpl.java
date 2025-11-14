@@ -100,8 +100,6 @@ public class DriveServiceImpl implements DriveService {
         //LOG.info("Get drive user {}", authService.getUsernameFromContext());
 
         if(mapDrive == null || mapDrive.containsKey(authService.getUsernameFromContext()) == false) {
-            //HUHO
-            //LOG.warn("WAAAAT CAN I DO");
             requireAuth();
         }
 

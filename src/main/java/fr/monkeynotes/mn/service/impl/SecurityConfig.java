@@ -1,6 +1,9 @@
 package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.JwtFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -20,17 +23,22 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    Logger LOG = LoggerFactory.getLogger(SecurityConfig.class);
+
+    @Value("${app.security.cors.origin}")
+    private String corsOrigin;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         //TODO improve insecure routes
         http
-                .csrf(csrf -> csrf.disable())  // Disable CSRF for APIs
+                .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/agent/subscribe/*/*/*").permitAll() //auth with get token param
-                    .requestMatchers("/jwt/login").permitAll()
-                    .requestMatchers("/grant-callback").permitAll() //secure by token... TODO update AuthWebhooksController
-                    .requestMatchers("/notify").permitAll() //TODO more secured ?
+                    .requestMatchers("/grant-callback").permitAll() //secured using get token param
+                    .requestMatchers("/jwt/login").permitAll() //no auth required
+                    .requestMatchers("/agent/subscribe/*/*/*").permitAll() //secured using get token param
+                    .requestMatchers("/notify").permitAll() //TODO secure ?
                     .requestMatchers("/image/*/*/*").permitAll() //todo secure ?
                     .requestMatchers("/imagetemp/*/*/*").permitAll() //todo secure ?
                     .anyRequest().authenticated()
@@ -42,20 +50,15 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
+        String[]aCorsOrigin = corsOrigin.split(",");
+
         CorsConfiguration config = new CorsConfiguration();
-
-
-//                .allowedOrigins("https://ohdbcfzqnn.a.pinggy.link")
-//                .allowedOrigins("https://notes.monkeynotes.fr")
-//                //.allowedOrigins("https://notes.monkeynotes.fr/api")
-//                .allowedOrigins("http://localhost:5173") //TODO dev only
-//                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-//                .allowedHeaders("*")
-//                .allowCredentials(true);
-
-        config.addAllowedOrigin("https://notes.monkeynotes.fr");
-        config.setAllowCredentials(true); // if you use cookies or auth headers
-        config.addAllowedOriginPattern("*"); // or restrict to your domain
+        for(String origin : aCorsOrigin) {
+            LOG.info("**** adding CORS origin: {}", origin);
+            config.addAllowedOrigin(origin);
+        }
+        config.setAllowCredentials(true);
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

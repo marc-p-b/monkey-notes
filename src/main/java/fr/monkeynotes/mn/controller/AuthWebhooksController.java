@@ -7,6 +7,7 @@ import fr.monkeynotes.mn.service.DriveService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,6 +30,9 @@ public class AuthWebhooksController {
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
 
+    @Value("${app.url.frontend}")
+    private String frontendUrl;
+
     @GetMapping("/grant-callback")
     public String grantCallback(HttpServletRequest request) throws IOException {
         String code = request.getParameter("code");
@@ -47,7 +51,7 @@ public class AuthWebhooksController {
 
         driveService.grantCallback(code);
 
-        return "redirect:http://localhost:5173/preferences";
+        return "redirect:" + frontendUrl + "/preferences";
     }
 
     @PostMapping("/notify")

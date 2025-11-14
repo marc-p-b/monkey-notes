@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -48,13 +49,14 @@ public class AuthController {
 
         if (ud != null && passwordEncoder.matches(request.getPassword(), ud.getPassword())) {
             LOG.info("Login granted");
-            String token = JwtUtil.generateToken(request.getUsername());
+            String token = JwtUtil.generateToken(ud);
             return ResponseEntity.ok(new AuthResponse(token));
         }
         LOG.warn("Login refused");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/user/{user}/password")
     public ResponseEntity<String> setPassword(@PathVariable String user, @RequestParam String password) {
 
@@ -71,6 +73,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body("Password set");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/user/create/{user}")
     public ResponseEntity<String> createUser(@PathVariable String user) {
 

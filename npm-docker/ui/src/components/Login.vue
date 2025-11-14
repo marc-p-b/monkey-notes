@@ -17,6 +17,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { noAuthFetch } from "@/requests.ts";
 
 const router = useRouter();
 
@@ -27,9 +28,8 @@ const infoMessage = ref("");
 
 async function handleLogin() {
   try {
-    //TODO replace complete url
-
-    const response = await fetch("https://notes.monkeynotes.fr/api/jwt/login", {
+    //const url = import.meta.env.VITE_API_URL + '/jwt/login'
+    const response = await noAuthFetch('jwt/login', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

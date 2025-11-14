@@ -1,15 +1,21 @@
+export async function noAuthFetch(path, options = {}) {
+    const url = import.meta.env.VITE_API_URL + '/' + path
+    console.log('no auth fetch' + url)
 
-//TODO noAuthFetch()
+    const headers = {
+        ...(options.headers || {}),
+        "Content-Type": "application/json",
+    };
 
+    const response = await fetch(url, { ...options, headers });
+
+    return response;
+}
 
 export async function authFetch(path, options = {}) {
     const token = localStorage.getItem("token");
-
-    //TODO env ??
-    //const url = import.meta.env.VITE_API_URL + '/' + path
-    const url = 'https://notes.monkeynotes.fr/api/' + path
-
-    //const url = 'http://localhost:8080' + '/' + path
+    const url = import.meta.env.VITE_API_URL + '/' + path
+    console.log('auth fetch' + url)
 
     const headers = {
         ...(options.headers || {}),

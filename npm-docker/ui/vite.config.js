@@ -4,19 +4,21 @@ import Components from 'unplugin-vue-components/vite';
 import { PrimeVueResolver } from '@primevue/auto-import-resolver';
 import { fileURLToPath, URL } from 'node:url'
 
-
 export default defineConfig(({ mode }) => ({
 	plugins: [vue(),
+		//debug (if npm run build -- --mode debug
 		Components({
 			resolvers: [
 				PrimeVueResolver()
 			]
 		})
 	],
+	//debug
 	build: {
 		sourcemap: mode === 'debug',       // ✅ generate source maps
 		minify: mode === 'debug' ? false : 'esbuild', // ✅ no minify
 	},
+	//debug
 	define: {
 		__DEBUG__: mode === 'debug',
 	},resolve: {

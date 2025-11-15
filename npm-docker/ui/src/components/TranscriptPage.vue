@@ -1,18 +1,72 @@
 <template>
   <span :id="'pageNumber' + page.pageNumber" />
   <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
-  <div v-else>
-      <div class="flex flex-col gap-1">
-      <Textarea v-model="text2" auto-resize :rows="page.rows" :cols="page.cols" cols="30"></Textarea>
+  <div v-else class="edit-container">
+
+
+    <div class="flex-row">
+      <div class="left">
+      <Textarea
+          v-model="text2"
+          auto-resize
+          class="w-full"
+      />
       </div>
+      <div class="right">
+        <img
+            :src="page.imageUrl"
+            alt="preview"
+            class="preview-img"
+        />
+      </div>
+
+    </div>
+
+    <!-- Buttons below -->
+    <div class="buttons">
       <Button @click.prevent="save" label="save" />
-    <Button @click.prevent="closeEdit" label="close" />
+      <Button @click.prevent="closeEdit" label="close" />
+    </div>
   </div>
   <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a>
   <span v-if="page.deltas === 1"> - {{page.deltas}} delta</span>
   <span v-else-if="page.deltas > 1"> - {{page.deltas}} deltas</span>
 </template>
+
+<style>
+
+.edit-container {
+  display: flex;
+  flex-direction: column;  /* stack flex-row and buttons */
+  gap: 1rem;
+}
+
+.flex-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.left {
+  flex: 1;                /* textarea takes remaining space */
+}
+
+.right {
+  flex: 0 0 auto;         /* image keeps natural width */
+}
+
+.preview-img {
+  width: 80%;       /* 40% of flex row or any fixed px */
+  height: auto;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.5rem;            /* space between buttons */
+}
+
+</style>
 
 <script lang="ts" setup>
 import {ref, defineProps, onMounted} from "vue";

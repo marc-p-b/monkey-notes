@@ -63,7 +63,7 @@ node_modules
 /npm-docker/ui/.env.docker
 
 /docker/api/mn-api.jar
-/docker/compose/data/nginx/www-ui/*
-/docker/compose/data/postgres/*
-/docker/compose/data/logs/*
-/docker/compose/data/mn_data/*
+/docker/compose/data/nginx/www-ui
+/docker/compose/data/postgres
+/docker/compose/data/logs
+/docker/compose/data/mn_data

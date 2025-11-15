@@ -57,6 +57,10 @@ node_modules
 /.kotlin/
 /src/main/resources/application-dev.yaml
 /src/main/resources/application-prod.yaml
+/src/main/resources/application-docker.yaml
+
+/npm-docker/ui/.env
+/npm-docker/ui/.env.docker
 
 /docker/api/mn-api.jar
 /docker/compose/data/nginx/www-ui/*

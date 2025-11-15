@@ -57,3 +57,5 @@ node_modules
 /.kotlin/
 /src/main/resources/application-dev.yaml
 /src/main/resources/application-prod.yaml
+
+/docker/

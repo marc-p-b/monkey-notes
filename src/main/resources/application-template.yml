@@ -1,11 +1,11 @@
 spring:
-  application.name: DriveSpringBoot
+  application.name: MonkeyNotes
   resources:
     static-locations=classpath:static/:
   datasource:
-    url: jdbc:postgresql://HOST:PORT/DB?currentSchema=SCHEMA
-    username: DB_USER
-    password: DB_PASSWORD
+    url: jdbc:postgresql://mn-db:5432/monkey_db
+    username: monkey_user
+    password: monK3Y__42_Pa55w0rD
     hikari.auto-commit: false
   jpa:
     hibernate.ddl-auto: update
@@ -17,7 +17,7 @@ spring:
 
 app:
   security:
-    cors.origin: MY_DOMAIN
+    cors.origin: https://youdomain.com
   dry-run: false
   drive:
     auth:
@@ -25,6 +25,7 @@ app:
       client-id: GDRIVE_CLIENT_ID
       client-secret: GDRIVE_SECRET
   changes:
+    listen.on-startup.enabled: true
     expiration: 3000
     flush: 5
   openai:
@@ -32,34 +33,28 @@ app:
     assistant:
       defaults:
         model: gpt-4o-mini
-        instructions: Tu es un assistant qui répond à des questions concernant des notes prises pendant des réunions. Le document joint \"knowledge.json\" (appelé NOTES par l'utilisateur) provient de notes manuscrites transformés par OCR au format JSON
+        instructions: You are an assistant who answers questions regarding notes taken during meetings. The attached document, "knowledge.json" (referred to as NOTES by the user), comes from handwritten notes converted to JSON format via OCR.
   qwen:
     url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions
     key: QWEN_API_KEY
   paths:
-    user_data: /home/USER/.monkey/user_data
+    user_data: /mn_data
   url:
-    self: https://PUBLIC_HOST
+    frontend: https://youdomain.com
+    self: https://youdomain.com/api #NOTE THE TRAILING API !
   notify:
     path: /notify
   oauth-callback:
     path: /grant-callback
   defaults:
     qwen:
-      prompt: extraire le texte de l'image. ne pas ajouter d'autre texte
+      prompt: extract the text from the image. do not add any other text
       # available models : qwen2.5-vl-72b-instruct, qwen-vl-max, qwen-vl-ocr
       model: qwen-vl-ocr
       max-tokens: 5000
     ai:
       connect-timeout: 3000
       read-timeout: 180000
-  email:
-    enable: true
-    sender: SENDER@EMAIL.COM
-    recipient: RECIPIENT@EMAIL.COM
-    mailjet.apikey:
-      public: MAILJET_API_PUBLIC_KEY
-      private: MAILJET_API_PRIVATE_KEY
 
 #Tooling Spring Boot Starter config
 tooling :

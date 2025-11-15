@@ -6,5 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 public interface SearchService {
+    void initLucene();
     Map<String, List<DtoSearchResult>> search(String query);
 }

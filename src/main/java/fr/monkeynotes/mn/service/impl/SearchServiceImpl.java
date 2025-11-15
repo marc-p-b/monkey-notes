@@ -24,13 +24,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,31 +44,39 @@ public class SearchServiceImpl implements SearchService {
     @Autowired
     private EditService editService;
 
-    @Autowired
-    private ViewService viewService;
-
     private StandardAnalyzer analyzer;
     private Directory memoryIndex;
 
+    @Autowired
+    private Environment environment;
 
     @EventListener(ApplicationReadyEvent.class)
+    public void startUp() {
+
+        String envIdxLcn = environment.getProperty("INDEX_LUCENE");
+
+        if ((envIdxLcn != null && envIdxLcn.equals("true"))
+                || Arrays.stream(environment.getActiveProfiles())
+                .filter(p -> p.equals("index_lucene"))
+                .findFirst().isPresent()) {
+            LOG.info("*** Started index lucene search");
+            initLucene();
+        } else {
+            LOG.warn("*** Lucene index disabled");
+        }
+    }
+
     public void initLucene() {
-        if(true)
-            return;
         analyzer = new StandardAnalyzer();
         memoryIndex = new ByteBuffersDirectory();
         try {
             IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
             IndexWriter writter = new IndexWriter(memoryIndex, indexWriterConfig);
 
-
             repositoryTranscript.findAll().stream()
                 .map(e -> DtoTranscript.fromEntity(e))
                     .forEach(dtoTranscript -> {
                         LOG.info("indexing transcript {}", dtoTranscript.getName());
-
-
-
 
                         repositoryTranscriptPage.findByIdTranscriptPage_FileId(dtoTranscript.getFileId()).stream()
                             .map(e -> DtoTranscriptPage.fromEntity(e))

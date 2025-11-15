@@ -17,7 +17,7 @@ spring:
 
 app:
   security:
-    cors.origin: http://localhost:5173
+    cors.origin: MY_DOMAIN
   dry-run: false
   drive:
     auth:

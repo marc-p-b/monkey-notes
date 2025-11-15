@@ -1,9 +1,16 @@
-FROM node:24
+# Use official Node.js LTS image as the base
+FROM node:25
 
-WORKDIR /app/ui
+CMD mkdir /ui
 
-EXPOSE 5173
+# Set working directory
+WORKDIR ui
 
-RUN "npm install"
+# Copy package.json and package-lock.json first (for caching dependencies)
+#COPY ui/package*.json ./
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Install dependencies
+#RUN npm install
+
+# Copy the rest of the application code
+#COPY ui .

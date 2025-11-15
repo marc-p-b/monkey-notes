@@ -58,4 +58,8 @@ node_modules
 /src/main/resources/application-dev.yaml
 /src/main/resources/application-prod.yaml
 
-/docker/
+/docker/api/mn-api.jar
+/docker/compose/data/nginx/www-ui/*
+/docker/compose/data/postgres/*
+/docker/compose/data/logs/*
+/docker/compose/data/mn_data/*

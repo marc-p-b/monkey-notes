@@ -58,7 +58,7 @@ public class TranscriptUtils {
 
         //String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
 
-        String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L))(?:\\s*:\\s*([^\\]]+))?\\]";
+        String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L|V|X))(?:\\s*:\\s*([^\\]]+))?\\]";
         //format [VERB:value] where VERB is XT, T, D, DU, P, @, SREF, S, L (upper or lower)
         //with spaces or not :
         // [ t: myTAG]

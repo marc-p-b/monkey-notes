@@ -181,6 +181,18 @@ props.page.listNamedEntities.forEach(ne => {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='"+ne.uuid+"'>" + ne.value + "</h6>");
   } else if(ne.verb == 'tag') {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-tag'></i></span>");
+  } else if(ne.verb == 'person') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-user'></i></span>");
+  } else if(ne.verb == 'email') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-envelope'></i></span>");
+  } else if(ne.verb == 'link') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-link'></i></span>");
+  } else if (ne.verb == 'dateUs' || ne.verb == 'dateIntl') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='"+ne.uuid+"'>" + ne.value + " <i class='pi pi-calendar'></i></span>");
+  } else if(ne.verb == 'checked') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='"+ne.uuid+"' type='checkbox' checked /><label for='"+ne.uuid+"'>"+ne.value+"</label>");
+  } else if(ne.verb == 'unchecked') {
+    repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='"+ne.uuid+"' type='checkbox' /><label for='"+ne.uuid+"'>"+ne.value+"</label>");
   } else {
     repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|");
   }

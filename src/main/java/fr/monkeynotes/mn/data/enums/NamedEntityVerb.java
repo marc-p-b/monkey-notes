@@ -10,6 +10,8 @@ public enum NamedEntityVerb {
     schema("S", false),
     refSchema("SREF", false),
     noTranscript("XT", false),
+    checked("V", false),
+    unchecked("X", false),
     h2("#", false),
     h3("##", false),
     h4("###", false),

@@ -63,6 +63,7 @@ node_modules
 /npm-docker/ui/.env
 /npm-docker/ui/.env.dev
 /npm-docker/ui/.env.docker
+/docker/nginx/dist/
 
 /docker/api/mn-api.jar
 /docker/compose/data/nginx/www-ui
@@ -70,4 +71,5 @@ node_modules
 /docker/compose/data/logs
 /docker/compose/data/mn_data
 /docker/compose/.env
+
 

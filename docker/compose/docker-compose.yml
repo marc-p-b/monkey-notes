@@ -6,11 +6,11 @@ networks:
     mn_ext:
 services:
   nginx:
-    image: nginx:1.15-alpine
+    image: mn-nginx
     restart: unless-stopped
     volumes:
       - ./data/nginx:/etc/nginx/conf.d
-      - ./data/nginx/www-ui:/var/www/mn-ui/dist
+      - ./data/nginx/env.js:/var/www/mn-ui/dist/env.js:ro
     ports:
       - "80:80"
       - "443:443"
@@ -18,6 +18,19 @@ services:
     networks: 
       - mn_int
       - mn_ext
+#  nginx:
+#    image: nginx:1.15-alpine
+#    restart: unless-stopped
+#    volumes:
+#      - ./data/nginx:/etc/nginx/conf.d
+#      - ./data/nginx/www-ui:/var/www/mn-ui/dist
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+#    networks:
+#      - mn_int
+#      - mn_ext
   db:
     image: postgres
     restart: on-failure
@@ -28,7 +41,7 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql/data/pg14
     hostname: mn-db
-    networks: 
+    networks:
       - mn_int
   mn-api:
     depends_on:
@@ -39,6 +52,6 @@ services:
     volumes:
       - ./data/mn_data/:/mn_data
       - ./data/logs/:/logs
-    networks: 
+    networks:
       - mn_int
       - mn_ext

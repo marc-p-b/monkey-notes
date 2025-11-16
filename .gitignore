@@ -70,6 +70,6 @@ node_modules
 /docker/compose/data/postgres
 /docker/compose/data/logs
 /docker/compose/data/mn_data
-/docker/compose/.env
+
 
 

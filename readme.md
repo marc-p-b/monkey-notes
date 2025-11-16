@@ -1,28 +1,43 @@
 
-# docker install
+# Docker install
 
-copy docker-compose.yml and .env
-create dir data/nginx
-copy app-run.conf and env.js to data/nginx/
+In a new directory, copy the content of https://github.com/marc-p-b/monkey-notes/tree/main/docker/compose 
 
-edit .env and fill all the properties
-YOUR_DOMAIN=
-YOUR_DOMAIN_API=
-CORS_DOMAINS=
-GDRIVE_CLIENT_ID=
-GDRIVE_SECRET=
-OPENAI_API_KEY=
-QWEN_API_KEY=
+docker-compose.yml
 
-edit app-run.conf, replace <<MY_DOMAIN>> by your domain, like https://mn.mydomain.com
-edit env.js, replace ___CHANGE_ME !___ by your domain. keep the trailing /api/
+## Edit nginx config
 
-start the app using docker compose up
+Open `data/nginx/app-run.conf` and replace `<<MY_DOMAIN>>` by your domain, like `https://mn.mydomain.com`
 
-watch the log for admin password :
+## Edit ui config
+
+Open `data/nginx/env.js` and replace `___CHANGE_ME !___` by your domain. Keep the trailing `/api/`
+
+## Edit backend config
+
+Open `.env` and fill all the properties, assuming your are using `mn.mydomain.com`
+
+```
+YOUR_DOMAIN = https://mn.mydomain.com
+YOUR_DOMAIN_API = https://mn.mydomain.com/api
+CORS_DOMAINS = https://mn.mydomain.com
+GDRIVE_CLIENT_ID = <<your google console client_id>>
+GDRIVE_SECRET = <<your google console client_secret>>
+OPENAI_API_KEY = <<your openai api key>>
+QWEN_API_KEY = <<your openai api key>>
+```
+
+## Run MonkeyNotes App
+
+Start the app using `docker compose up`
+
+Watch the logs for admin password :
+
+```
 ****** ----------------------- **************
 ****** Initializing admin user **************
 password 25d9ccaa-efaf-4531-ae79-8aea7fd002bc
 ****** ----------------------- **************
+```
 
-use your fqdn https://mn.mydomain.com to login using the admin user
+Use your fqdn https://mn.mydomain.com to login using the admin user

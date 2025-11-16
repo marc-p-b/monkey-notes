@@ -48,7 +48,7 @@ services:
       - db
     image: monkeynotes/mn-api:latest
     environment:
-      - SPRING_PROFILES_ACTIVE=docker,init_admin
+      - SPRING_PROFILES_ACTIVE=dist,init_admin
     volumes:
       - ./data/mn_data/:/mn_data
       - ./data/logs/:/logs

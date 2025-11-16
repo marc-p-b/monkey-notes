@@ -1,14 +1,28 @@
 
-# dev
+# docker install
 
-## UI : install packages and serve vue.js using vite
+copy docker-compose.yml and .env
+create dir data/nginx
+copy app-run.conf and env.js to data/nginx/
 
-cd npm-docker
-docker build -t npm-ui .
-docker run -it -u $(id -u):$(id -g) -p 5173:5173 -v ./ui/:/ui npm-ui sh -c "npm install"
-docker run -it -u $(id -u):$(id -g) -p 5173:5173 -v ./ui/:/ui npm-ui sh -c "npm run dev -- --host"
+edit .env and fill all the properties
+YOUR_DOMAIN=
+YOUR_DOMAIN_API=
+CORS_DOMAINS=
+GDRIVE_CLIENT_ID=
+GDRIVE_SECRET=
+OPENAI_API_KEY=
+QWEN_API_KEY=
 
-## DB
+edit app-run.conf, replace <<MY_DOMAIN>> by your domain, like https://mn.mydomain.com
+edit env.js, replace ___CHANGE_ME !___ by your domain. keep the trailing /api/
 
-## spring api app
+start the app using docker compose up
 
+watch the log for admin password :
+****** ----------------------- **************
+****** Initializing admin user **************
+password 25d9ccaa-efaf-4531-ae79-8aea7fd002bc
+****** ----------------------- **************
+
+use your fqdn https://mn.mydomain.com to login using the admin user

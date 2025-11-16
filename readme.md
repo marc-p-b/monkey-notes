@@ -1,20 +1,14 @@
 
-# docker
+# dev
 
-## build api container
+## UI : install packages and serve vue.js using vite
 
-mvn clean package
-cd docker/api
-cp ../../target/mn-api.jar ./
-docker build -t mn .
-cd ../..
+cd npm-docker
+docker build -t npm-ui .
+docker run -it -u $(id -u):$(id -g) -p 5173:5173 -v ./ui/:/ui npm-ui sh -c "npm install"
+docker run -it -u $(id -u):$(id -g) -p 5173:5173 -v ./ui/:/ui npm-ui sh -c "npm run dev -- --host"
 
-## create ui dist
+## DB
 
-todo build
-
-cd docker/compose
-cp -R ../../npm-docker/ui/dist/* data/nginx/www-ui/
-
-todo edit files (domains)
+## spring api app
 

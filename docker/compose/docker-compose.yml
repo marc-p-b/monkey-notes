@@ -33,7 +33,7 @@ services:
   mn-api:
     depends_on:
       - db
-    image: mn-api:latest
+    image: monkeynotes/mn-api:latest
     environment:
       - SPRING_PROFILES_ACTIVE=docker,init_admin
     volumes:

@@ -3,6 +3,8 @@
 
 Use your eInk tablet notes to produce automatically high quality text using LLM's OCR !
 
+![homepage](readme_assets/tablet_and_pc.jpg)
+
 # Features
 
 ## eInk tablet synchronisation

@@ -122,20 +122,23 @@ But you may share a test folder to keep your notes safe from any harm !
 * A Qwen API key (OCR LLM)
 * (optional) An OpenAI API key (Agent LLM to interact over the notes)
 
+## Clone the project
+
+git clone https://github.com/marc-p-b/monkey-notes.git
+
 ## Init docker-compose directory
 
-
-In a new directory, copy the content of https://github.com/marc-p-b/monkey-notes/tree/main/docker/compose 
-
-docker-compose.yml
+Copy the content of docker/compose somewhere
 
 ## Edit nginx config
 
-Open `data/nginx/app-run.conf` and replace `<<MY_DOMAIN>>` by your domain, like `https://mn.mydomain.com`
+Open `data/nginx/app-run.conf` and replace `<<MY_DOMAIN>>` by your domain, like `mn.mydomain.com`
 
 ## Edit ui config
 
 Open `data/nginx/env.js` and replace `___CHANGE_ME !___` by your domain. Keep the trailing `/api/`
+
+It should be like `https://mn.mydomain.com/api/`
 
 ## Edit backend config
 

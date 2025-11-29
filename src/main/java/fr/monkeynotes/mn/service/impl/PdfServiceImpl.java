@@ -71,7 +71,7 @@ public class PdfServiceImpl implements PdfService {
     }
 
     @Override
-    public List<URL> pdf2Images(String username, String fileId, File sourceFile){//, Path targetDir) {
+    public List<URL> pdf2Images(String username, String fileId, File sourceFile){
         LOG.info("Converting {} to images", sourceFile);
 
         List<URL> listImages = null;

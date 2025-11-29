@@ -112,6 +112,40 @@ No upload, modification or deletion is implemented from MN to GoogleDrive.
 
 But you may share a test folder to keep your notes safe from any harm !
 
+# Dev env
+
+* frontend will be served locally at : http://localhost:5173
+* backend https://youtunnel.xyz tunnelized to http://localhost:8080
+
+## ProgresSQL DB
+
+todo
+
+## HTTPS
+
+Backend must be visible from outside. (mandatory to sync Google Drive)
+
+Using an HTTPS tunnel such as `ngrok` or `pinggy` is a good idea.
+
+Assuming backend is running on 8080, pinggy command : 
+
+`ssh -p 443 -R0:localhost:8080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 XXXXXXX@pro.pinggy.io`
+
+This will serve your local http backend server from your pinggy unique https URL such as `https://xxxxxxxx.a.pinggy.link`
+
+## Spring Backend
+
+Start Spring backend using JetBrains or `mvn spring-boot:run`
+
+todo
+
+## Serve UI using npm/vite
+
+Use npm-docker scripts :
+
+* run-build.sh : Create npm-ui container
+* run-serve.sh : Serve UI using vite
+
 # Docker install
 
 ## Prerequisites
@@ -136,7 +170,7 @@ Open `data/nginx/app-run.conf` and replace `<<MY_DOMAIN>>` by your domain, like 
 
 ## Edit ui config
 
-Open `data/nginx/env.js` and replace `___CHANGE_ME !___` by your domain. Keep the trailing `/api/`
+Open `data/nginx/env.js` and replace `<<MY_DOMAIN>>` by your domain. Keep the trailing `/api/`
 
 It should be like `https://mn.mydomain.com/api/`
 

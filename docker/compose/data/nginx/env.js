@@ -1,3 +1,3 @@
 window._env_ = {
-    API_URL: '___CHANGE_ME !___/api/',
+    API_URL: 'https://<<YOUR_DOMAIN>>/api/',
 };

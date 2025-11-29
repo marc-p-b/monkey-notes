@@ -1,16 +1,16 @@
-# Use official Node.js LTS image as the base
 FROM node:25
 
 CMD mkdir /ui
 
-# Set working directory
 WORKDIR ui
 
-# Copy package.json and package-lock.json first (for caching dependencies)
-#COPY ui/package*.json ./
+RUN echo "cd /ui" > /vite.sh
+RUN echo "npm install" >> /vite.sh
+RUN echo "npm run dev -- --host" >> /vite.sh
 
-# Install dependencies
-#RUN npm install
+RUN echo "cd /ui" > /dist.sh
+RUN echo "npm install" >> /dist.sh
+RUN echo "rm -rf /ui/dist" >> /dist.sh
+RUN echo "npm run build" >> /dist.sh
 
-# Copy the rest of the application code
-#COPY ui .
+CMD ["/bin/sh", "/vite.sh"]

@@ -25,4 +25,5 @@ public interface UtilsService {
     Path getUserDownloadsPath();
     Path getUserTranscriptsPath();
     String getLocalFileName(String fileId);
+    void deleteAllData();
 }

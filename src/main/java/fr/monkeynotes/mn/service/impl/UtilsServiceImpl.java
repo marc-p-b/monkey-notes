@@ -5,9 +5,7 @@ import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.EntityTranscript;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.entity.IdFile;
-import fr.monkeynotes.mn.data.repository.RepositoryFile;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
-import fr.monkeynotes.mn.data.repository.RepositoryUser;
+import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;
 import fr.monkeynotes.mn.service.ViewService;
@@ -31,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -68,6 +67,24 @@ public class UtilsServiceImpl implements UtilsService {
     @Autowired
     private Environment environment;
 
+    @Autowired
+    private RepositoryTranscript repositoryTranscript;
+
+    @Autowired
+    private RepositoryTranscriptPage repositoryTranscriptPage;
+
+    @Autowired
+    private RepositoryTranscriptPageDiff repositoryTranscriptPageDiff;
+
+    @Autowired
+    private RepositoryNamedEntity repositoryNamedEntity;
+
+    @Autowired
+    private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
+
+    @Autowired
+    private RepositoryAgent repositoryAgent;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
         String envInitUser = environment.getProperty("INIT_USERS");
@@ -92,6 +109,18 @@ public class UtilsServiceImpl implements UtilsService {
         }
     }
 
+    @Override
+    public void deleteAllData() {
+        LOG.info("************** Deleting all data **************");
+        repositoryNamedEntity.deleteAll();
+        repositoryNamedEntityIndex.deleteAll();
+        repositoryTranscriptPageDiff.deleteAll();
+        repositoryTranscriptPage.deleteAll();
+        repositoryTranscript.deleteAll();
+        repositoryFile.deleteAll();
+        repositoryAgent.deleteAll();
+        LOG.info("**************        Done      ***************");
+    }
 
     @Override
     public Path downloadDir(String fileId) {

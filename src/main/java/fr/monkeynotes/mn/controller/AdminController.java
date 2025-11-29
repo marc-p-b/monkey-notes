@@ -1,10 +1,13 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.service.DriveChangeManagerService;
+import fr.monkeynotes.mn.service.UtilsService;
+import fr.monkeynotes.mn.service.impl.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -17,6 +20,9 @@ public class AdminController {
 
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
+
+    @Autowired
+    private UtilsService utilsService;
 
     @GetMapping("/watch/start")
     public ResponseEntity<String> watchStart() throws IOException {
@@ -38,6 +44,13 @@ public class AdminController {
     @GetMapping("/flush")
     public ResponseEntity<String> flush() {
         driveChMgmtService.flushChanges();
+        return ResponseEntity.ok().body("OK");
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/reset")
+    public ResponseEntity<String> reset() {
+        utilsService.deleteAllData();
         return ResponseEntity.ok().body("OK");
     }
 

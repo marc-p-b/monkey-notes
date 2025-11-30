@@ -60,9 +60,7 @@ node_modules
 /src/main/resources/application-docker.yaml
 
 /npm-docker/ui/env.js
-/npm-docker/ui/.env
-/npm-docker/ui/.env.dev
-/npm-docker/ui/.env.docker
+/npm-docker/ui/dist/
 /docker/nginx/dist/
 
 /docker/api/mn-api.jar
@@ -70,6 +68,7 @@ node_modules
 /docker/compose/data/postgres
 /docker/compose/data/logs
 /docker/compose/data/mn_data
+
 
 
 

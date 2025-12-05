@@ -1,27 +1,11 @@
 package fr.monkeynotes.mn.service.impl;
 
-import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.entity.EntityFile;
-import fr.monkeynotes.mn.data.entity.EntityTranscript;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;
-import fr.monkeynotes.mn.service.ViewService;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.*;
-import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.ByteBuffersDirectory;
-import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +21,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UtilsServiceImpl implements UtilsService {

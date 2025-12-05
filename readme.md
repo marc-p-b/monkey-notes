@@ -148,6 +148,8 @@ Use npm-docker scripts :
 
 # Docker install
 
+Staging env
+
 ## Prerequisites
 
 * Docker and docker compose tools

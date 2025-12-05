@@ -117,6 +117,37 @@ public class UpdateServiceImpl implements UpdateService {
                 return;
             }
 
+
+            // --------------------------------------
+            // Move new files to regular dir
+            // --------------------------------------
+            Path tempDir = utilsService.tempImageDir(file2Process.getFileId());
+            Path imageDir = utilsService.imageDir(file2Process.getFileId());
+
+            try {
+                if(imageDir.toFile().exists()) {
+                    LOG.info("delete {}", imageDir);
+                    Utils.deleteDirectory(imageDir);
+
+                    if(tempDir.toFile().exists()) {
+                        LOG.info("move {} to {}", tempDir, imageDir);
+                        Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            } catch (IOException e) {
+                LOG.error("ERROR moving dirs", e);
+            }
+
+
+            modifiedOrNewImages.stream()
+                .forEach(i2p-> {
+                    try {
+                        i2p.updateUrl(utilsService.imageURL(authService.getUsernameFromContext(), i2p.getFileId(), i2p.getPageNumber()));
+                    } catch (MalformedURLException e) {
+                        LOG.error("failed to create url for fileid {} page {}", i2p.getFileId(), i2p.getPageNumber(), e);
+                    }
+                });
+
             // --------------------------------------
             // Call LLM
             // --------------------------------------
@@ -138,25 +169,6 @@ public class UpdateServiceImpl implements UpdateService {
             }
             LOG.info("Images converted {}", listCompletionResponse.size());
 
-            // --------------------------------------
-            // Move new files to regular dir
-            // --------------------------------------
-            Path tempDir = utilsService.tempImageDir(file2Process.getFileId());
-            Path imageDir = utilsService.imageDir(file2Process.getFileId());
-
-            try {
-                if(imageDir.toFile().exists()) {
-                    LOG.info("delete {}", imageDir);
-                    Utils.deleteDirectory(imageDir);
-
-                    if(tempDir.toFile().exists()) {
-                        LOG.info("move {} to {}", tempDir, imageDir);
-                        Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                }
-            } catch (IOException e) {
-                LOG.error("ERROR moving dirs", e);
-            }
 
             // --------------------------------------
             // Create transcript db entities

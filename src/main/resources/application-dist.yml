@@ -49,7 +49,7 @@ app:
   defaults:
     qwen:
       prompt: extract the text from the image. do not add any other text
-      # available models : qwen2.5-vl-72b-instruct, qwen-vl-max, qwen-vl-ocr
+      # available models : qwen-vl-ocr-2025-11-20,qwen2.5-vl-72b-instruct, qwen-vl-max, qwen-vl-ocr
       model: qwen-vl-ocr
       max-tokens: 5000
     ai:

@@ -41,4 +41,8 @@ public class Image2Process {
         return this;
     }
 
+    public void updateUrl(URL url) {
+        this.url = url;
+    }
+
 }

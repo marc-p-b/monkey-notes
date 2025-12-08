@@ -1,9 +1,9 @@
 export async function noAuthFetch(path, options = {}) {
     //TODO conf problem
     //const url = window._env_.API_URL + path
-    const url = 'http://localhost/' + path
+    const url = 'http://localhost:8080/' + path
 
-    console.log('no auth fetch' + url)
+    console.log('API URL ' + url)
 
     const headers = {
         ...(options.headers || {}),
@@ -18,10 +18,10 @@ export async function noAuthFetch(path, options = {}) {
 export async function authFetch(path, options = {}) {
     //TODO conf problem
     //const url = window._env_.API_URL + path
-    const url = 'http://localhost/' + path
+    const url = 'http://localhost:8080/' + path
 
     const token = localStorage.getItem("token");
-    console.log('auth fetch' + url)
+    console.log('API URL (no auth) ' + url)
 
     const headers = {
         ...(options.headers || {}),

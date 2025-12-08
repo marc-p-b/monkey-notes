@@ -1,12 +1,12 @@
 #version: '3'
 
-networks:
-    mn_int:
-        internal: true
-    mn_ext:
+#networks:
+#    mn_int:
+#        internal: true
+#    mn_ext:
 services:
   nginx:
-    image: monkeynotes/mn-nginx
+    image: mn-ui
     restart: unless-stopped
     volumes:
       - ./data/nginx:/etc/nginx/conf.d
@@ -15,37 +15,37 @@ services:
       - "80:80"
       - "443:443"
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-    networks: 
-      - mn_int
-      - mn_ext
-  db:
-    image: postgres
-    restart: on-failure
-    environment:
-      POSTGRES_DB: monkey_db
-      POSTGRES_USER: monkey_user
-      POSTGRES_PASSWORD: monK3Y__42_Pa55w0rD
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data/pg14
-    hostname: mn-db
-    networks:
-      - mn_int
-  mn-api:
-    depends_on:
-      - db
-    image: monkeynotes/mn-api:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=dist,init_admin
-      - YOUR_DOMAIN=${YOUR_DOMAIN}
-      - YOUR_DOMAIN_API=${YOUR_DOMAIN_API}
-      - CORS_DOMAINS=${CORS_DOMAINS}
-      - GDRIVE_CLIENT_ID=${GDRIVE_CLIENT_ID}
-      - GDRIVE_SECRET=${GDRIVE_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - QWEN_API_KEY=${QWEN_API_KEY}
-    volumes:
-      - ./data/mn_data/:/mn_data
-      - ./data/logs/:/logs
-    networks:
-      - mn_int
-      - mn_ext
+#    networks: 
+#      - mn_int
+#      - mn_ext
+#  db:
+#    image: postgres
+#    restart: on-failure
+#    environment:
+#      POSTGRES_DB: monkey_db
+#      POSTGRES_USER: monkey_user
+#      POSTGRES_PASSWORD: monK3Y__42_Pa55w0rD
+#    volumes:
+#      - ./data/postgres:/var/lib/postgresql/data/pg14
+#    hostname: mn-db
+#    networks:
+#      - mn_int
+#  mn-api:
+#    depends_on:
+#      - db
+#    image: monkeynotes/mn-api:latest
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=dist,init_admin
+#      - YOUR_DOMAIN=${YOUR_DOMAIN}
+#      - YOUR_DOMAIN_API=${YOUR_DOMAIN_API}
+#      - CORS_DOMAINS=${CORS_DOMAINS}
+#      - GDRIVE_CLIENT_ID=${GDRIVE_CLIENT_ID}
+#      - GDRIVE_SECRET=${GDRIVE_SECRET}
+#      - OPENAI_API_KEY=${OPENAI_API_KEY}
+#      - QWEN_API_KEY=${QWEN_API_KEY}
+#    volumes:
+#      - ./data/mn_data/:/mn_data
+#      - ./data/logs/:/logs
+#    networks:
+#      - mn_int
+#      - mn_ext

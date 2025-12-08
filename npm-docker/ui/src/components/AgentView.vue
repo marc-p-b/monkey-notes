@@ -123,7 +123,10 @@ const submitForm = async () => {
 
     const data = await response.json()
     //TODO conf problem
-    const streamUrl = "http://localhost/" + data.url
+    const streamUrl = "http://localhost:8080/" + data.url
+
+    console.log("Stream url " + streamUrl)
+
     //const streamUrl = import.meta.env.VITE_API_URL + "/" + data.url
 
     if (!streamUrl) throw new Error('No streaming URL returned')

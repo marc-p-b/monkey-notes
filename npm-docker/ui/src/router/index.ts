@@ -33,8 +33,8 @@ export function isTokenValid(token: string | null): boolean {
 
 const router = createRouter({
   //TODO conf problem
-  history: createWebHistory("http://localhost"),
-  //history: createWebHistory(),
+  //history: createWebHistory("http://localhost"),
+  history: createWebHistory(),
   routes: [
     {
       path: '/',

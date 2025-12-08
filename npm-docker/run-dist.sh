@@ -4,6 +4,7 @@ if [ -f ./ui/env.js ];then
   echo ">> Saving env.js"
   mv ./ui/env.js /tmp/env.js && saved=1
 fi
+rm -rf ./ui/dist
 cp ./ui/index_dist.html ./ui/index.html
 docker run -it --rm -u $(id -u):$(id -g) -p 5173:5173 -v ./ui/:/ui npm-ui bash /dist.sh
 if [ $saved = 1 ];then

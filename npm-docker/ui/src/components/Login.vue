@@ -28,7 +28,6 @@ const infoMessage = ref("");
 
 async function handleLogin() {
   try {
-    //const url = import.meta.env.VITE_API_URL + '/jwt/login'
     const response = await noAuthFetch('jwt/login', {
       method: "POST",
       headers: { "Content-Type": "application/json" },

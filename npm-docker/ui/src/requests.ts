@@ -1,7 +1,7 @@
 export async function noAuthFetch(path, options = {}) {
-    const url = window._env_.API_URL + path
-    //const url = import.meta.env.VITE_API_URL + '/' + path
-    //const url = 'http://localhost/' + path
+    //TODO conf problem
+    //const url = window._env_.API_URL + path
+    const url = 'http://localhost/' + path
 
     console.log('no auth fetch' + url)
 
@@ -16,9 +16,9 @@ export async function noAuthFetch(path, options = {}) {
 }
 
 export async function authFetch(path, options = {}) {
-    const url = window._env_.API_URL + path
-    //const url = import.meta.env.VITE_API_URL + '/' + path
-    //const url = 'http://localhost/' + path
+    //TODO conf problem
+    //const url = window._env_.API_URL + path
+    const url = 'http://localhost/' + path
 
     const token = localStorage.getItem("token");
     console.log('auth fetch' + url)

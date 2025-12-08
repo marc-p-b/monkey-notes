@@ -32,7 +32,9 @@ export function isTokenValid(token: string | null): boolean {
 }
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  //TODO conf problem
+  history: createWebHistory("http://localhost"),
+  //history: createWebHistory(),
   routes: [
     {
       path: '/',

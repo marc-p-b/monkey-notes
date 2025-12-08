@@ -6,7 +6,7 @@ networks:
     mn_ext:
 services:
   nginx:
-    image: monkeynotes/mn-nginx
+    image: monkeynotes/mn-ui
     restart: unless-stopped
     volumes:
       - ./data/nginx:/etc/nginx/conf.d
@@ -19,7 +19,7 @@ services:
       - mn_int
       - mn_ext
   db:
-    image: postgres
+    image: postgres:18.1
     restart: on-failure
     environment:
       POSTGRES_DB: monkey_db

@@ -5,14 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.monkeynotes.mn.data.dto.DtoExport;
-import fr.monkeynotes.mn.data.entity.EntityPreferencesId;
-import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
-import fr.monkeynotes.mn.data.entity.IdFile;
-import fr.monkeynotes.mn.data.entity.IdTranscriptPage;
-import fr.monkeynotes.mn.data.repository.RepositoryConfig;
-import fr.monkeynotes.mn.data.repository.RepositoryFile;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
-import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
+import fr.monkeynotes.mn.data.entity.*;
+import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.ExportService;
 import fr.monkeynotes.mn.service.UtilsService;
@@ -50,6 +44,15 @@ public class ExportServiceImpl implements ExportService {
     private RepositoryTranscriptPage repositoryTranscriptPage;
 
     @Autowired
+    private RepositoryTranscriptPageDiff repositoryTranscriptPageDiff;
+
+    @Autowired
+    private RepositoryNamedEntity repositoryNamedEntity;
+
+    @Autowired
+    private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
+
+    @Autowired
     private RepositoryConfig repositoryConfig;
 
     @Autowired
@@ -72,6 +75,11 @@ public class ExportServiceImpl implements ExportService {
                 .setFiles(repositoryFile.findAllByIdFile_Username(username))
                 .setTranscripts(repositoryTranscript.findAllByIdFile_Username(username))
                 .setPages(pages)
+
+                .setPageDiffs(repositoryTranscriptPageDiff.findAllByIdTranscriptPageDiff_Username(username))
+                .setNamedEntities(repositoryNamedEntity.findAllByIdNamedEntity_Username(username))
+                .setNamedEntityIndexes(repositoryNamedEntityIndex.findAllByIdNamedEntityIndex_Username(username))
+
                 .setPreferences(repositoryConfig.findAllByConfigId_Username(username));
 
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
@@ -108,9 +116,6 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
-//    @Value("${app.paths.images}")
-//    private String imagesPath;
-
     public void importUserData(MultipartFile multipartFile) {
         byte[] databaseBytes = null;
         try {
@@ -131,7 +136,6 @@ public class ExportServiceImpl implements ExportService {
                         String basename = FilenameUtils.getBaseName(zipEntry.getName());
                         String fileId = basename.substring(0, basename.lastIndexOf('_'));
 
-                        //Path folder = Paths.get(imagesPath, fileId);
                         Path folder = Paths.get(utilsService.getUserImagesPath().toString(), fileId);
 
                         Path destPath = Paths.get(folder.toString(), zipEntry.getName());
@@ -179,27 +183,58 @@ public class ExportServiceImpl implements ExportService {
                                 f.getIdTranscriptPage().getFileId(),
                                 f.getIdTranscriptPage().getPageNumber()));
                     });
+            dtoExport.getPageDiffs()
+                    .forEach(f -> {
+                        f.setIdTranscriptPageDiff(IdTranscriptPageDiff.createIdTranscriptPageDiff(
+                                connectedUsername,
+                                f.getIdTranscriptPageDiff().getFileId(),
+                                f.getIdTranscriptPageDiff().getPageNumber(),
+                                f.getIdTranscriptPageDiff().getVersion()));
+                    });
+            dtoExport.getNamedEntities()
+                    .forEach(f -> {
+                        f.setIdNamedEntity(IdNamedEntity.createIdNamedEntity(
+                                connectedUsername,
+                                f.getIdNamedEntity().getFileId(),
+                                f.getIdNamedEntity().getPageNumber()));
+                    });
+            dtoExport.getNamedEntityIndexes()
+                    .forEach(f -> {
+                        f.setIdNamedEntityIndex(IdNamedEntityIndex.createIdNamedEntityIndex(
+                                connectedUsername,
+                                f.getIdNamedEntityIndex().getVerb(),
+                                f.getIdNamedEntityIndex().getValue()));
+                    });
             dtoExport.getPreferences()
                     .forEach(f -> {
                         f.setConfigId(EntityPreferencesId.createConfigId(connectedUsername, f.getConfigId().getKey()));
                     });
 
+            repositoryNamedEntityIndex.deleteAll();
+            repositoryNamedEntity.deleteAll();
+            repositoryTranscriptPageDiff.deleteAll();
             repositoryTranscriptPage.deleteAll();
             repositoryTranscript.deleteAll();
             repositoryFile.deleteAll();
             repositoryConfig.deleteAll();
 
-            LOG.info("drop all data");
+            LOG.info("dropped all data");
 
             repositoryConfig.saveAll(dtoExport.getPreferences());
             repositoryFile.saveAll(dtoExport.getFiles());
             repositoryTranscript.saveAll(dtoExport.getTranscripts());
             repositoryTranscriptPage.saveAll(dtoExport.getPages());
+            repositoryTranscriptPageDiff.saveAll(dtoExport.getPageDiffs());
+            repositoryNamedEntity.saveAll(dtoExport.getNamedEntities());
+            repositoryNamedEntityIndex.saveAll(dtoExport.getNamedEntityIndexes());
 
-            LOG.info("load all data files {} transcripts {} pages {}",
+            LOG.info("loaded all data files {} transcripts {} pages {} pageDiffs {} namedEntity {} namedEntityIndexes {}",
                     dtoExport.getFiles().size(),
                     dtoExport.getTranscripts().size(),
-                    dtoExport.getPages().size());
+                    dtoExport.getPages().size(),
+                    dtoExport.getPageDiffs().size(),
+                    dtoExport.getNamedEntities().size(),
+                    dtoExport.getNamedEntityIndexes().size());
 
         } catch (JsonParseException e) {
             LOG.error("Json Parse Exception", e);

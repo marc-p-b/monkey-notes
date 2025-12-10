@@ -1,10 +1,5 @@
 export async function noAuthFetch(path, options = {}) {
-    //TODO conf problem
     const url = window._env_.API_URL + path
-    //const url = 'http://localhost:8080/' + path
-
-    console.log('API URL ' + url)
-
     const headers = {
         ...(options.headers || {}),
         "Content-Type": "application/json",
@@ -16,13 +11,8 @@ export async function noAuthFetch(path, options = {}) {
 }
 
 export async function authFetch(path, options = {}) {
-    //TODO conf problem
     const url = window._env_.API_URL + path
-    //const url = 'http://localhost:8080/' + path
-
     const token = localStorage.getItem("token");
-    console.log('API URL (no auth) ' + url)
-
     const headers = {
         ...(options.headers || {}),
         "Content-Type": "application/json",
@@ -38,3 +28,24 @@ export async function authFetch(path, options = {}) {
 
     return response;
 }
+
+
+export async function authPostFile(path, formData) {
+    const url = window._env_.API_URL + path
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+            // DO NOT add 'Content-Type'
+        },
+        method: 'POST',
+        body: formData
+    });
+
+    if (response.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+    }
+}
+

@@ -17,5 +17,7 @@ public interface RepositoryNamedEntityIndex extends JpaRepository<EntityNamedEnt
 
     @Query("SELECT count(n) FROM named_entity_index n where n.idNamedEntityIndex.username = :username and n.idNamedEntityIndex.verb = :verb")
     Long countByVerb(@Param("username") String username, @Param("verb") NamedEntityVerb verb);
+
+    List<EntityNamedEntityIndex> findAllByIdNamedEntityIndex_Username(String username);
 }
 

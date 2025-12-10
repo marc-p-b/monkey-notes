@@ -1,9 +1,6 @@
 package fr.monkeynotes.mn.data.dto;
 
-import fr.monkeynotes.mn.data.entity.EntityPreferences;
-import fr.monkeynotes.mn.data.entity.EntityFile;
-import fr.monkeynotes.mn.data.entity.EntityTranscript;
-import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
+import fr.monkeynotes.mn.data.entity.*;
 
 import java.util.List;
 
@@ -11,6 +8,9 @@ public class DtoExport {
     private List<EntityFile> files;
     private List<EntityTranscript> transcripts;
     private List<EntityTranscriptPage> pages;
+    private List<EntityTranscriptPageDiff> pageDiffs;
+    private List<EntityNamedEntity> namedEntities;
+    private List<EntityNamedEntityIndex> namedEntityIndexes;
     private List<EntityPreferences> preferences;
 
     public List<EntityFile> getFiles() {
@@ -37,6 +37,33 @@ public class DtoExport {
 
     public DtoExport setPages(List<EntityTranscriptPage> pages) {
         this.pages = pages;
+        return this;
+    }
+
+    public List<EntityTranscriptPageDiff> getPageDiffs() {
+        return pageDiffs;
+    }
+
+    public DtoExport setPageDiffs(List<EntityTranscriptPageDiff> pageDiffs) {
+        this.pageDiffs = pageDiffs;
+        return this;
+    }
+
+    public List<EntityNamedEntity> getNamedEntities() {
+        return namedEntities;
+    }
+
+    public DtoExport setNamedEntities(List<EntityNamedEntity> namedEntities) {
+        this.namedEntities = namedEntities;
+        return this;
+    }
+
+    public List<EntityNamedEntityIndex> getNamedEntityIndexes() {
+        return namedEntityIndexes;
+    }
+
+    public DtoExport setNamedEntityIndexes(List<EntityNamedEntityIndex> namedEntityIndexes) {
+        this.namedEntityIndexes = namedEntityIndexes;
         return this;
     }
 

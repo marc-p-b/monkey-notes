@@ -7,9 +7,33 @@
       <a :href="googleAuthUrl">Google Drive auth</a>
     </div>
 
-    <a href="#" @click.prevent="updateAllTranscripts">Update all folders and transcripts</a>
+    <form>
+      <Fieldset legend="Accounts">
+        <div class="actions">
+          <Button @click.prevent="logout" label="Logout from Monkey Notes"/>
+          <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
+          <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts"/>
+        </div>
+
+      </Fieldset>
+    </form>
+
+    <form>
+      <Fieldset legend="Export data" class="data-fieldset">
+        <div class="actions">
+          <Button label="Download all data" @click="downloadExport" />
+        </div>
+      </Fieldset>
+
+      <Fieldset legend="Import data" class="data-fieldset">
+        <div class="actions">
+          <FileUpload mode="basic" @select="handleFileSelect($event)" customUpload auto severity="secondary"  />
+        </div>
+      </Fieldset>
+    </form>
 
     <form @submit.prevent="submitForm">
+
       <!-- Use Default Prompt -->
       <Fieldset legend="Use Default Prompt">
         <ToggleButton
@@ -102,9 +126,6 @@
     </form>
   </div>
 
-  <button @click.prevent="googleDisconnect">Disconnect from Google Drive</button>
-  <button @click.prevent="logout">Logout from Monkey Notes</button>
-
   <p>{{message}}</p>
 
 </template>
@@ -112,6 +133,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
+import {authPostFile} from "../requests";
 
 export interface Prefs {
   set: boolean;
@@ -138,6 +160,46 @@ const googleConnectRequired = ref(false)
 const googleAuthUrl = ref<string | null>(null)
 
 const message = ref(<string>"")
+
+ // async function handleFileSelect() {
+ //   console.log("hey")
+ // }
+
+
+const handleFileSelect = (event) => {
+  // event.files is always an array, even if single file mode
+  const file = event.files[0]
+  console.log('Selected file:', file)
+
+
+// async function handleFileSelect(event) {
+//   console.log("hey")
+//   const file = event.target.files[0];
+//
+  const formData = new FormData();
+  formData.append("file", file);
+
+  authPostFile("data/import", formData);
+
+  console.log("Upload done!");
+ }
+
+
+async function downloadExport() {
+  const res = await authFetch("data/export")
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = "monkey-notes.zip"
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+
+
 
 const submitForm = async () => {
   try {
@@ -247,4 +309,12 @@ onMounted(() => {
 .w-full {
   width: 100%;
 }
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 </style>

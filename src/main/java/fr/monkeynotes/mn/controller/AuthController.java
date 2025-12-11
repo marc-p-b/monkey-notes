@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.JwtUtil;
+import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.service.DriveService;
@@ -17,8 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 
@@ -57,6 +57,16 @@ public class AuthController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/user/list") public ResponseEntity<List<DtoUser>> getUsers() {
+
+        List<DtoUser> list = repositoryUser.findAll().stream()
+                .map(u -> DtoUser.fromEntity(u))
+                .toList();
+
+        return ResponseEntity.ok(list);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/user/{user}/password")
     public ResponseEntity<String> setPassword(@PathVariable String user, @RequestParam String password) {
 
@@ -71,6 +81,29 @@ public class AuthController {
         repositoryUser.save(userEntity);
 
         return ResponseEntity.status(HttpStatus.OK).body("Password set");
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/user/{user}/toggleAdmin")
+    public ResponseEntity<String> toggleAdmin(@PathVariable String user) {
+
+        Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(user);
+        if (!optionalEntityUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("no user found");
+        }
+
+        EntityUser userEntity = optionalEntityUser.get();
+
+        String[] roles = userEntity.getRoles().split(",");
+        Set<String> rolesSet = new HashSet<>(Arrays.asList(roles));
+        if(rolesSet.contains("ADMIN")) {
+            userEntity.setRoles("USER");
+        } else {
+            userEntity.setRoles("ADMIN,USER");
+        }
+        repositoryUser.save(userEntity);
+
+        return ResponseEntity.status(HttpStatus.OK).body(rolesSet.contains("ADMIN") ? "Admin role set" : "Admin role removed");
     }
 
     @PreAuthorize("hasRole('ADMIN')")

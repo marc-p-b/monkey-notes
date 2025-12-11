@@ -37,7 +37,12 @@ const menuItems = ref([
     label: 'Processes',
     icon: 'pi pi-briefcase',
     command: () => router.push('/processes')
-  }
+  },
+  {
+    label: 'Users',
+    icon: 'pi pi-users',
+    command: () => router.push('/users')
+  },
 
 ])
 

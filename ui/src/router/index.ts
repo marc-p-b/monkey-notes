@@ -7,6 +7,7 @@ import AgentView from "@/components/AgentView.vue";
 import ProcessesView from "@/components/ProcessesView.vue";
 import NamedEntitiesView from "@/components/NamedEntitiesView.vue";
 import SearchView from "@/components/SearchView.vue";
+import UsersView from "@/components/UsersView.vue";
 import { jwtDecode } from "jwt-decode";
 
 interface JwtPayload {
@@ -32,8 +33,6 @@ export function isTokenValid(token: string | null): boolean {
 }
 
 const router = createRouter({
-  //TODO conf problem
-  //history: createWebHistory("http://localhost"),
   history: createWebHistory(),
   routes: [
     {
@@ -83,6 +82,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: UsersView,
     }
   ],
 })

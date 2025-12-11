@@ -59,8 +59,8 @@ node_modules
 /src/main/resources/application-prod.yaml
 /src/main/resources/application-docker.yaml
 
-/npm-docker/ui/env.js
-/npm-docker/ui/dist/
+/ui/env.js
+/ui/dist/
 /docker/ui/dist/
 
 /docker/api/mn-api.jar

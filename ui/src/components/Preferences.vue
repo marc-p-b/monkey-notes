@@ -2,16 +2,18 @@
 
   <div class="main-wrapper">
     <h2>Preferences</h2>
-    <div v-if="googleConnectRequired">
-      <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
-      <a :href="googleAuthUrl">Google Drive auth</a>
-    </div>
 
     <form>
       <Fieldset legend="Accounts">
         <div class="actions">
           <Button @click.prevent="logout" label="Logout from Monkey Notes"/>
-          <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
+          <div v-if="googleConnectRequired">
+            <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
+            <a :href="googleAuthUrl">Google Drive auth</a>
+          </div>
+          <div v-else>
+            <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
+          </div>
           <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts"/>
         </div>
 

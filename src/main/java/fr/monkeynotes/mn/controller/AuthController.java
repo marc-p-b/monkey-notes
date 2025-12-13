@@ -1,6 +1,9 @@
 package fr.monkeynotes.mn.controller;
 
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import fr.monkeynotes.mn.JwtUtil;
+import fr.monkeynotes.mn.data.dto.DtoPreferences;
 import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
@@ -66,9 +69,17 @@ public class AuthController {
         return ResponseEntity.ok(list);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/user/{user}/password")
-    public ResponseEntity<String> setPassword(@PathVariable String user, @RequestParam String password) {
+    @GetMapping("/user/{user}/remove")
+    public ResponseEntity<String> removeUser(@PathVariable String user) {
+
+        return ResponseEntity.status(HttpStatus.OK).body("User " + user + " removed");
+    }
+
+    @PostMapping("/user/{user}/password")
+    public ResponseEntity<String> setPassword(@PathVariable String user, @RequestBody String json) {
+
+        DocumentContext ctx = JsonPath.parse(json);
+        String password = ctx.read("$.password");
 
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(user);
         if (!optionalEntityUser.isPresent()) {
@@ -107,22 +118,24 @@ public class AuthController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/user/create/{user}")
-    public ResponseEntity<String> createUser(@PathVariable String user) {
+    @PostMapping("/user/create")
+    public ResponseEntity<String> createUser(@RequestBody DtoUser dtoUser) {
 
-        Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(user);
+        Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(dtoUser.getUsername());
         if (optionalEntityUser.isPresent()) {
             return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("user already exists");
         }
         String rndPassword = UUID.randomUUID().toString();
 
+        String roles = "USER" + (dtoUser.isAdmin() ? ",ADMIN" : "");
+
         EntityUser u = new EntityUser()
-                .setUsername(user)
+                .setUsername(dtoUser.getUsername())
                 .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
-                .setRoles("USER");
+                .setRoles(roles);
         repositoryUser.save(u);
 
-        return ResponseEntity.status(HttpStatus.OK).body("User created");
+        return ResponseEntity.status(HttpStatus.OK).body(rndPassword);
     }
 }
 

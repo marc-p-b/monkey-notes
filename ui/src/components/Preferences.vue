@@ -201,8 +201,6 @@ async function downloadExport() {
 }
 
 
-
-
 const submitForm = async () => {
   try {
     const response = await authFetch("preferences/form", {

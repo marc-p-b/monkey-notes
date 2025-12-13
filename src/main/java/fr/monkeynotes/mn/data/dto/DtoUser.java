@@ -9,6 +9,7 @@ import java.util.Set;
 public class DtoUser {
     private String username;
     private Set<String> roles;
+    private boolean admin;
 
     public static DtoUser fromEntity(EntityUser user) {
 
@@ -17,8 +18,8 @@ public class DtoUser {
 
         return new DtoUser()
                 .setUsername(user.getUsername())
-                .setRoles(rolesSet);
-
+                .setRoles(rolesSet)
+                .setAdmin(rolesSet.contains("ADMIN"));
     }
 
     public String getUsername() {
@@ -36,6 +37,15 @@ public class DtoUser {
 
     public DtoUser setRoles(Set<String> roles) {
         this.roles = roles;
+        return this;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public DtoUser setAdmin(boolean admin) {
+        this.admin = admin;
         return this;
     }
 }

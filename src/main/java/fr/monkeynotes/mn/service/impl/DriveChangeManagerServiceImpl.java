@@ -264,6 +264,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if(processService.concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
+            //todo nothing is done here ! do something when too much concurrent
         }
 
         SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
@@ -280,8 +281,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 LOG.error("Failed to flushed changes", result.getException());
             }
         });
-
-
 
         long items = mapAuth2SetFlushedFileId.values().stream()
                 .flatMap(s->s.stream())
@@ -322,8 +321,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .collect(Collectors.toSet());
 
         setProcessingFileId.addAll(setFilteredFlushedFileId);
-        System.out.println("S> "+ setProcessingFileId);
+        //System.out.println("S> "+ setProcessingFileId);
         // TODO SYNC END !
+
+        processService.updateProcess(monitoringService.getCurrentMonitoringData().getId(), "Prepare and filter processing (flushed files : " + setFilteredFlushedFileId.size() + ")");
 
         List<File2Process> files2Process = setFilteredFlushedFileId.stream()
             .map(fileId -> {
@@ -390,7 +391,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         updateService.runListAsyncProcess(files2Process);
         setProcessingFileId.removeAll(setFilteredFlushedFileId);
-        System.out.println("T> "+ setProcessingFileId);
+        //System.out.println("T> "+ setProcessingFileId);
     }
 
     public void renewWatch(String username) throws IOException {

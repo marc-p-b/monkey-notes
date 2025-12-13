@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.data.dto.AsyncProcess;
+import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
 import fr.monkeynotes.mn.data.dto.DtoProcess;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
@@ -23,6 +24,41 @@ public class ProcessServiceImpl implements ProcessService {
     private Map<String, AsyncProcess> mapAsyncProcess = new HashMap<>();
     long CONCURRENT_LIMIT = 1;
 
+    @Override
+    public void updateProcess(String processId, String event) {
+        if(mapAsyncProcess.containsKey(processId) == false) {
+            return;
+        }
+        AsyncProcess p = mapAsyncProcess.get(processId);
+        p.addEvent(event);
+    }
+
+    @Override
+    public void updateDetails(String processId, String details) {
+        if(mapAsyncProcess.containsKey(processId) == false) {
+            return;
+        }
+        AsyncProcess p = mapAsyncProcess.get(processId);
+        p.addUpdateDetail(details);
+    }
+
+    @Override
+    public List<AsyncProcessEvent> getEvents(String processId) {
+        if(mapAsyncProcess.containsKey(processId) == false) {
+            return new ArrayList<>();
+        }
+        AsyncProcess p = mapAsyncProcess.get(processId);
+        return p.getEvents();
+    }
+
+    @Override
+    public List<String> getDetails(String processId) {
+        if(mapAsyncProcess.containsKey(processId) == false) {
+            return new ArrayList<>();
+        }
+        AsyncProcess p = mapAsyncProcess.get(processId);
+        return p.getUpdateDetails();
+    }
 
     public void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
 
@@ -55,6 +91,8 @@ public class ProcessServiceImpl implements ProcessService {
                 .setName(name.name())
                 .setCreatedAt(OffsetDateTime.now())
                 .setDescription(description);
+
+        LOG.info(asyncProcess.toString());
 
         mapAsyncProcess.put(id, asyncProcess);
     }

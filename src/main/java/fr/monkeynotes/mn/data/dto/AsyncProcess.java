@@ -3,15 +3,18 @@ package fr.monkeynotes.mn.data.dto;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class AsyncProcess {
         private String id;
-        //private String uniqueId;
         private String name;
         private OffsetDateTime createdAt;
         private String description;
         private CompletableFuture<AsyncResult> future;
+        private List<AsyncProcessEvent> events;
+        private List<String> updateDetails;
 
         public AsyncProcess() {
         }
@@ -24,15 +27,6 @@ public class AsyncProcess {
                 this.id = id;
                 return this;
         }
-//
-//        public String getUniqueId() {
-//                return uniqueId;
-//        }
-//
-//        public AsyncProcess setUniqueId(String uniqueId) {
-//                this.uniqueId = uniqueId;
-//                return this;
-//        }
 
         public String getName() {
                 return name;
@@ -68,5 +62,38 @@ public class AsyncProcess {
         public AsyncProcess setFuture(CompletableFuture<AsyncResult> future) {
                 this.future = future;
                 return this;
+        }
+
+        public void addEvent(String event) {
+                if (events == null) {
+                        events = new ArrayList<>();
+                }
+                events.add(new AsyncProcessEvent(event));
+        }
+
+        public void addUpdateDetail(String detail) {
+                if (updateDetails == null) {
+                        updateDetails = new ArrayList<>();
+                }
+                updateDetails.add(detail);
+        }
+
+        public List<AsyncProcessEvent> getEvents() {
+                return events;
+        }
+
+        public List<String> getUpdateDetails() {
+                return updateDetails;
+        }
+
+        @Override
+        public String toString() {
+                return "AsyncProcess{" +
+                        "id='" + id + '\'' +
+                        ", name='" + name + '\'' +
+                        ", createdAt=" + createdAt +
+                        ", description='" + description + '\'' +
+                        ", future=" + future +
+                        '}';
         }
 }

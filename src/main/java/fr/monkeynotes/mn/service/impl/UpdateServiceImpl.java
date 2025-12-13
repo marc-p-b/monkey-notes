@@ -3,6 +3,7 @@ package fr.monkeynotes.mn.service.impl;
 import com.google.api.services.drive.model.File;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
+import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
@@ -85,8 +86,10 @@ public class UpdateServiceImpl implements UpdateService {
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
-        for(File2Process file2Process : files2Process) {
+        final String processId = monitoringService.getCurrentMonitoringData().getId();
+        processService.updateProcess(processId, "files to process : " + files2Process.size());
 
+        for(File2Process file2Process : files2Process) {
             // --------------------------------------
             // get full path of the current file
             // --------------------------------------
@@ -112,11 +115,11 @@ public class UpdateServiceImpl implements UpdateService {
             List<Image2Process> modifiedOrNewImages = images2Process.getListImage2Process();
             LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
 
+            processService.updateProcess(processId, "created or modified pages : " + modifiedOrNewImages.size());
             if(modifiedOrNewImages.isEmpty()) {
                 LOG.info("No new or modified images, exiting from update process");
                 return;
             }
-
 
             // --------------------------------------
             // Move new files to regular dir
@@ -137,7 +140,6 @@ public class UpdateServiceImpl implements UpdateService {
             } catch (IOException e) {
                 LOG.error("ERROR moving dirs", e);
             }
-
 
             modifiedOrNewImages.stream()
                 .forEach(i2p-> {
@@ -162,13 +164,17 @@ public class UpdateServiceImpl implements UpdateService {
                 completionResponse.setPageNumber(image2Process.getPageNumber());
                 listCompletionResponse.add(completionResponse);
                 if (completionResponse.isCompleted()) {
-                    LOG.info("FileId {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
+                    LOG.info("FileId LLM OCR {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
+                    processService.updateProcess(processId, "llm ocr done fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
+
+
+
+                    processService.updateDetails(processId, file2Process.getFileName() + " updated page " + image2Process.getPageNumber());
                 } else {
-                    LOG.info("FileId {} Image {} failed", file2Process.getFileId(), imageUrl);
+                    LOG.warn("FileId LLM OCR {} Image {} failed", file2Process.getFileId(), imageUrl);
+                    processService.updateProcess(processId, "llm ocr failed fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
                 }
             }
-            LOG.info("Images converted {}", listCompletionResponse.size());
-
 
             // --------------------------------------
             // Create transcript db entities
@@ -186,6 +192,10 @@ public class UpdateServiceImpl implements UpdateService {
             namedEntitiesService.saveNamedEntities(file2Process.getFileId(), listCompletionResponse);
         }
         createFileEntities(files2Process);
+
+        List<AsyncProcessEvent> events = processService.getEvents(processId);
+        List<String> details = processService.getDetails(processId);
+
         LOG.info("Done processing files {}", files2Process.size());
     }
 
@@ -457,6 +467,9 @@ public class UpdateServiceImpl implements UpdateService {
                 })
                 .toList();
 
+
+        //TODO update process
+
         runListAsyncProcess(files2Process);
         LOG.info("Completed : Update folder id {}", folderId);
     }
@@ -549,6 +562,8 @@ public class UpdateServiceImpl implements UpdateService {
         LOG.info("Processing : Force page update for {} page {}", fileId, pageNumber);
         CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL);
 
+        //TODO update process
+
         if (completionResponse.isCompleted()) {
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, pageNumber));
@@ -629,6 +644,9 @@ public class UpdateServiceImpl implements UpdateService {
 
     @MonitoringAsync
     private void asyncForceTranscriptUpdate(String fileId) {
+
+        //TODO update process
+
         try {
             File file = driveUtilsService.getDriveFileDetails(fileId);
 

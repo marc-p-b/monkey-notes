@@ -2,7 +2,7 @@
   <div class="home-wrapper">
 
     <h2>Users</h2>
-    <form>
+    <form @submit.prevent="saveList">
       <ul>
         <li v-for="user in users" :key="user.username">
           <label :for="user.username">{{ user.username }}</label>
@@ -22,7 +22,6 @@
               v-model="newPassword"
               toggleMask
               :feedback="true"
-              required
           />
           <Button label="Ok" @click.prevent="changePassword(user.username)"/>
 
@@ -84,6 +83,28 @@ const formCreateUser = ref({
   username: '',
   admin: false
 });
+
+const saveList = async () => {
+  try {
+    const response = await authFetch("user/list/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(users.value),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    password.value = await response.text();
+  } catch (err: any) {
+    error.value = err.message || "Something went wrong.";
+  } finally {
+    loading.value = false;
+
+  }
+}
 
 const createUser = async () => {
   try {

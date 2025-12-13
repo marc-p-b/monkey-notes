@@ -69,6 +69,25 @@ public class AuthController {
         return ResponseEntity.ok(list);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/user/list/save") public ResponseEntity<String> saveUsers(@RequestBody List<DtoUser> users) {
+
+
+        List<EntityUser> entityUsers = users.stream()
+                .map(dtoUser -> {
+
+                    return new EntityUser()
+                            .setUsername(dtoUser.getUsername())
+                            .setRoles(dtoUser.isAdmin() ? "USER,ADMIN" : "USER");
+
+                })
+                .toList();
+
+        repositoryUser.saveAll(entityUsers);
+
+        return ResponseEntity.ok("ok");
+    }
+
     @GetMapping("/user/{user}/remove")
     public ResponseEntity<String> removeUser(@PathVariable String user) {
 

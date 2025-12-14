@@ -4,6 +4,7 @@ import com.google.api.services.drive.model.File;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
 import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
+import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
@@ -98,6 +99,8 @@ public class UpdateServiceImpl implements UpdateService {
             } catch (ServiceException e) {
                 LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
             }
+            AsyncProcessFileEvent fileEvent = new AsyncProcessFileEvent(file2Process.getFileId(), file2Process.getFileName(), file2Process.getParentFolderName());
+            processService.attachFileEvent(processId, fileEvent);
 
             // --------------------------------------
             // PDF 2 images / temp dir
@@ -107,6 +110,8 @@ public class UpdateServiceImpl implements UpdateService {
                     file2Process.getFileId(),
                     file2Process.getFilePath().toFile());
             LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
+            fileEvent.setTotalPages(listImages.size());
+
 
             // --------------------------------------
             // Get list of modified or created images
@@ -116,6 +121,8 @@ public class UpdateServiceImpl implements UpdateService {
             LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
 
             processService.updateProcess(processId, "created or modified pages : " + modifiedOrNewImages.size());
+            fileEvent.setModifiedPages(modifiedOrNewImages.size());
+
             if(modifiedOrNewImages.isEmpty()) {
                 LOG.info("No new or modified images, exiting from update process");
                 return;
@@ -166,10 +173,6 @@ public class UpdateServiceImpl implements UpdateService {
                 if (completionResponse.isCompleted()) {
                     LOG.info("FileId LLM OCR {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
                     processService.updateProcess(processId, "llm ocr done fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
-
-
-
-                    processService.updateDetails(processId, file2Process.getFileName() + " updated page " + image2Process.getPageNumber());
                 } else {
                     LOG.warn("FileId LLM OCR {} Image {} failed", file2Process.getFileId(), imageUrl);
                     processService.updateProcess(processId, "llm ocr failed fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
@@ -194,7 +197,7 @@ public class UpdateServiceImpl implements UpdateService {
         createFileEntities(files2Process);
 
         List<AsyncProcessEvent> events = processService.getEvents(processId);
-        List<String> details = processService.getDetails(processId);
+        List<AsyncProcessFileEvent> fileEvents = processService.getFileEvents(processId);
 
         LOG.info("Done processing files {}", files2Process.size());
     }
@@ -423,13 +426,13 @@ public class UpdateServiceImpl implements UpdateService {
                 () -> asyncUpdateFolder(folderId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-        future.thenAccept(result -> {
-           if(result.isSuccessful()) {
-               LOG.info("Successfully updated folder id {}", folderId);
-           } else if (result.isFailure()) {
-               LOG.error("Failed to update folder id {}", folderId, result.getException());
-           }
-        });
+//        future.thenAccept(result -> {
+//           if(result.isSuccessful()) {
+//               LOG.info("Successfully updated folder id {}", folderId);
+//           } else if (result.isFailure()) {
+//               LOG.error("Failed to update folder id {}", folderId, result.getException());
+//           }
+//        });
 
         processService.registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
 
@@ -537,13 +540,13 @@ public class UpdateServiceImpl implements UpdateService {
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-            future.thenAccept(result -> {
-                if(result.isSuccessful()) {
-                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
-                } else if (result.isFailure()) {
-                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
-                }
-            });
+//            future.thenAccept(result -> {
+//                if(result.isSuccessful()) {
+//                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
+//                } else if (result.isFailure()) {
+//                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
+//                }
+//            });
 
             String desc = new StringBuilder()
                     .append("forced update file ")
@@ -628,13 +631,13 @@ public class UpdateServiceImpl implements UpdateService {
                 () -> asyncForceTranscriptUpdate(fileId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-        future.thenAccept(result -> {
-            if(result.isSuccessful()) {
-                LOG.info("Successfully updated file id {}", fileId);
-            } else if (result.isFailure()) {
-                LOG.error("Failed to update file id {}", fileId, result.getException());
-            }
-        });
+//        future.thenAccept(result -> {
+//            if(result.isSuccessful()) {
+//                LOG.info("Successfully updated file id {}", fileId);
+//            } else if (result.isFailure()) {
+//                LOG.error("Failed to update file id {}", fileId, result.getException());
+//            }
+//        });
 
 
         processService.registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),

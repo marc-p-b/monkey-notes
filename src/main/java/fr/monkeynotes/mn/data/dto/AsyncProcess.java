@@ -14,7 +14,7 @@ public class AsyncProcess {
         private String description;
         private CompletableFuture<AsyncResult> future;
         private List<AsyncProcessEvent> events;
-        private List<String> updateDetails;
+        private List<AsyncProcessFileEvent> fileEvents;
 
         public AsyncProcess() {
         }
@@ -71,19 +71,19 @@ public class AsyncProcess {
                 events.add(new AsyncProcessEvent(event));
         }
 
-        public void addUpdateDetail(String detail) {
-                if (updateDetails == null) {
-                        updateDetails = new ArrayList<>();
-                }
-                updateDetails.add(detail);
-        }
-
         public List<AsyncProcessEvent> getEvents() {
                 return events;
         }
 
-        public List<String> getUpdateDetails() {
-                return updateDetails;
+        public void addFileEvent(AsyncProcessFileEvent event) {
+                if (fileEvents == null) {
+                        fileEvents = new ArrayList<>();
+                }
+                fileEvents.add(event);
+        }
+
+        public List<AsyncProcessFileEvent> getFileEvents() {
+                return fileEvents;
         }
 
         @Override

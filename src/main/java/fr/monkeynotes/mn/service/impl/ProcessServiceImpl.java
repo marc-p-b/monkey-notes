@@ -2,6 +2,7 @@ package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.data.dto.AsyncProcess;
 import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
+import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.dto.DtoProcess;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
@@ -27,6 +28,7 @@ public class ProcessServiceImpl implements ProcessService {
     @Override
     public void updateProcess(String processId, String event) {
         if(mapAsyncProcess.containsKey(processId) == false) {
+            LOG.error("Process with id {} not found", processId);
             return;
         }
         AsyncProcess p = mapAsyncProcess.get(processId);
@@ -34,12 +36,13 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public void updateDetails(String processId, String details) {
+    public void attachFileEvent(String processId, AsyncProcessFileEvent event) {
         if(mapAsyncProcess.containsKey(processId) == false) {
+            LOG.error("Process with id {} not found", processId);
             return;
         }
         AsyncProcess p = mapAsyncProcess.get(processId);
-        p.addUpdateDetail(details);
+        p.addFileEvent(event);
     }
 
     @Override
@@ -52,12 +55,23 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public List<String> getDetails(String processId) {
+    public List<AsyncProcessFileEvent> getFileEvents(String processId) {
         if(mapAsyncProcess.containsKey(processId) == false) {
+            LOG.error("Process with id {} not found", processId);
             return new ArrayList<>();
         }
         AsyncProcess p = mapAsyncProcess.get(processId);
-        return p.getUpdateDetails();
+        return p.getFileEvents();
+    }
+
+    @Override
+    public List<AsyncProcessFileEvent> getAllFileEvents() {
+        List<AsyncProcessFileEvent> list = mapAsyncProcess.entrySet().stream()
+                .flatMap(e -> {
+                    return e.getValue().getFileEvents().stream();
+                })
+                .toList();
+        return list;
     }
 
     public void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
@@ -93,6 +107,23 @@ public class ProcessServiceImpl implements ProcessService {
                 .setDescription(description);
 
         LOG.info(asyncProcess.toString());
+
+        future.thenAccept(result -> {
+
+            Duration d = Duration.between(asyncProcess.getCreatedAt(), OffsetDateTime.now());
+
+            String strDuration = new StringBuilder()
+                    .append(d.toHoursPart()).append("h ")
+                    .append(d.toMinutesPart()).append("m ")
+                    .append(d.toSecondsPart()).append("s ").toString();
+
+            if(result.isSuccessful()) {
+                LOG.info("Success processing {} took {}", name.name(), strDuration);
+            } else if (result.isFailure()) {
+                LOG.warn("Failed processing {} after {}", name.name(), strDuration, result.getException());
+            }
+        });
+
 
         mapAsyncProcess.put(id, asyncProcess);
     }

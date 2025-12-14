@@ -274,13 +274,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         // register async process
         //TODO filter already processing fileId ?
 
-        future.thenAccept(result -> {
-            if(result.isSuccessful()) {
-                LOG.info("Successfully flushed changes");
-            } else if (result.isFailure()) {
-                LOG.error("Failed to flushed changes", result.getException());
-            }
-        });
+//        future.thenAccept(result -> {
+//            if(result.isSuccessful()) {
+//                LOG.info("Successfully flushed changes");
+//            } else if (result.isFailure()) {
+//                LOG.error("Failed to flushed changes", result.getException());
+//            }
+//        });
 
         long items = mapAuth2SetFlushedFileId.values().stream()
                 .flatMap(s->s.stream())

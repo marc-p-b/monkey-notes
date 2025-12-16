@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 
@@ -70,20 +71,37 @@ public class AuthController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/user/list/save") public ResponseEntity<String> saveUsers(@RequestBody List<DtoUser> users) {
-
-
-        List<EntityUser> entityUsers = users.stream()
-                .map(dtoUser -> {
-
-                    return new EntityUser()
-                            .setUsername(dtoUser.getUsername())
-                            .setRoles(dtoUser.isAdmin() ? "USER,ADMIN" : "USER");
-
+    @PostMapping("/user/list/save") public ResponseEntity<String> saveUsers(@RequestBody List<DtoUser> uiUsers) {
+        //map of users from ui
+        Map<String, DtoUser> mapUiUsers = uiUsers.stream()
+                .map(u -> {
+                    //ui only change admin flag ; had to update roles
+                    Set<String> roles = new HashSet<>();
+                    roles.add("USER");
+                    if (u.isAdmin()) {
+                        roles.add("ADMIN");
+                    }
+                    u.setRoles(roles);
+                    return u;
                 })
-                .toList();
+                .collect(Collectors.toMap(u->u.getUsername(), u->u));
 
-        repositoryUser.saveAll(entityUsers);
+        List<EntityUser> users2Update = repositoryUser.findAll().stream()
+            .filter(dbUser -> {
+                int h = Objects.hash(dbUser.getUsername(), dbUser.getEmail(), Arrays.stream(dbUser.getRoles().split(",")).collect(Collectors.toSet()));
+                //exclude if hash equals
+                return mapUiUsers.get(dbUser.getUsername()).hashCode() != h;
+            })
+            .map(dbUser -> {
+                //update entity
+                DtoUser uiUser = mapUiUsers.get(dbUser.getUsername());
+                return dbUser
+                        .setEmail(uiUser.getEmail())
+                        .setRoles("USER" + (uiUser.isAdmin() ? ",ADMIN" : ""));
+            })
+            .toList();
+
+        repositoryUser.saveAll(users2Update);
 
         return ResponseEntity.ok("ok");
     }
@@ -150,6 +168,7 @@ public class AuthController {
 
         EntityUser u = new EntityUser()
                 .setUsername(dtoUser.getUsername())
+                .setEmail(dtoUser.getEmail())
                 .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
                 .setRoles(roles);
         repositoryUser.save(u);

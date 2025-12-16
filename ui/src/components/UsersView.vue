@@ -16,6 +16,10 @@
               offIcon="pi pi-user"
           />
 
+          <InputText
+            v-model="user.email"
+          />
+
           <Button label="New password" />
           <Password
               id="password"
@@ -37,6 +41,12 @@
         <InputText
             id="username"
             v-model="formCreateUser.username"
+            required
+        />
+        <label for="email">Email</label>
+        <InputText
+            id="email"
+            v-model="formCreateUser.email"
             required
         />
       </div>
@@ -69,6 +79,7 @@ const error = ref<string | null>(null)
 
 interface DtoUser {
   username: string
+  email: string
   admin: boolean
   roles: []
 }
@@ -81,6 +92,7 @@ const newPassword = ref();
 
 const formCreateUser = ref({
   username: '',
+  email: '',
   admin: false
 });
 

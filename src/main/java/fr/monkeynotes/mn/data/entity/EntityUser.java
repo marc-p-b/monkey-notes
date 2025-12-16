@@ -13,6 +13,8 @@ public class EntityUser {
 
     private String password;
 
+    private String email;
+
     private String otp;
 
     private ZonedDateTime otpExpiresAt;
@@ -21,6 +23,14 @@ public class EntityUser {
 
     private ZonedDateTime lastNrpUsage;
 
+    public String getEmail() {
+        return email;
+    }
+
+    public EntityUser setEmail(String email) {
+        this.email = email;
+        return this;
+    }
 
     public String getUsername() {
         return username;
@@ -74,5 +84,14 @@ public class EntityUser {
     public EntityUser setLastNrpUsage(ZonedDateTime lastNrpUsage) {
         this.lastNrpUsage = lastNrpUsage;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "EntityUser{" +
+                "username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", roles='" + roles + '\'' +
+                '}';
     }
 }

@@ -74,7 +74,7 @@ public class ProcessServiceImpl implements ProcessService {
         return list;
     }
 
-    public void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
+    public void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
 
 //        Optional<AsyncProcess> optExistingProcess = mapAsyncProcess.values().stream()
 //                .filter(p->p.getUniqueId().equals(uniqueId))
@@ -95,16 +95,8 @@ public class ProcessServiceImpl implements ProcessService {
 //
 //        }
 
-
         String id = monitoringData.getId();
-        AsyncProcess asyncProcess = new AsyncProcess()
-                .setId(id)
-                .setFuture(future)
-                //.setUniqueId(uniqueId)
-                //todo use enum ?
-                .setName(name.name())
-                .setCreatedAt(OffsetDateTime.now())
-                .setDescription(description);
+        AsyncProcess asyncProcess = new AsyncProcess(monitoringData, name, username, future, description);
 
         LOG.info(asyncProcess.toString());
 
@@ -163,7 +155,7 @@ public class ProcessServiceImpl implements ProcessService {
         List<DtoProcess> list = mapAsyncProcess.entrySet().stream()
             .map(e -> {
                 AsyncProcess asyncProcess = e.getValue();
-                String processName = asyncProcess.getName();
+                String processName = asyncProcess.getName().toString();
                 CompletableFuture<AsyncResult> future = asyncProcess.getFuture();
                 DtoProcess.Status status = DtoProcess.Status.unknown;
                 String statusStr = "unknown";

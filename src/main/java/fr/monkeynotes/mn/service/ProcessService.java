@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface ProcessService {
 
-    void registerSyncProcess(AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future);
+    void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future);
     boolean concurrentProcessFull();
     void cancelProcess(String id);
     List<DtoProcess> listProcess();

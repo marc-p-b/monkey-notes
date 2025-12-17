@@ -1,6 +1,8 @@
 package fr.monkeynotes.mn.data.dto;
 
+import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
+import fr.monkeynotes.mn.monitoring.MonitoringData;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -9,60 +11,54 @@ import java.util.concurrent.CompletableFuture;
 
 public class AsyncProcess {
         private String id;
-        private String name;
+        private AsyncProcessName name;
+        private String username;
         private OffsetDateTime createdAt;
         private String description;
         private CompletableFuture<AsyncResult> future;
         private List<AsyncProcessEvent> events;
         private List<AsyncProcessFileEvent> fileEvents;
 
-        public AsyncProcess() {
+        public AsyncProcess(MonitoringData monitoringData, AsyncProcessName name, String username, CompletableFuture<AsyncResult> future, String description) {
+                this.id = monitoringData.getId();
+                this.name = name;
+                this.future = future;
+                this.description = description;
+                this.createdAt = OffsetDateTime.now();
+        }
+
+        public String getUsername() {
+                return username;
+        }
+
+        public AsyncProcess setUsername(String username) {
+                this.username = username;
+                return this;
         }
 
         public String getId() {
                 return id;
         }
 
-        public AsyncProcess setId(String id) {
-                this.id = id;
-                return this;
-        }
 
-        public String getName() {
+        public AsyncProcessName getName() {
                 return name;
-        }
-
-        public AsyncProcess setName(String name) {
-                this.name = name;
-                return this;
         }
 
         public OffsetDateTime getCreatedAt() {
                 return createdAt;
         }
 
-        public AsyncProcess setCreatedAt(OffsetDateTime createdAt) {
-                this.createdAt = createdAt;
-                return this;
-        }
 
         public String getDescription() {
                 return description;
         }
 
-        public AsyncProcess setDescription(String description) {
-                this.description = description;
-                return this;
-        }
 
         public CompletableFuture<AsyncResult> getFuture() {
                 return future;
         }
 
-        public AsyncProcess setFuture(CompletableFuture<AsyncResult> future) {
-                this.future = future;
-                return this;
-        }
 
         public void addEvent(String event) {
                 if (events == null) {

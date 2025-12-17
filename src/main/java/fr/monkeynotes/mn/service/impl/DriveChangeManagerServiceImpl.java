@@ -260,56 +260,49 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
-
-
         if(processService.concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
             //todo nothing is done here ! do something when too much concurrent
         }
 
-        SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
-                () -> asyncProcessFlushed(mapAuth2SetFlushedFileId));
-        CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+        mapAuth2SetFlushedFileId.entrySet().stream()
+            .forEach(e -> {
+                String username = e.getKey();
+                Set<String> fileIds = e.getValue();
 
-        // register async process
-        //TODO filter already processing fileId ?
+                SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                        () -> asyncProcessFlushed(username, fileIds));
+                CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//        future.thenAccept(result -> {
-//            if(result.isSuccessful()) {
-//                LOG.info("Successfully flushed changes");
-//            } else if (result.isFailure()) {
-//                LOG.error("Failed to flushed changes", result.getException());
-//            }
-//        });
+                // register async process
+                //TODO filter already processing fileId ?
 
-        long items = mapAuth2SetFlushedFileId.values().stream()
-                .flatMap(s->s.stream())
-                .count();
+                long items = mapAuth2SetFlushedFileId.values().stream()
+                        .flatMap(s->s.stream())
+                        .count();
 
-        String desc = "";
-        if(items <= 10) {
-            String itemsList = mapAuth2SetFlushedFileId.values().stream()
-                    .flatMap(s -> s.stream())
-                    .map(s -> utilsService.getLocalFileName(s))
-                    .collect(Collectors.joining(", "));
+                String desc = "";
+                if(items <= 10) {
+                    String itemsList = mapAuth2SetFlushedFileId.values().stream()
+                            .flatMap(s -> s.stream())
+                            .map(s -> utilsService.getLocalFileName(s))
+                            .collect(Collectors.joining(", "));
 
-            desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
-        } else {
-            desc = new StringBuilder().append("flushing ").append(" items : ").toString();
-        }
-        processService.registerSyncProcess(AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
+                    desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
+                } else {
+                    desc = new StringBuilder().append("flushing ").append(" items : ").toString();
+                }
+                processService.registerSyncProcess(username, AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc, future);
+
+            });
+
     }
 
-    public void asyncProcessFlushed(Map<String, Set<String>> mapAuth2SetFlushedFileId) {
-        for(Map.Entry<String, Set<String>> e: mapAuth2SetFlushedFileId.entrySet()) {
-            String username = e.getKey();
-
-            Set<String> setFlushedFileId = e.getValue();
+    public void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
             LOG.info("Processing user {} flushed files {}", username, setFlushedFileId.size());
 
             NoAuthContextHolder.setContext(new NoAuthContext(username));
-            asyncProcessFlushedByUser(e.getValue());
-        }
+            asyncProcessFlushedByUser(setFlushedFileId);
     }
 
     public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {

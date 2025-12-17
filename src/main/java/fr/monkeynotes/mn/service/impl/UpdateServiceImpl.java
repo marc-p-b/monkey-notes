@@ -426,15 +426,7 @@ public class UpdateServiceImpl implements UpdateService {
                 () -> asyncUpdateFolder(folderId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//        future.thenAccept(result -> {
-//           if(result.isSuccessful()) {
-//               LOG.info("Successfully updated folder id {}", folderId);
-//           } else if (result.isFailure()) {
-//               LOG.error("Failed to update folder id {}", folderId, result.getException());
-//           }
-//        });
-
-        processService.registerSyncProcess(AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
+        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
 
     }
 
@@ -540,19 +532,11 @@ public class UpdateServiceImpl implements UpdateService {
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//            future.thenAccept(result -> {
-//                if(result.isSuccessful()) {
-//                    LOG.info("Successfully updated file id {} page {}", fileId, pageNumber);
-//                } else if (result.isFailure()) {
-//                    LOG.error("Failed to update file id {} page {}", fileId, pageNumber, result.getException());
-//                }
-//            });
-
             String desc = new StringBuilder()
                     .append("forced update file ")
                     .append(utilsService.getLocalFileName(fileId)).append(" page ")
                     .append(pageNumber).toString();
-            processService.registerSyncProcess(AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
+            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
 
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
@@ -625,22 +609,12 @@ public class UpdateServiceImpl implements UpdateService {
             return;
         }
 
-
         SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                 optAuth.get(),
                 () -> asyncForceTranscriptUpdate(fileId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-//        future.thenAccept(result -> {
-//            if(result.isSuccessful()) {
-//                LOG.info("Successfully updated file id {}", fileId);
-//            } else if (result.isFailure()) {
-//                LOG.error("Failed to update file id {}", fileId, result.getException());
-//            }
-//        });
-
-
-        processService.registerSyncProcess(AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
+        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
                 "update transcript " + utilsService.getLocalFileName(fileId), future);
 
     }

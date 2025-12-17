@@ -24,7 +24,7 @@ public class MailerTask implements Runnable{
 		ProcessService processService = ctx.getBean(ProcessService.class);
 
 		long startTime = System.currentTimeMillis();
-
+		//TODO wrap in a service
 		List<AsyncProcessFileEvent> list = processService.getAllFileEvents();
 
 		if(list.isEmpty()){
@@ -52,14 +52,10 @@ public class MailerTask implements Runnable{
 
 			})
 			.collect(Collectors.joining("\n"));
-
 		list.forEach(e -> {e.nofified();});
-
 		//TODO email from user
 		String[] target = new String[]{"TODO"};
-
 		mailService.sendSimpleMessage(target, subject, body);
-
 		monitoringService.end(System.currentTimeMillis() - startTime);
 	}
 }

@@ -7,6 +7,7 @@ public class DtoProcess {
     private Status status;
     private String description;
     private String duration;
+    private String username;
 
     public enum Status {
         unknown,
@@ -71,6 +72,15 @@ public class DtoProcess {
 
     public DtoProcess setStatus(Status status) {
         this.status = status;
+        return this;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public DtoProcess setUsername(String username) {
+        this.username = username;
         return this;
     }
 

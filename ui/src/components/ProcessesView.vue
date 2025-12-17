@@ -10,7 +10,7 @@
       <ul>
         <li v-for="process in processes">
           <p v-if="process.status !== 'running'">{{process.name}} {{process.description}} (completed, ran for {{process.duration}})</p>
-          <p v-else> {{process.name}} ({{process.description}}) running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
+          <p v-else> {{process.name}} @{{process.username}} ({{process.description}}) running for {{process.duration}} <a @click.prevent="cancelProcess(process.id)">cancel</a></p>
         </li>
       </ul>
     </div>
@@ -22,12 +22,13 @@ import { ref, onMounted } from "vue";
 import {authFetch} from "@/requests";
 
 interface DtoProcess {
-  id: string;
-  name: string;
-  statusStr: string;
-  status: string;
-  description: string;
-  duration: string;
+  id: string
+  name: string
+  statusStr: string
+  status: string
+  description: string
+  duration: string
+  username: string
 }
 
 const processes = ref<DtoProcess[]>([])

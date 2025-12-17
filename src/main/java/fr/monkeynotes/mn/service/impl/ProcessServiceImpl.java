@@ -159,7 +159,8 @@ public class ProcessServiceImpl implements ProcessService {
                 CompletableFuture<AsyncResult> future = asyncProcess.getFuture();
                 DtoProcess.Status status = DtoProcess.Status.unknown;
                 String statusStr = "unknown";
-                DtoProcess p = new DtoProcess(e.getKey(), processName);
+                DtoProcess p = new DtoProcess(e.getKey(), processName)
+                    .setUsername(asyncProcess.getUsername());
 
                 Duration d = Duration.between(asyncProcess.getCreatedAt(), OffsetDateTime.now());
                 p.setDescription(asyncProcess.getDescription());
@@ -168,7 +169,6 @@ public class ProcessServiceImpl implements ProcessService {
                         .append(d.toMinutesPart()).append("m ")
                         .append(d.toSecondsPart()).append("s ").toString();
                 p.setDuration(strDuration);
-
 
                 if (future.isDone()) {
                     try {

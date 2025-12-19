@@ -1,7 +1,9 @@
 package fr.monkeynotes.mn.service.impl;
 
+import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
+import fr.monkeynotes.mn.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserServiceImpl implements UserDetailsService, UserService {
 
     @Autowired
     private RepositoryUser repositoryUser;
@@ -37,4 +39,12 @@ public class UserService implements UserDetailsService {
     }
 
 
+    @Override
+    public DtoUser getUser(String username) throws UsernameNotFoundException {
+        Optional<EntityUser> user = repositoryUser.findByUsernameEquals(username);
+        if(user.isPresent() == false) {
+            throw new UsernameNotFoundException("Unknown user "+ username);
+        }
+        return DtoUser.fromEntity(user.get());
+    }
 }

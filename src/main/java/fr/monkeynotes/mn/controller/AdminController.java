@@ -2,7 +2,6 @@ package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.service.DriveChangeManagerService;
 import fr.monkeynotes.mn.service.UtilsService;
-import fr.monkeynotes.mn.service.impl.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -45,34 +45,45 @@ public class ProcessServiceImpl implements ProcessService {
         p.addFileEvent(event);
     }
 
+//    @Override
+//    public List<AsyncProcessEvent> getEvents(String processId) {
+//        if(mapAsyncProcess.containsKey(processId) == false) {
+//            return new ArrayList<>();
+//        }
+//        AsyncProcess p = mapAsyncProcess.get(processId);
+//        return p.getEvents();
+//    }
+
     @Override
-    public List<AsyncProcessEvent> getEvents(String processId) {
-        if(mapAsyncProcess.containsKey(processId) == false) {
-            return new ArrayList<>();
-        }
-        AsyncProcess p = mapAsyncProcess.get(processId);
-        return p.getEvents();
+    public List<AsyncProcess> getAllProcesses() {
+        return mapAsyncProcess.values().stream().collect(Collectors.toList());
     }
 
     @Override
-    public List<AsyncProcessFileEvent> getFileEvents(String processId) {
-        if(mapAsyncProcess.containsKey(processId) == false) {
-            LOG.error("Process with id {} not found", processId);
-            return new ArrayList<>();
-        }
-        AsyncProcess p = mapAsyncProcess.get(processId);
-        return p.getFileEvents();
+    public Map<String, List<AsyncProcess>> getAllProcessesMapByUser() {
+        return mapAsyncProcess.values().stream()
+                .collect(Collectors.groupingBy(AsyncProcess::getUsername));
     }
 
-    @Override
-    public List<AsyncProcessFileEvent> getAllFileEvents() {
-        List<AsyncProcessFileEvent> list = mapAsyncProcess.entrySet().stream()
-                .flatMap(e -> {
-                    return e.getValue().getFileEvents().stream();
-                })
-                .toList();
-        return list;
-    }
+//    @Override
+//    public List<AsyncProcessFileEvent> getFileEvents(String processId) {
+//        if(mapAsyncProcess.containsKey(processId) == false) {
+//            LOG.error("Process with id {} not found", processId);
+//            return new ArrayList<>();
+//        }
+//        AsyncProcess p = mapAsyncProcess.get(processId);
+//        return p.getFileEvents();
+//    }
+//
+//    @Override
+//    public List<AsyncProcessFileEvent> getAllFileEvents() {
+//        List<AsyncProcessFileEvent> list = mapAsyncProcess.entrySet().stream()
+//                .flatMap(e -> {
+//                    return e.getValue().getFileEvents().stream();
+//                })
+//                .toList();
+//        return list;
+//    }
 
     public void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
 

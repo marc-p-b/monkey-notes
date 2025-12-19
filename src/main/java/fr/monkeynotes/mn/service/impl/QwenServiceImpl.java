@@ -102,7 +102,7 @@ public class QwenServiceImpl implements QwenService {
             }
             long took = System.currentTimeMillis() - start;
 
-            DocumentContext context = JsonPath.parse(respBody);
+            DocumentContext context = JsonPath.parse( respBody);
 
             String content = context.read("$.choices[0].message.content");
             String usedModel = context.read("$.model");

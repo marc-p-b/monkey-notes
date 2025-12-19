@@ -7,8 +7,11 @@ import com.mailjet.client.transactional.SendContact;
 import com.mailjet.client.transactional.SendEmailsRequest;
 import com.mailjet.client.transactional.TransactionalEmail;
 import com.mailjet.client.transactional.response.SendEmailsResponse;
+import fr.monkeynotes.mn.data.dto.AsyncProcess;
+import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.service.MailService;
-import fr.monkeynotes.mn.tasks.FlushTask;
+import fr.monkeynotes.mn.service.ProcessService;
+import fr.monkeynotes.mn.service.UserService;
 import fr.monkeynotes.mn.tasks.MailerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,17 +20,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.Environment;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MailServiceImpl implements MailService {
@@ -66,6 +66,67 @@ public class MailServiceImpl implements MailService {
         mailjetClient = new MailjetClient(options);
 
         taskScheduler.scheduleWithFixedDelay(new MailerTask(applicationContext), Duration.of(2, ChronoUnit.MINUTES));
+
+    }
+
+    @Autowired
+    private ProcessService processService;
+
+    @Autowired
+    private UserService userService;
+
+    @Override
+    public void sendAsyncProcessFinishedMessage() {
+        //List<AsyncProcessFileEvent> list = processService.getAllFileEvents();
+
+        Map<String, List<AsyncProcess>> mapProcesses = processService.getAllProcessesMapByUser();
+
+        if(mapProcesses.isEmpty()){
+            return;
+        }
+
+        mapProcesses.forEach((username, listProcesses) -> {
+
+            try {
+                DtoUser dtoUser = userService.getUser(username);
+                String subject = new StringBuilder()
+                        .append(listProcesses.size())
+                        .append(" updated files available")
+                        .toString();
+
+                String body = listProcesses.stream()
+                        //.filter() // UN-NOTIFIED
+                        .flatMap(p -> p.getFileEvents().stream())
+                        .map(fe -> {
+                            return new StringBuilder()
+                                    .append(fe.getFolderName())
+                                    .append("/")
+                                    .append(fe.getFileName())
+                                    .append(" modified ")
+                                    .append(fe.getModifiedPages())
+                                    .append(" on a total of ")
+                                    .append(fe.getTotalPages())
+                                    .toString();
+
+                        })
+                        .collect(Collectors.joining("\n"));
+
+                String emails[] = {dtoUser.getEmail()};
+
+                this.sendSimpleMessage(emails, subject, body);
+            } catch (UsernameNotFoundException e) {
+                //todo err
+            }
+
+
+        });
+
+//
+//
+
+//        list.forEach(e -> {e.nofified();});
+//        //TODO email from user
+//        String[] target = new String[]{"TODO"};
 
     }
 

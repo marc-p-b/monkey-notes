@@ -196,8 +196,8 @@ public class UpdateServiceImpl implements UpdateService {
         }
         createFileEntities(files2Process);
 
-        List<AsyncProcessEvent> events = processService.getEvents(processId);
-        List<AsyncProcessFileEvent> fileEvents = processService.getFileEvents(processId);
+        //List<AsyncProcessEvent> events = processService.getEvents(processId);
+        //List<AsyncProcessFileEvent> fileEvents = processService.getFileEvents(processId);
 
         LOG.info("Done processing files {}", files2Process.size());
     }

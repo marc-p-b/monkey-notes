@@ -1,5 +1,6 @@
 package fr.monkeynotes.mn.service;
 
+import fr.monkeynotes.mn.data.dto.AsyncProcess;
 import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
 import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.dto.DtoProcess;
@@ -8,6 +9,7 @@ import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringData;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface ProcessService {
@@ -21,8 +23,11 @@ public interface ProcessService {
 
     void attachFileEvent(String processId, AsyncProcessFileEvent event);
 
-    List<AsyncProcessEvent> getEvents(String processId);
-    List<AsyncProcessFileEvent> getFileEvents(String processId);
+    //List<AsyncProcessEvent> getEvents(String processId);
+    List<AsyncProcess> getAllProcesses();
 
-    List<AsyncProcessFileEvent> getAllFileEvents();
+    Map<String, List<AsyncProcess>> getAllProcessesMapByUser();
+//    List<AsyncProcessFileEvent> getFileEvents(String processId);
+//
+//    List<AsyncProcessFileEvent> getAllFileEvents();
 }

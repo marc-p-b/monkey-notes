@@ -14,11 +14,13 @@ import org.springframework.stereotype.Service;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ImageServiceImpl implements ImageService {
@@ -27,6 +29,41 @@ public class ImageServiceImpl implements ImageService {
 
     @Autowired
     private UtilsService utilsService;
+
+
+    @Override
+    public String imageAsBase64(URL imageURL) {
+        String strUrl = imageURL.getPath();
+
+        Pattern p = Pattern.compile("image\\/(.*)\\/(.*)\\/(\\d+)");
+        Matcher m = p.matcher(strUrl);
+
+        if (m.find()) {
+
+            String username = m.group(1);
+            String fileId = m.group(2);
+            int nb = Integer.valueOf(m.group(3));
+
+            return imageAsBase64(username, fileId, nb);
+        }
+        //TODO err
+        return null;
+
+    }
+
+    @Override
+    public String imageAsBase64(String username, String fileId, int imageNum) {
+
+
+        byte[] bytes = null;
+        try {
+            bytes = Files.readAllBytes(utilsService.imagePath(username, fileId, imageNum));
+        } catch (IOException e) {
+            LOG.error(e.getMessage(), e);
+        }
+        return Base64.getEncoder().encodeToString(bytes);
+
+    }
 
     @Override
     public void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream) throws IOException {

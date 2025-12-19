@@ -4,6 +4,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.CompletionResponse;
+import fr.monkeynotes.mn.service.ImageService;
 import fr.monkeynotes.mn.service.PreferencesService;
 import fr.monkeynotes.mn.service.QwenService;
 import org.json.JSONObject;
@@ -42,6 +43,10 @@ public class QwenServiceImpl implements QwenService {
     @Autowired
     private PreferencesService preferencesService;
 
+    @Autowired
+    private ImageService imageService;
+
+
     private CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
         LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);
 
@@ -68,7 +73,10 @@ public class QwenServiceImpl implements QwenService {
 
             JSONObject content1 = new JSONObject();
             content1.put("type", "image_url");
-            content1.put("image_url", content1_url);
+            //content1.put("image_url", content1_url);
+
+            content1.put("image_url", "data:image/png;base64," + imageService.imageAsBase64(imageURL));
+
 
             JSONObject content2 = new JSONObject();
             content2.put("type", "text");

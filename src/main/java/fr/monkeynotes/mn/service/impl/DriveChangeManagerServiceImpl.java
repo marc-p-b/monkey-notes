@@ -34,6 +34,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 
@@ -57,10 +58,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private boolean changesListenEnabled;
 
     private ScheduledFuture<?> futureFlush;
-    private Map<String, ChangedFile> mapScheduled = new HashMap<>();
-    private Map<String, WatchData> mapUsernameWatchData;
-    private Map<String, WatchData> mapChannelIdWatchData;
-    private Set<String> setProcessingFileId = new HashSet<>();
+    private ConcurrentHashMap<String, ChangedFile> mapScheduled = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, WatchData> mapUsernameWatchData;
+    private ConcurrentHashMap<String, WatchData> mapChannelIdWatchData;
+    private Set<String> setProcessingFileId = ConcurrentHashMap.newKeySet();
 
     @Autowired
     private ApplicationContext ctx;
@@ -119,7 +120,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 });
     }
 
-    private synchronized void driveAuthCallBack() {
+    private void driveAuthCallBack() {
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
             boolean watchChanges = false;
@@ -130,7 +131,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    public synchronized void watch(boolean renewOrForced) {
+    public void watch(boolean renewOrForced) {
         String username = authService.getUsernameFromContext();
 
         LOG.info("Setup watch drive update for user {}", username);
@@ -171,10 +172,10 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             watchData.setWatchChanges(true);
 
             if(mapChannelIdWatchData == null) {
-                mapChannelIdWatchData = new HashMap<>();
+                mapChannelIdWatchData = new ConcurrentHashMap<>();
             }
             if(mapUsernameWatchData == null) {
-                mapUsernameWatchData = new HashMap<>();
+                mapUsernameWatchData = new ConcurrentHashMap<>();
             }
 
             mapUsernameWatchData.put(username, watchData);
@@ -188,7 +189,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public synchronized void changeNotified(String channelId) {
+    public void changeNotified(String channelId) {
         if(mapChannelIdWatchData == null || !mapChannelIdWatchData.containsKey(channelId)) {
             LOG.debug("Rejected notified changes channel {}", channelId);
             return;
@@ -249,7 +250,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public synchronized void flushChanges() {
+    public void flushChanges() {
         LOG.info("Prepare Async (flushChanges)");
 
         //multiple notifications for the same file could occur
@@ -299,13 +300,13 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             });
     }
 
-    public synchronized void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
+    public void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
             LOG.info("Processing user {} flushed files {}", username, setFlushedFileId.size());
             NoAuthContextHolder.setContext(new NoAuthContext(username));
             asyncProcessFlushedByUser(setFlushedFileId);
     }
 
-    public synchronized void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
+    public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
         //Removed already processing
         Set<String> setFilteredFlushedFileId = setFlushedFileId.stream()
                 .filter(fileId -> !setProcessingFileId.contains(fileId))
@@ -380,7 +381,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         setProcessingFileId.removeAll(setFilteredFlushedFileId);
     }
 
-    public synchronized void renewWatch(String username) throws IOException {
+    public void renewWatch(String username) throws IOException {
         NoAuthContextHolder.setContext(new NoAuthContext(username));
         LOG.info("renew watch for user {}", username);
 
@@ -390,7 +391,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     //TODO
-    public synchronized void watchStop() throws IOException {
+    public void watchStop() throws IOException {
 //        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
 //        driveService.getDrive().channels().stop(responseChannel);
 //        watchChanges = false;

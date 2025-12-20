@@ -18,31 +18,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Service
 public class ProcessServiceImpl implements ProcessService {
     private Logger LOG = LoggerFactory.getLogger(ProcessService.class);
-    private Map<String, AsyncProcess> mapAsyncProcess = new HashMap<>();
+    private ConcurrentHashMap<String, AsyncProcess> mapAsyncProcess = new ConcurrentHashMap<>();
     long CONCURRENT_LIMIT = 1;
 
     @Override
-    public synchronized void updateProcess(String processId, String event) {
-        if(mapAsyncProcess.containsKey(processId) == false) {
-            return;
-        }
-        AsyncProcess p = mapAsyncProcess.get(processId);
-        p.addEvent(event);
+    public void updateProcess(String processId, String event) {
+        mapAsyncProcess.computeIfPresent(processId, (key, process) -> {
+            process.addEvent(event);
+            return process;
+        });
     }
 
     @Override
-    public synchronized void attachFileEvent(String processId, AsyncProcessFileEvent event) {
-        if(mapAsyncProcess.containsKey(processId) == false) {
-            return;
-        }
-        AsyncProcess p = mapAsyncProcess.get(processId);
-        p.addFileEvent(event);
+    public void attachFileEvent(String processId, AsyncProcessFileEvent event) {
+        mapAsyncProcess.computeIfPresent(processId, (key, process) -> {
+            process.addFileEvent(event);
+            return process;
+        });
     }
 
     @Override
@@ -51,23 +50,30 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public synchronized Map<String, List<AsyncProcess>> getAllProcessesMapByUser() {
-        Map<String, AsyncProcess> mapNotified = mapAsyncProcess.entrySet().stream()
-                .filter(e -> e.getValue().unNotified())
-                .map(e -> {
-                    e.getValue().setNotified();
-                    return e;
-                })
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    public Map<String, List<AsyncProcess>> getAllProcessesMapByUser() {
+        // Collect newly notified processes
+        Map<String, AsyncProcess> newlyNotified = new HashMap<>();
+        Set<String> keysToRemove = ConcurrentHashMap.newKeySet();
 
-        mapAsyncProcess = mapNotified;
+        // Mark unnotified as notified and collect them, track already-notified for removal
+        mapAsyncProcess.forEach((key, process) -> {
+            if (process.unNotified()) {
+                process.setNotified();
+                newlyNotified.put(key, process);
+            } else {
+                keysToRemove.add(key);
+            }
+        });
 
-        return mapNotified.values().stream()
+        // Remove already notified entries
+        keysToRemove.forEach(mapAsyncProcess::remove);
+
+        return newlyNotified.values().stream()
             .collect(Collectors.groupingBy(AsyncProcess::getUsername));
     }
 
     @Override
-    public synchronized void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description) {
+    public void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description) {
         String id = monitoringData.getId();
         AsyncProcess asyncProcess = new AsyncProcess(monitoringData, name, username, description);
 
@@ -75,7 +81,7 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public synchronized void registerSyncProcessFuture(MonitoringData monitoringData, CompletableFuture<AsyncResult> future) {
+    public void registerSyncProcessFuture(MonitoringData monitoringData, CompletableFuture<AsyncResult> future) {
         String id = monitoringData.getId();
         AsyncProcess asyncProcess = mapAsyncProcess.get(id);
         asyncProcess.setFuture(future);
@@ -99,7 +105,7 @@ public class ProcessServiceImpl implements ProcessService {
         });
     }
 
-    public synchronized boolean concurrentProcessFull() {
+    public boolean concurrentProcessFull() {
         long count = mapAsyncProcess.values().stream()
                 .filter(p -> p.getName().equals(AsyncProcessName.flushChanges.name()))
                 .filter(p -> !p.getFuture().isDone())
@@ -114,7 +120,7 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public synchronized void cancelProcess(String id) {
+    public void cancelProcess(String id) {
         if(mapAsyncProcess.get(id) == null) {
             LOG.error("Process does not exists {}", id);
             return;

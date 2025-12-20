@@ -81,13 +81,14 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void sendAsyncProcessFinishedMessage() {
+        LOG.info("Send report emails");
+
         Map<String, List<AsyncProcess>> mapProcesses = processService.getAllProcessesMapByUser();
 
         if(mapProcesses.isEmpty()){
+            LOG.info("No processes found");
             return;
         }
-
-        //processService.processDebug();
 
         mapProcesses.forEach((username, listProcesses) -> {
 

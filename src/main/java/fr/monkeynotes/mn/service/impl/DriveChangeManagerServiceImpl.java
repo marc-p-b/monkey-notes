@@ -99,7 +99,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private PreferencesService preferencesService;
 
     @EventListener(ApplicationReadyEvent.class)
-    void connect() {
+    public void connect() {
         LOG.info("Starting up");
         Runnable runnable = new Runnable() {
             @Override
@@ -119,7 +119,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 });
     }
 
-    void driveAuthCallBack() {
+    private synchronized void driveAuthCallBack() {
         LOG.info("Drive auth callback");
         if(changesListenEnabled) {
             boolean watchChanges = false;
@@ -130,7 +130,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    public void watch(boolean renewOrForced) {
+    public synchronized void watch(boolean renewOrForced) {
         String username = authService.getUsernameFromContext();
 
         LOG.info("Setup watch drive update for user {}", username);
@@ -188,7 +188,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     @Override
-    public void changeNotified(String channelId) {
+    public synchronized void changeNotified(String channelId) {
         if(mapChannelIdWatchData == null || !mapChannelIdWatchData.containsKey(channelId)) {
             LOG.debug("Rejected notified changes channel {}", channelId);
             return;
@@ -265,18 +265,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         if(processService.concurrentProcessFull()) {
             LOG.warn("Flush skipped, too much concurrent processes");
-            //todo nothing is done here ! do something when too much concurrent
+            //TODO push a message to user ? or ui ?
+            return;
         }
-
 
         mapAuth2SetFlushedFileId.keySet().stream()
             .forEach(username -> {
                 //String username = e.getKey();
                 Set<String> fileIds = mapAuth2SetFlushedFileId.get(username);
-
-                //String pId = monitoringService.getCurrentMonitoringData().getId();
-                //LOG.info("-->PREPARE ASYNC (flushChanges) PID {}", pId);
-                //LOG.info("--> FLUSH username {} {} items", username, fileIds.size());
 
                 SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                         () -> asyncProcessFlushed(username, fileIds));
@@ -303,25 +299,18 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             });
     }
 
-    public void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
+    public synchronized void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
             LOG.info("Processing user {} flushed files {}", username, setFlushedFileId.size());
-            //LOG.info("--> ASYNC (flushChanges) PID {}", monitoringService.getCurrentMonitoringData().getId());
             NoAuthContextHolder.setContext(new NoAuthContext(username));
             asyncProcessFlushedByUser(setFlushedFileId);
     }
 
-    public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
-
-        // TODO SYNC !
+    public synchronized void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
         //Removed already processing
         Set<String> setFilteredFlushedFileId = setFlushedFileId.stream()
                 .filter(fileId -> !setProcessingFileId.contains(fileId))
                 .collect(Collectors.toSet());
-
         setProcessingFileId.addAll(setFilteredFlushedFileId);
-        //System.out.println("S> "+ setProcessingFileId);
-        // TODO SYNC END !
-
         processService.updateProcess(monitoringService.getCurrentMonitoringData().getId(), "Prepare and filter processing (flushed files : " + setFilteredFlushedFileId.size() + ")");
 
         List<File2Process> files2Process = setFilteredFlushedFileId.stream()
@@ -389,22 +378,19 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         updateService.runListAsyncProcess(files2Process);
         setProcessingFileId.removeAll(setFilteredFlushedFileId);
-        //System.out.println("T> "+ setProcessingFileId);
     }
 
-    public void renewWatch(String username) throws IOException {
+    public synchronized void renewWatch(String username) throws IOException {
         NoAuthContextHolder.setContext(new NoAuthContext(username));
         LOG.info("renew watch for user {}", username);
 
         WatchData watchData = mapUsernameWatchData.get(username);
-        //LOG.info("stop watch channel id {}", responseChannel.getResourceId());
         driveService.getDrive().channels().stop(watchData.getChannel());
-
         this.watch(true);
     }
 
     //TODO
-    public void watchStop() throws IOException {
+    public synchronized void watchStop() throws IOException {
 //        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
 //        driveService.getDrive().channels().stop(responseChannel);
 //        watchChanges = false;

@@ -87,13 +87,6 @@ public class UpdateServiceImpl implements UpdateService {
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
-        //wait for registering
-//        try {
-//            Thread.sleep(5000);
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
-
         final String processId = monitoringService.getCurrentMonitoringData().getId();
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 

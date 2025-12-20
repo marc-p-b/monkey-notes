@@ -73,10 +73,9 @@ public class QwenServiceImpl implements QwenService {
 
             JSONObject content1 = new JSONObject();
             content1.put("type", "image_url");
+            // if using api url image, mimage must be public, see SecurityConfig)
             //content1.put("image_url", content1_url);
-
             content1.put("image_url", "data:image/png;base64," + imageService.imageAsBase64(imageURL));
-
 
             JSONObject content2 = new JSONObject();
             content2.put("type", "text");

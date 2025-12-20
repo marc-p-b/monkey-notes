@@ -6,7 +6,6 @@ public class AsyncProcessFileEvent {
     private String folderName;
     private int totalPages;
     private int modifiedPages;
-    private boolean notified;
 
     public AsyncProcessFileEvent(String fileId, String fileName, String folderName) {
         this.fileName = fileName;
@@ -42,13 +41,5 @@ public class AsyncProcessFileEvent {
 
     public int getModifiedPages() {
         return modifiedPages;
-    }
-
-    public boolean notNotified() {
-        return !notified;
-    }
-
-    public void nofified() {
-        notified = true;
     }
 }

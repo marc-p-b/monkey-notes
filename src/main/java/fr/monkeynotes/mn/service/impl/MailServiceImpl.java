@@ -8,6 +8,7 @@ import com.mailjet.client.transactional.SendEmailsRequest;
 import com.mailjet.client.transactional.TransactionalEmail;
 import com.mailjet.client.transactional.response.SendEmailsResponse;
 import fr.monkeynotes.mn.data.dto.AsyncProcess;
+import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.service.MailService;
 import fr.monkeynotes.mn.service.ProcessService;
@@ -47,6 +48,9 @@ public class MailServiceImpl implements MailService {
     @Value("${app.email.sender}")
     private String emailSender;
 
+    @Value("${app.email.reports.delay}")
+    private int emailReportDelay;
+
     @Autowired
     private TaskScheduler taskScheduler;
 
@@ -65,7 +69,7 @@ public class MailServiceImpl implements MailService {
 
         mailjetClient = new MailjetClient(options);
 
-        taskScheduler.scheduleWithFixedDelay(new MailerTask(applicationContext), Duration.of(2, ChronoUnit.MINUTES));
+        taskScheduler.scheduleWithFixedDelay(new MailerTask(applicationContext), Duration.of(emailReportDelay, ChronoUnit.MINUTES));
 
     }
 
@@ -77,25 +81,20 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void sendAsyncProcessFinishedMessage() {
-        //List<AsyncProcessFileEvent> list = processService.getAllFileEvents();
-
         Map<String, List<AsyncProcess>> mapProcesses = processService.getAllProcessesMapByUser();
 
         if(mapProcesses.isEmpty()){
             return;
         }
 
+        //processService.processDebug();
+
         mapProcesses.forEach((username, listProcesses) -> {
 
             try {
                 DtoUser dtoUser = userService.getUser(username);
-                String subject = new StringBuilder()
-                        .append(listProcesses.size())
-                        .append(" updated files available")
-                        .toString();
 
                 String body = listProcesses.stream()
-                        //.filter() // UN-NOTIFIED
                         .flatMap(p -> p.getFileEvents().stream())
                         .map(fe -> {
                             return new StringBuilder()
@@ -104,30 +103,30 @@ public class MailServiceImpl implements MailService {
                                     .append(fe.getFileName())
                                     .append(" modified ")
                                     .append(fe.getModifiedPages())
-                                    .append(" on a total of ")
+                                    .append(" pages on a total of ")
                                     .append(fe.getTotalPages())
                                     .toString();
 
                         })
-                        .collect(Collectors.joining("\n"));
+                        .collect(Collectors.joining(", "));
+
+                long modified = listProcesses.stream()
+                        .flatMap(p -> p.getFileEvents().stream())
+                        .count();
+
+                String subject = new StringBuilder()
+                        .append(modified)
+                        .append(" modified documents")
+                        .toString();
 
                 String emails[] = {dtoUser.getEmail()};
 
                 this.sendSimpleMessage(emails, subject, body);
+
             } catch (UsernameNotFoundException e) {
                 //todo err
             }
-
-
         });
-
-//
-//
-
-//        list.forEach(e -> {e.nofified();});
-//        //TODO email from user
-//        String[] target = new String[]{"TODO"};
-
     }
 
     public void sendSimpleMessage(String[] to, String subject, String body) {

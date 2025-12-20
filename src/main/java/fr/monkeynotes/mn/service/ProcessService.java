@@ -1,7 +1,6 @@
 package fr.monkeynotes.mn.service;
 
 import fr.monkeynotes.mn.data.dto.AsyncProcess;
-import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
 import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.dto.DtoProcess;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
@@ -13,21 +12,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface ProcessService {
-
     void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future);
     boolean concurrentProcessFull();
     void cancelProcess(String id);
     List<DtoProcess> listProcess();
-
     void updateProcess(String processId, String event);
-
     void attachFileEvent(String processId, AsyncProcessFileEvent event);
-
-    //List<AsyncProcessEvent> getEvents(String processId);
     List<AsyncProcess> getAllProcesses();
-
     Map<String, List<AsyncProcess>> getAllProcessesMapByUser();
-//    List<AsyncProcessFileEvent> getFileEvents(String processId);
-//
-//    List<AsyncProcessFileEvent> getAllFileEvents();
+    //void processDebug();
 }

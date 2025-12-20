@@ -18,13 +18,17 @@ public class AsyncProcess {
         private CompletableFuture<AsyncResult> future;
         private List<AsyncProcessEvent> events;
         private List<AsyncProcessFileEvent> fileEvents;
+        private boolean notified;
 
         public AsyncProcess(MonitoringData monitoringData, AsyncProcessName name, String username, CompletableFuture<AsyncResult> future, String description) {
                 this.id = monitoringData.getId();
                 this.name = name;
+                this.username = username;
                 this.future = future;
                 this.description = description;
                 this.createdAt = OffsetDateTime.now();
+                events = new ArrayList<>();
+                fileEvents = new ArrayList<>();
         }
 
         public String getUsername() {
@@ -61,9 +65,6 @@ public class AsyncProcess {
 
 
         public void addEvent(String event) {
-                if (events == null) {
-                        events = new ArrayList<>();
-                }
                 events.add(new AsyncProcessEvent(event));
         }
 
@@ -72,14 +73,19 @@ public class AsyncProcess {
         }
 
         public void addFileEvent(AsyncProcessFileEvent event) {
-                if (fileEvents == null) {
-                        fileEvents = new ArrayList<>();
-                }
                 fileEvents.add(event);
         }
 
         public List<AsyncProcessFileEvent> getFileEvents() {
                 return fileEvents;
+        }
+
+        public void setNotified() {
+                notified = true;
+        }
+
+        public boolean unNotified() {
+                return !notified;
         }
 
         @Override

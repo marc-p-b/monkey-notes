@@ -87,6 +87,13 @@ public class UpdateServiceImpl implements UpdateService {
 
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
+        //wait for registering
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
         final String processId = monitoringService.getCurrentMonitoringData().getId();
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 
@@ -196,8 +203,7 @@ public class UpdateServiceImpl implements UpdateService {
         }
         createFileEntities(files2Process);
 
-        //List<AsyncProcessEvent> events = processService.getEvents(processId);
-        //List<AsyncProcessFileEvent> fileEvents = processService.getFileEvents(processId);
+        //processService.processDebug();
 
         LOG.info("Done processing files {}", files2Process.size());
     }

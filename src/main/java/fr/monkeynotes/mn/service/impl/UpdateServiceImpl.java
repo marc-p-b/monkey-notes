@@ -88,11 +88,11 @@ public class UpdateServiceImpl implements UpdateService {
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
         //wait for registering
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            Thread.sleep(5000);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         final String processId = monitoringService.getCurrentMonitoringData().getId();
         processService.updateProcess(processId, "files to process : " + files2Process.size());
@@ -430,9 +430,10 @@ public class UpdateServiceImpl implements UpdateService {
         SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                 optAuth.get(),
                 () -> asyncUpdateFolder(folderId));
+        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.updateFolder, monitoringService.getCurrentMonitoringData(), "folder " + utilsService.getLocalFileName(folderId), future);
+        processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
 
     }
 
@@ -536,13 +537,14 @@ public class UpdateServiceImpl implements UpdateService {
             SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                     optAuth.get(),
                     () -> asyncForcePageUpdate(fileId, pageNumber, imageURL));
-            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-
             String desc = new StringBuilder()
                     .append("forced update file ")
                     .append(utilsService.getLocalFileName(fileId)).append(" page ")
                     .append(pageNumber).toString();
-            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc, future);
+            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forcePageUpdate, monitoringService.getCurrentMonitoringData(), desc);
+
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+            processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
 
         } catch (MalformedURLException e) {
             LOG.error("Failed to create image url {}", fileId, e);
@@ -618,10 +620,11 @@ public class UpdateServiceImpl implements UpdateService {
         SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
                 optAuth.get(),
                 () -> asyncForceTranscriptUpdate(fileId));
+        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
+                "update transcript " + utilsService.getLocalFileName(fileId));
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
-        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.forceTranscriptUpdate, monitoringService.getCurrentMonitoringData(),
-                "update transcript " + utilsService.getLocalFileName(fileId), future);
+        processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
 
     }
 

@@ -45,7 +45,7 @@ public class ProcessServiceImpl implements ProcessService {
     @Override
     public synchronized void updateProcess(String processId, String event) {
         if(mapAsyncProcess.containsKey(processId) == false) {
-            LOG.error("(UPDATE PROCESS) Process with id {} not found", processId);
+            //LOG.error("(UPDATE PROCESS) Process with id {} not found", processId);
             return;
         }
         AsyncProcess p = mapAsyncProcess.get(processId);
@@ -55,22 +55,13 @@ public class ProcessServiceImpl implements ProcessService {
     @Override
     public synchronized void attachFileEvent(String processId, AsyncProcessFileEvent event) {
         if(mapAsyncProcess.containsKey(processId) == false) {
-            LOG.error("(ATTACH FILE) Process with id {} not found", processId);
+            //LOG.error("(ATTACH FILE) Process with id {} not found", processId);
             return;
         }
-        LOG.info("--> ASYNC PROCESS {} file added {}" , processId, event.getFileName());
+        //LOG.info("--> ASYNC PROCESS {} file added {}" , processId, event.getFileName());
         AsyncProcess p = mapAsyncProcess.get(processId);
         p.addFileEvent(event);
     }
-
-//    @Override
-//    public List<AsyncProcessEvent> getEvents(String processId) {
-//        if(mapAsyncProcess.containsKey(processId) == false) {
-//            return new ArrayList<>();
-//        }
-//        AsyncProcess p = mapAsyncProcess.get(processId);
-//        return p.getEvents();
-//    }
 
     @Override
     public List<AsyncProcess> getAllProcesses() {
@@ -95,27 +86,16 @@ public class ProcessServiceImpl implements ProcessService {
                 .collect(Collectors.groupingBy(AsyncProcess::getUsername));
     }
 
-//    @Override
-//    public List<AsyncProcessFileEvent> getFileEvents(String processId) {
-//        if(mapAsyncProcess.containsKey(processId) == false) {
-//            LOG.error("Process with id {} not found", processId);
-//            return new ArrayList<>();
-//        }
-//        AsyncProcess p = mapAsyncProcess.get(processId);
-//        return p.getFileEvents();
-//    }
-//
-//    @Override
-//    public List<AsyncProcessFileEvent> getAllFileEvents() {
-//        List<AsyncProcessFileEvent> list = mapAsyncProcess.entrySet().stream()
-//                .flatMap(e -> {
-//                    return e.getValue().getFileEvents().stream();
-//                })
-//                .toList();
-//        return list;
-//    }
+    @Override
+    public synchronized void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description) {
 
-    public synchronized void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future) {
+
+        String id = monitoringData.getId();
+        AsyncProcess asyncProcess = new AsyncProcess(monitoringData, name, username, description);
+
+        //LOG.info("==> ASYNC PROCESS REGISTER {}", asyncProcess.getId());
+        //LOG.info(asyncProcess.toString());
+        mapAsyncProcess.put(id, asyncProcess);
 
 //        Optional<AsyncProcess> optExistingProcess = mapAsyncProcess.values().stream()
 //                .filter(p->p.getUniqueId().equals(uniqueId))
@@ -136,11 +116,17 @@ public class ProcessServiceImpl implements ProcessService {
 //
 //        }
 
-        String id = monitoringData.getId();
-        AsyncProcess asyncProcess = new AsyncProcess(monitoringData, name, username, future, description);
+    }
 
-        LOG.info("==> ASYNC PROCESS REGISTER {}", asyncProcess.getId());
-        //LOG.info(asyncProcess.toString());
+    @Override
+    public synchronized void registerSyncProcessFuture(MonitoringData monitoringData, CompletableFuture<AsyncResult> future) {
+        String id = monitoringData.getId();
+        AsyncProcess asyncProcess = mapAsyncProcess.get(id);
+        asyncProcess.setFuture(future);
+
+        String processName = asyncProcess.getName().toString();
+
+        //LOG.info("==> ASYNC PROCESS REGISTER FUTURE {}", asyncProcess.getId());
         mapAsyncProcess.put(id, asyncProcess);
 
         future.thenAccept(result -> {
@@ -153,14 +139,15 @@ public class ProcessServiceImpl implements ProcessService {
                     .append(d.toSecondsPart()).append("s ").toString();
 
             if(result.isSuccessful()) {
-                LOG.info("Success processing {} took {}", name.name(), strDuration);
+                LOG.info("Success processing {} took {}", processName, strDuration);
             } else if (result.isFailure()) {
-                LOG.warn("Failed processing {} after {}", name.name(), strDuration, result.getException());
+                LOG.warn("Failed processing {} after {}", processName, strDuration, result.getException());
             }
         });
 
-        //mapAsyncProcess.put(id, asyncProcess);
     }
+
+
 
     public synchronized boolean concurrentProcessFull() {
         long count = mapAsyncProcess.values().stream()

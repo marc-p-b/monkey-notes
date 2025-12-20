@@ -20,15 +20,19 @@ public class AsyncProcess {
         private List<AsyncProcessFileEvent> fileEvents;
         private boolean notified;
 
-        public AsyncProcess(MonitoringData monitoringData, AsyncProcessName name, String username, CompletableFuture<AsyncResult> future, String description) {
+        public AsyncProcess(MonitoringData monitoringData, AsyncProcessName name, String username, String description) {
                 this.id = monitoringData.getId();
                 this.name = name;
                 this.username = username;
-                this.future = future;
                 this.description = description;
                 this.createdAt = OffsetDateTime.now();
                 events = new ArrayList<>();
                 fileEvents = new ArrayList<>();
+        }
+
+        public AsyncProcess setFuture(CompletableFuture<AsyncResult> future) {
+                this.future = future;
+                return this;
         }
 
         public String getUsername() {

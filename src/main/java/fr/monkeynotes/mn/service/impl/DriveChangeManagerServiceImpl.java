@@ -252,6 +252,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     public synchronized void flushChanges() {
         LOG.info("Prepare Async (flushChanges)");
 
+        //multiple notifications for the same file could occur
+        //filtering is done by asyncProcessFlushedByUser()
+
         long now = System.currentTimeMillis();
         Map<String, Set<String>> mapAuth2SetFlushedFileId =
                 mapScheduled.entrySet().stream()
@@ -265,37 +268,38 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
             //todo nothing is done here ! do something when too much concurrent
         }
 
-        mapAuth2SetFlushedFileId.entrySet().stream()
-            .forEach(e -> {
-                String username = e.getKey();
-                Set<String> fileIds = e.getValue();
+
+        mapAuth2SetFlushedFileId.keySet().stream()
+            .forEach(username -> {
+                //String username = e.getKey();
+                Set<String> fileIds = mapAuth2SetFlushedFileId.get(username);
 
                 //String pId = monitoringService.getCurrentMonitoringData().getId();
                 //LOG.info("-->PREPARE ASYNC (flushChanges) PID {}", pId);
+                //LOG.info("--> FLUSH username {} {} items", username, fileIds.size());
 
                 SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                         () -> asyncProcessFlushed(username, fileIds));
+
+                long items = mapAuth2SetFlushedFileId.values().stream()
+                        .flatMap(s->s.stream())
+                        .count();
+
+                String desc = "";
+                if(items <= 10) {
+                    String itemsList = mapAuth2SetFlushedFileId.values().stream()
+                            .flatMap(s -> s.stream())
+                            .map(s -> utilsService.getLocalFileName(s))
+                            .collect(Collectors.joining(", "));
+
+                    desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
+                } else {
+                    desc = new StringBuilder().append("flushing ").append(" items : ").toString();
+                }
+                processService.registerSyncProcess(username, AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), desc);
+
                 CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-
-                processService.registerSyncProcess(username, AsyncProcessName.flushChanges, monitoringService.getCurrentMonitoringData(), "desc", future);
-                // register async process
-                //TODO filter already processing fileId ?
-
-//                long items = mapAuth2SetFlushedFileId.values().stream()
-//                        .flatMap(s->s.stream())
-//                        .count();
-//
-//                String desc = "";
-//                if(items <= 10) {
-//                    String itemsList = mapAuth2SetFlushedFileId.values().stream()
-//                            .flatMap(s -> s.stream())
-//                            .map(s -> utilsService.getLocalFileName(s))
-//                            .collect(Collectors.joining(", "));
-//
-//                    desc = new StringBuilder().append("flushing ").append(" items : ").append(itemsList).toString();
-//                } else {
-//                    desc = new StringBuilder().append("flushing ").append(" items : ").toString();
-//                }
+                processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
             });
     }
 

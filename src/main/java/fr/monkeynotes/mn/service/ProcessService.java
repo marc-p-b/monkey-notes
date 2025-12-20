@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface ProcessService {
-    void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description, CompletableFuture<AsyncResult> future);
+    void registerSyncProcess(String username, AsyncProcessName name, MonitoringData monitoringData, String description);
+    void registerSyncProcessFuture(MonitoringData monitoringData, CompletableFuture<AsyncResult> future);
     boolean concurrentProcessFull();
     void cancelProcess(String id);
     List<DtoProcess> listProcess();

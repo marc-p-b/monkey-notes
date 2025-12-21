@@ -56,7 +56,12 @@ public class ProcessServiceImpl implements ProcessService {
         Set<String> keysToRemove = ConcurrentHashMap.newKeySet();
 
         // Mark unnotified as notified and collect them, track already-notified for removal
-        mapAsyncProcess.forEach((key, process) -> {
+        mapAsyncProcess
+                //TODO must be completed
+
+//                .entrySet()
+//                .stream().filter(e -> e.getValue().getFuture().isDone())
+                .forEach((key, process) -> {
             if (process.unNotified()) {
                 process.setNotified();
                 newlyNotified.put(key, process);

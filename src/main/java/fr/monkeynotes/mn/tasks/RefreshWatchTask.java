@@ -22,24 +22,23 @@ public class RefreshWatchTask implements Runnable{
 
 	@Override
 	public void run() {
-		DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
-
-//		SecurityContext context = SecurityContextHolder.getContext();
-//		context.setAuthentication(auth);
-
-		NoAuthContextHolder.setContext(new NoAuthContext(username));
-
-
-		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
-		monitoringService.start("RefreshWatchTask", "run");
-
-		long startTime = System.currentTimeMillis();
 		try {
-			//TODO set username here
-            service.renewWatch(username);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-		monitoringService.end(System.currentTimeMillis() - startTime);
+			NoAuthContextHolder.setContext(new NoAuthContext(username));
+
+			DriveChangeManagerService service = ctx.getBean(DriveChangeManagerService.class);
+
+			MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
+			monitoringService.start("RefreshWatchTask", "run");
+
+			long startTime = System.currentTimeMillis();
+			try {
+				service.renewWatch(username);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			monitoringService.end(System.currentTimeMillis() - startTime);
+		} finally {
+			NoAuthContextHolder.clearContext();
+		}
     }
 }

@@ -18,20 +18,20 @@ public class RefreshTokenTask implements Runnable{
 
 	@Override
 	public void run() {
-		DriveService service = ctx.getBean(DriveService.class);
+		try {
+			NoAuthContextHolder.setContext(new NoAuthContext(username));
 
-//		SecurityContext context = SecurityContextHolder.getContext();
-//		context.setAuthentication(auth);
-		NoAuthContextHolder.setContext(new NoAuthContext(username));
+			DriveService service = ctx.getBean(DriveService.class);
 
-		MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
-		monitoringService.start("RefreshTokenTask", "run");
+			MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
+			monitoringService.start("RefreshTokenTask", "run");
 
-		long startTime = System.currentTimeMillis();
-		service.refreshToken();
+			long startTime = System.currentTimeMillis();
+			service.refreshToken();
 
-		monitoringService.end(System.currentTimeMillis() - startTime);
-
-
+			monitoringService.end(System.currentTimeMillis() - startTime);
+		} finally {
+			NoAuthContextHolder.clearContext();
+		}
     }
 }

@@ -115,8 +115,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 .stream()
                 .map(EntityGDriveCredential::getId)
                 .forEach(username -> {
-                    NoAuthContextHolder.setContext(new NoAuthContext(username));
-                    watch(true);
+                    try {
+                        NoAuthContextHolder.setContext(new NoAuthContext(username));
+                        watch(true);
+                    } finally {
+                        NoAuthContextHolder.clearContext();
+                    }
                 });
     }
 
@@ -196,56 +200,61 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
 
         WatchData watchData = mapChannelIdWatchData.get(channelId);
-        NoAuthContextHolder.setContext(new NoAuthContext(watchData.getUsername()));
 
-        LOG.debug("Changes notified channel {} user {}", channelId, watchData.getUsername());
-
-        String inboundFolderId = "";
         try {
-            inboundFolderId = preferencesService.getInputFolderId();
-        } catch (ServiceException e) {
-            LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
-            return;
-        }
+            NoAuthContextHolder.setContext(new NoAuthContext(watchData.getUsername()));
 
-        ChangeList changes = null;
-        try {
-            changes = driveService.getDrive().changes().list(watchData.getLastPageToken()).execute();
-            watchData.setLastPageToken(changes.getNewStartPageToken());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            LOG.debug("Changes notified channel {} user {}", channelId, watchData.getUsername());
 
-        if(!changes.isEmpty()) {
-            for (Change change : changes.getChanges()) {
-                ChangedFile changedFile = new ChangedFile(change, watchData.getUsername());
+            String inboundFolderId = "";
+            try {
+                inboundFolderId = preferencesService.getInputFolderId();
+            } catch (ServiceException e) {
+                LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
+                return;
+            }
 
-                String fileId = change.getFileId();
+            ChangeList changes = null;
+            try {
+                changes = driveService.getDrive().changes().list(watchData.getLastPageToken()).execute();
+                watchData.setLastPageToken(changes.getNewStartPageToken());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
-                if(change.getFile() != null) {
-                    String filename = change.getFile().getName();
-                    LOG.debug("Change fileId {} name {}", fileId, filename);
+            if(!changes.isEmpty()) {
+                for (Change change : changes.getChanges()) {
+                    ChangedFile changedFile = new ChangedFile(change, watchData.getUsername());
 
-                    //TODO this limits change acceptation ONLY to known files
-                    if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
-                        if(mapScheduled.containsKey(fileId)) {
-                            LOG.debug("already got a change for file {}", fileId);
-                            mapScheduled.get(fileId).getFuture().cancel(true);
+                    String fileId = change.getFileId();
+
+                    if(change.getFile() != null) {
+                        String filename = change.getFile().getName();
+                        LOG.debug("Change fileId {} name {}", fileId, filename);
+
+                        //TODO this limits change acceptation ONLY to known files
+                        if(driveUtilsService.fileHasSpecifiedParents(fileId, inboundFolderId)) {
+                            if(mapScheduled.containsKey(fileId)) {
+                                LOG.debug("already got a change for file {}", fileId);
+                                mapScheduled.get(fileId).getFuture().cancel(true);
+                            }
+                            LOG.info("Accepted file change id {} name {}", fileId, filename);
+                            //todo refresh is deactivated inside task
+                            futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
+                            changedFile.setFuture(futureFlush);
+                            mapScheduled.put(fileId, changedFile);
+
                         }
-                        LOG.info("Accepted file change id {} name {}", fileId, filename);
-                        //todo refresh is deactivated inside task
-                        futureFlush = taskScheduler.schedule(new FlushTask(ctx), ZonedDateTime.now().plusSeconds(flushInterval).toInstant());
-                        changedFile.setFuture(futureFlush);
-                        mapScheduled.put(fileId, changedFile);
-
-                    }
 //                    else {
 //                        LOG.info("rejected file {}", fileId);
 //                    }
-                } else {
-                    LOG.warn("No file with this id found {}", fileId);
+                    } else {
+                        LOG.warn("No file with this id found {}", fileId);
+                    }
                 }
             }
+        } finally {
+            NoAuthContextHolder.clearContext();
         }
     }
 
@@ -302,8 +311,12 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
     public void asyncProcessFlushed(String username, Set<String> setFlushedFileId) {
             LOG.info("Processing user {} flushed files {}", username, setFlushedFileId.size());
-            NoAuthContextHolder.setContext(new NoAuthContext(username));
-            asyncProcessFlushedByUser(setFlushedFileId);
+            try {
+                NoAuthContextHolder.setContext(new NoAuthContext(username));
+                asyncProcessFlushedByUser(setFlushedFileId);
+            } finally {
+                NoAuthContextHolder.clearContext();
+            }
     }
 
     public void asyncProcessFlushedByUser(Set<String> setFlushedFileId) {
@@ -382,12 +395,16 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
     public void renewWatch(String username) throws IOException {
-        NoAuthContextHolder.setContext(new NoAuthContext(username));
-        LOG.info("renew watch for user {}", username);
+        try {
+            NoAuthContextHolder.setContext(new NoAuthContext(username));
+            LOG.info("renew watch for user {}", username);
 
-        WatchData watchData = mapUsernameWatchData.get(username);
-        driveService.getDrive().channels().stop(watchData.getChannel());
-        this.watch(true);
+            WatchData watchData = mapUsernameWatchData.get(username);
+            driveService.getDrive().channels().stop(watchData.getChannel());
+            this.watch(true);
+        } finally {
+            NoAuthContextHolder.clearContext();
+        }
     }
 
     //TODO

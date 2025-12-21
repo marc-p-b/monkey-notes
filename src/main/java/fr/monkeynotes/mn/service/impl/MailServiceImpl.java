@@ -122,6 +122,8 @@ public class MailServiceImpl implements MailService {
 
                 String emails[] = {dtoUser.getEmail()};
 
+                body = "Hello, " + dtoUser.getUsername() + "!\n\n" + body;
+
                 this.sendSimpleMessage(emails, subject, body);
 
             } catch (UsernameNotFoundException e) {

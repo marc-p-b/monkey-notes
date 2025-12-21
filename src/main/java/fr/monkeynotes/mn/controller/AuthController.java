@@ -5,6 +5,7 @@ import com.jayway.jsonpath.JsonPath;
 import fr.monkeynotes.mn.data.AuthRequest;
 import fr.monkeynotes.mn.data.AuthResponse;
 import fr.monkeynotes.mn.data.dto.DtoUser;
+import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.DriveService;
 import fr.monkeynotes.mn.service.UserService;
 import org.slf4j.Logger;
@@ -30,10 +31,19 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AuthService authService;
+
     @GetMapping(value = "/drive/disconnect", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> disconnect() {
         driveService.disconnect();
         return ResponseEntity.status(HttpStatus.OK).body("Disconnected");
+    }
+
+    @GetMapping(value = "/user/whoami", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> whoami() {
+        String username = authService.getUsernameFromContext();
+        return ResponseEntity.status(HttpStatus.OK).body(username);
     }
 
     @PostMapping(value = "/jwt/login", produces = MediaType.APPLICATION_JSON_VALUE)

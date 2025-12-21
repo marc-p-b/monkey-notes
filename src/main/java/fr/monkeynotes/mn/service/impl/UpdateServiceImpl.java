@@ -3,7 +3,6 @@ package fr.monkeynotes.mn.service.impl;
 import com.google.api.services.drive.model.File;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
-import fr.monkeynotes.mn.data.dto.AsyncProcessEvent;
 import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
@@ -23,9 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -43,6 +39,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class UpdateServiceImpl implements UpdateService {
+    public static final String ROOT_FOLDER = "/";
     private Logger LOG = LoggerFactory.getLogger(UpdateServiceImpl.class);
 
     //todo props or conf
@@ -375,7 +372,6 @@ public class UpdateServiceImpl implements UpdateService {
     }
 
     private String updateAncestorsFolders(String fileId) throws ServiceException {
-
         String inboundFolderId = "";
         try {
             inboundFolderId = preferencesService.getInputFolderId();
@@ -390,11 +386,11 @@ public class UpdateServiceImpl implements UpdateService {
         Collections.reverse(ancestors);
 
         List<EntityFile> folders = new ArrayList<>();
-        EntityFile rootFolder = repositoryFile.findByNameAndTypeIs("/", FileType.folder)
+        EntityFile rootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder)
                 .orElse(new EntityFile()
                         .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), inboundFolderId))
                         .setType(FileType.folder)
-                        .setName("/"));
+                        .setName(ROOT_FOLDER));
         folders.add(rootFolder);
 
         for(File folderFile : ancestors) {
@@ -411,7 +407,7 @@ public class UpdateServiceImpl implements UpdateService {
         }
         repositoryFile.saveAll(folders);
         //todo return dto instead
-        return "/" + ancestors.stream().map(File::getName).collect(Collectors.joining("/"));
+        return ROOT_FOLDER + ancestors.stream().map(File::getName).collect(Collectors.joining(ROOT_FOLDER));
     }
 
     @Override
@@ -492,7 +488,7 @@ public class UpdateServiceImpl implements UpdateService {
             for(File file : files) {
                 if(file.getMimeType() != null && file.getMimeType().equals(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE) && max_depth > 0) {
                     LOG.info("{}{} ({})/",offset, file.getName(), max_depth);
-                    recursRefreshFolder(file.getId(), offset + " ", max_depth - 1, currentFolderPath + "/" + file.getName(), file.getName(), remoteFiles);
+                    recursRefreshFolder(file.getId(), offset + " ", max_depth - 1, currentFolderPath + ROOT_FOLDER + file.getName(), file.getName(), remoteFiles);
 
                 } else {
                     LOG.info(offset + "{} ({})" ,file.getName(), file.getMd5Checksum());

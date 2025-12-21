@@ -30,6 +30,7 @@ public interface RepositoryNamedEntity extends JpaRepository<EntityNamedEntity, 
 
     List<EntityNamedEntity> findAllByIdNamedEntity_Username(String username);
 
+    //TODO add username
     long countByValue(String value);
 }
 

@@ -12,24 +12,9 @@ import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.service.*;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.*;
-import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.ByteBuffersDirectory;
-import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,7 +99,7 @@ public class ViewServiceImpl implements ViewService {
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
         List<FileNode> fileNodes = new ArrayList<>();
-        List<EntityFile> children = repositoryFile.findAllByParentFolderId(directory.getFileId());
+        List<EntityFile> children = repositoryFile.findAllByIdFile_UsernameAndParentFolderId(authService.getUsernameFromContext(), directory.getFileId());
         for (EntityFile child : children) {
             DtoTranscript dtoTranscript = null;
             if (child.getType() == FileType.transcript) {
@@ -139,7 +124,7 @@ public class ViewServiceImpl implements ViewService {
     private List<DtoFile> listAllFilesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
         List<DtoFile> files = new ArrayList<>();
-        List<EntityFile> childen = repositoryFile.findAllByParentFolderId(directory.getFileId());
+        List<EntityFile> childen = repositoryFile.findAllByIdFile_UsernameAndParentFolderId(authService.getUsernameFromContext(), directory.getFileId());
         for (EntityFile child : childen) {
             if (child.getType() == FileType.transcript) {
                 files.add(DtoFile.fromEntity(child));
@@ -182,7 +167,7 @@ public class ViewServiceImpl implements ViewService {
 
     @Override
     public List<FileNode> listLevel(String folderId) {
-        return repositoryFile.findAllByParentFolderId(folderId).stream()
+        return repositoryFile.findAllByIdFile_UsernameAndParentFolderId(authService.getUsernameFromContext(), folderId).stream()
                 .map(f -> {
                     FileNode node = new FileNode(DtoFile.fromEntity(f));
                     Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(f.getIdFile());

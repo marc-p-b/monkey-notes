@@ -3,6 +3,7 @@
   <div class="main-wrapper">
     <h2>Preferences</h2>
 
+    <h3>Hello, {{prefs.username}}</h3>
     <form>
       <Fieldset legend="Accounts">
         <div class="actions">
@@ -138,20 +139,21 @@ import { authFetch } from "@/requests.ts";
 import {authPostFile} from "../requests";
 
 export interface Prefs {
-  set: boolean;
-  useDefaultPrompt: boolean;
-  prompt?: string;
-  agentInstructions?: string;
-  useDefaultModel: boolean;
-  model?: string;
-  inputFolderId?: string;
-  outputFolderId?: string;
-  useDefaultAiConnectTimeout: boolean;
-  aiConnectTimeout: number;
-  useDefaultAiReadTimeout: boolean;
-  aiReadTimeout: number;
-  useDefaultModelMaxTokens: boolean;
-  modelMaxTokens: number;
+  set: boolean
+  useDefaultPrompt: boolean
+  prompt?: string
+  agentInstructions?: string
+  useDefaultModel: boolean
+  model?: string
+  inputFolderId?: string
+  outputFolderId?: string
+  useDefaultAiConnectTimeout: boolean
+  aiConnectTimeout: number
+  useDefaultAiReadTimeout: boolean
+  aiReadTimeout: number
+  useDefaultModelMaxTokens: boolean
+  modelMaxTokens: number
+  username: string
 }
 
 const prefs = ref<Prefs[]>([])

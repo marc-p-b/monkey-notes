@@ -57,7 +57,8 @@ public class PreferencesServiceImpl implements PreferencesService {
         } else {
             Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getUsernameFromContext()).stream()
                     .collect(Collectors.toMap(entityConfig -> entityConfig.getConfigId().getKey(), entityConfig -> entityConfig.getValue()));
-            return fromMap(map);
+            return fromMap(map)
+                    .setUsername(authService.getUsernameFromContext());
         }
     }
 

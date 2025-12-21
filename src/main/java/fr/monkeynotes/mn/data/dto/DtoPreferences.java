@@ -30,6 +30,8 @@ public class DtoPreferences {
     private boolean useDefaultModelMaxTokens;
     private int modelMaxTokens;
 
+    private String username;
+
 
 
     public List<EntityPreferences> toEntities(String username) {
@@ -56,6 +58,15 @@ public class DtoPreferences {
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.modelMaxTokens), Integer.toString(modelMaxTokens))
         );
         return list;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public DtoPreferences setUsername(String user) {
+        this.username = user;
+        return this;
     }
 
     public DtoPreferences setInitialized(boolean set) {

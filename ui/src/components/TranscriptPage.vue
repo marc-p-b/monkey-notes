@@ -28,7 +28,8 @@
       <Button @click.prevent="closeEdit" label="close" />
     </div>
   </div>
-  <a :href="page.imageUrl">page {{page.pageNumber + 1}} source</a> -
+  <img v-if="imgSrc" :src="imgSrc" alt="Image" />
+  <a href="#" @click.prevent="downloadImage(page)">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a>
   <span v-if="page.deltas === 1"> - {{page.deltas}} delta</span>
   <span v-else-if="page.deltas > 1"> - {{page.deltas}} deltas</span>
@@ -100,6 +101,26 @@ interface Page {
   cols: number
   rows: number
   deltas: number
+}
+
+const imgSrc = ref(null)
+
+async function downloadImage(page) {
+
+  const path = "image/" + page.username + "/" + page.fileId + "/" + page.pageNumber
+
+  console.log(path)
+
+  const res = await authFetch(path)
+  const blob = await res.blob()
+
+  if(imgSrc.value) {
+    URL.revokeObjectURL(imgSrc.value)
+  }
+
+  imgSrc.value = URL.createObjectURL(blob)
+
+  //URL.revokeObjectURL(url)
 }
 
 function replaceSubstring(str, start, end, replacement) {

@@ -43,7 +43,7 @@ public class SecurityConfig {
                     .requestMatchers("/agent/subscribe/*/*/*").permitAll() //secured using get token param
                     .requestMatchers("/notify").permitAll() //TODO secure ?
                     //needed if llm request with url pointing to api (see QwenServiceImpl)
-                    //.requestMatchers("/image/*/*/*").permitAll() //todo secure (ADD a unique key?)
+                    //.requestMatchers("/image/*/*/*").permitAll()//todo secure (ADD a unique key?)
                     .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -19,6 +19,8 @@ public class AsyncProcess {
         private List<AsyncProcessEvent> events;
         private List<AsyncProcessFileEvent> fileEvents;
         private boolean notified;
+        private boolean completed;
+        private boolean failed;
 
         public AsyncProcess(MonitoringData monitoringData, AsyncProcessName name, String username, String description) {
                 this.id = monitoringData.getId();
@@ -90,6 +92,22 @@ public class AsyncProcess {
 
         public boolean unNotified() {
                 return !notified;
+        }
+
+        public void setCompleted() {
+                this.completed = true;
+        }
+
+        public boolean isCompleted() {
+                return completed;
+        }
+
+        public void setFailed() {
+                this.failed = true;
+        }
+
+        public boolean isFailed() {
+                return failed;
         }
 
         @Override

@@ -20,6 +20,6 @@ public interface ProcessService {
     void updateProcess(String processId, String event);
     void attachFileEvent(String processId, AsyncProcessFileEvent event);
     List<AsyncProcess> getAllProcesses();
-    Map<String, List<AsyncProcess>> getAllProcessesMapByUser();
+    Map<String, List<AsyncProcess>> getCompletedProcessesToNotify();
     //void processDebug();
 }

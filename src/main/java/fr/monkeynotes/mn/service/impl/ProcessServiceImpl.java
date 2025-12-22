@@ -50,25 +50,23 @@ public class ProcessServiceImpl implements ProcessService {
     }
 
     @Override
-    public Map<String, List<AsyncProcess>> getAllProcessesMapByUser() {
+    public Map<String, List<AsyncProcess>> getCompletedProcessesToNotify() {
         // Collect newly notified processes
         Map<String, AsyncProcess> newlyNotified = new HashMap<>();
         Set<String> keysToRemove = ConcurrentHashMap.newKeySet();
 
-        // Mark unnotified as notified and collect them, track already-notified for removal
-        mapAsyncProcess
-                //TODO must be completed
-
-//                .entrySet()
-//                .stream().filter(e -> e.getValue().getFuture().isDone())
-                .forEach((key, process) -> {
-            if (process.unNotified()) {
-                process.setNotified();
-                newlyNotified.put(key, process);
-            } else {
-                keysToRemove.add(key);
-            }
-        });
+        mapAsyncProcess.entrySet().stream()
+            .filter(e->e.getValue().isCompleted())
+            .forEach(e-> {
+                String key = e.getKey();
+                AsyncProcess process = e.getValue();
+                if (process.unNotified()) {
+                    process.setNotified();
+                    newlyNotified.put(key, process);
+                } else {
+                    keysToRemove.add(key);
+                }
+            });
 
         // Remove already notified entries
         keysToRemove.forEach(mapAsyncProcess::remove);
@@ -104,8 +102,10 @@ public class ProcessServiceImpl implements ProcessService {
 
             if(result.isSuccessful()) {
                 LOG.info("Success processing {} took {}", processName, strDuration);
+                asyncProcess.setCompleted();
             } else if (result.isFailure()) {
                 LOG.warn("Failed processing {} after {}", processName, strDuration, result.getException());
+                asyncProcess.setFailed();
             }
         });
     }

@@ -8,7 +8,6 @@ import com.mailjet.client.transactional.SendEmailsRequest;
 import com.mailjet.client.transactional.TransactionalEmail;
 import com.mailjet.client.transactional.response.SendEmailsResponse;
 import fr.monkeynotes.mn.data.dto.AsyncProcess;
-import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.service.MailService;
 import fr.monkeynotes.mn.service.ProcessService;
@@ -83,7 +82,7 @@ public class MailServiceImpl implements MailService {
     public void sendAsyncProcessFinishedMessage() {
         LOG.info("Send report emails");
 
-        Map<String, List<AsyncProcess>> mapProcesses = processService.getAllProcessesMapByUser();
+        Map<String, List<AsyncProcess>> mapProcesses = processService.getCompletedProcessesToNotify();
 
         if(mapProcesses.isEmpty()){
             LOG.info("No processes found");

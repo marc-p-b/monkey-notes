@@ -1,9 +1,7 @@
 <template>
   <span :id="'pageNumber' + page.pageNumber" />
-  <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit()"></p>
+  <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit(page)"></p>
   <div v-else class="edit-container">
-
-
     <div class="flex-row">
       <div class="left">
       <Textarea
@@ -13,8 +11,8 @@
       />
       </div>
       <div class="right">
-        <img
-            :src="page.imageUrl"
+        <img :src="imgSrc"
+
             alt="preview"
             class="preview-img"
         />
@@ -28,8 +26,6 @@
       <Button @click.prevent="closeEdit" label="close" />
     </div>
   </div>
-  <img v-if="imgSrc" :src="imgSrc" alt="Image" />
-  <a href="#" @click.prevent="downloadImage(page)">page {{page.pageNumber + 1}} source</a> -
   <a href="#" @click.prevent="updatePage(page)">update</a>
   <span v-if="page.deltas === 1"> - {{page.deltas}} delta</span>
   <span v-else-if="page.deltas > 1"> - {{page.deltas}} deltas</span>
@@ -105,24 +101,6 @@ interface Page {
 
 const imgSrc = ref(null)
 
-async function downloadImage(page) {
-
-  const path = "image/" + page.username + "/" + page.fileId + "/" + page.pageNumber
-
-  console.log(path)
-
-  const res = await authFetch(path)
-  const blob = await res.blob()
-
-  if(imgSrc.value) {
-    URL.revokeObjectURL(imgSrc.value)
-  }
-
-  imgSrc.value = URL.createObjectURL(blob)
-
-  //URL.revokeObjectURL(url)
-}
-
 function replaceSubstring(str, start, end, replacement) {
   return str.slice(0, start) + replacement + str.slice(end);
 }
@@ -144,11 +122,23 @@ async function updatePage(page) {
   }
 }
 
-const switchEdit = async () => {
+const switchEdit = async (page) => {
+  downloadImage(page)
   editMode.value = true
 }
 const closeEdit = async () => {
   editMode.value = false
+}
+
+async function downloadImage(page) {
+  const path = "image/" + page.username + "/" + page.fileId + "/" + page.pageNumber
+  const res = await authFetch(path)
+  const blob = await res.blob()
+
+  if(imgSrc.value) {
+    URL.revokeObjectURL(imgSrc.value)
+  }
+  imgSrc.value = URL.createObjectURL(blob)
 }
 
 const save = async () => {

@@ -7,12 +7,11 @@ import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.service.EditService;
 import fr.monkeynotes.mn.service.SearchService;
-import fr.monkeynotes.mn.service.ViewService;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -33,6 +32,13 @@ import java.util.stream.Collectors;
 
 @Service
 public class SearchServiceImpl implements SearchService {
+    public static final String TYPE_TITLE = "title";
+    public static final String TYPE_CONTENT = "content";
+    public static final String FIELD_TYPE = "type";
+    public static final String FIELD_ID = "id";
+    public static final String FIELD_TITLE = "title";
+    public static final String FIELD_PAGE_NUMBER = "pageNumber";
+    public static final String FIELD_CONTENT = "content";
     private Logger LOG = LoggerFactory.getLogger(SearchService.class);
 
     @Autowired
@@ -77,22 +83,30 @@ public class SearchServiceImpl implements SearchService {
                 .map(e -> DtoTranscript.fromEntity(e))
                     .forEach(dtoTranscript -> {
                         LOG.info("indexing transcript {}", dtoTranscript.getName());
+                        Document tDoc = new Document();
+                        tDoc.add(new StringField(FIELD_TYPE, TYPE_TITLE, Field.Store.YES));
+                        tDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
+                        tDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getName(), Field.Store.YES));
 
+                        try {
+                            writter.addDocument(tDoc);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         repositoryTranscriptPage.findByIdTranscriptPage_FileId(dtoTranscript.getFileId()).stream()
                             .map(e -> DtoTranscriptPage.fromEntity(e))
                             .forEach(dtoTranscriptPage -> {
-                                Document document = new Document();
-                                //indexing transcript
-                                document.add(new TextField("id", dtoTranscript.getFileId(), Field.Store.YES));
-                                document.add(new TextField("title", dtoTranscript.getName(), Field.Store.YES));
-                                //indexing page (applying patches)
-                                document.add(new IntField("pageNumber", dtoTranscriptPage.getPageNumber(), Field.Store.YES));
+                                Document cDoc = new Document();
+                                cDoc.add(new StringField(FIELD_TYPE, TYPE_CONTENT, Field.Store.YES));
+                                cDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
+                                cDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getName(), Field.Store.YES));
+                                cDoc.add(new IntField(FIELD_PAGE_NUMBER, dtoTranscriptPage.getPageNumber(), Field.Store.YES));
                                 dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
                                 FieldType type = new FieldType(TextField.TYPE_STORED);
                                 type.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
-                                document.add(new Field("content", dtoTranscriptPage.getTranscript(), type));
+                                cDoc.add(new Field(FIELD_CONTENT, dtoTranscriptPage.getTranscript(), type));
                                 try {
-                                    writter.addDocument(document);
+                                    writter.addDocument(cDoc);
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -103,22 +117,47 @@ public class SearchServiceImpl implements SearchService {
 
 
         } catch (IOException e) {
+
             throw new RuntimeException(e);
         }
     }
 
     @Override
     public Map<String, List<DtoSearchResult>> search(String queryString) {
-        String inField = "content";
+        String []inFields = {FIELD_TITLE, FIELD_CONTENT};
 
         List<DtoSearchResult> dtoSearchResults = new ArrayList<>();
         try {
-            Query query = new QueryParser(inField, analyzer).parse(queryString);
+            Query query = new MultiFieldQueryParser(inFields, analyzer).parse(queryString);
 
             IndexReader indexReader = DirectoryReader.open(memoryIndex);
             IndexSearcher searcher = new IndexSearcher(indexReader);
             TopDocs topDocs = searcher.search(query, 100);
 
+            StoredFields storedFields = searcher.storedFields();
+            for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+                Document doc = storedFields.document(scoreDoc.doc);
+                DtoSearchResult dtoSearchResult = new DtoSearchResult()
+                        .setId(doc.get(FIELD_ID))
+                        .setTitle(doc.get(FIELD_TITLE));
+
+                switch (doc.get(FIELD_TYPE)) {
+                    case TYPE_TITLE:
+                        dtoSearchResult.setSrType(DtoSearchResult.SRType.title);
+                        break;
+                        case TYPE_CONTENT:
+                            dtoSearchResult
+                                    .setSrType(DtoSearchResult.SRType.content)
+                                    .setPageNumber(Integer.valueOf(doc.get(FIELD_PAGE_NUMBER)));
+                            break;
+                }
+
+                dtoSearchResults.add(dtoSearchResult);
+            }
+
+            Map<String, List<DtoSearchResult>> mapResults = dtoSearchResults.stream()
+                    .collect(Collectors.groupingBy(DtoSearchResult::getTitle));
+            return mapResults;
 //            UnifiedHighlighter highlighter = new UnifiedHighlighter(searcher, analyzer);
 //            highlighter.setHighlightPhrasesStrictly(true);
 //            highlighter.setMaxLength(9999);
@@ -128,20 +167,6 @@ public class SearchServiceImpl implements SearchService {
 //                System.out.println("Doc " + topDocs.scoreDocs[i].doc + ": " + fragments[i]);
 //            }
 
-            StoredFields storedFields = searcher.storedFields();
-            for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
-                Document doc = storedFields.document(scoreDoc.doc);
-                DtoSearchResult dtoSearchResult = new DtoSearchResult()
-                        .setId(doc.get("id"))
-                        .setTitle(doc.get("title"))
-                        .setPageNumber(Integer.valueOf(doc.get("pageNumber")));
-
-                dtoSearchResults.add(dtoSearchResult);
-            }
-
-            Map<String, List<DtoSearchResult>> mapResults = dtoSearchResults.stream()
-                    .collect(Collectors.groupingBy(DtoSearchResult::getTitle));
-            return mapResults;
         } catch (ParseException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {

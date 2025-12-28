@@ -31,11 +31,14 @@ const error = ref<string | null>(null)
 interface DtoResults {
   id: string
   title: string
+  srType: string
   pageNumber: number
 }
 
 type SearchResult = Record<DtoResults, DtoResults[]>
 const results = ref<SearchResult>({});
+
+//TODO refactor search display (seeSearchServiceImpl)
 
 const request = async() => {
 

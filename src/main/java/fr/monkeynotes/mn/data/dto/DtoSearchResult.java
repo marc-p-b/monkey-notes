@@ -3,7 +3,14 @@ package fr.monkeynotes.mn.data.dto;
 import java.util.Objects;
 
 public class DtoSearchResult {
+
+    public enum SRType {
+        content,
+        title
+    }
+
     private String id;
+    private SRType srType;
     private String title;
     private int pageNumber;
 
@@ -32,6 +39,15 @@ public class DtoSearchResult {
     public DtoSearchResult setPageNumber(int pageNumber) {
         this.pageNumber = pageNumber;
         return this;
+    }
+
+    public DtoSearchResult setSrType(SRType srType) {
+        this.srType = srType;
+        return this;
+    }
+
+    public SRType getSrType() {
+        return srType;
     }
 
     @Override

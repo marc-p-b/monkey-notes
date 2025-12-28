@@ -240,12 +240,6 @@ function agent(fileId) {
 }
 
 onMounted(() => {
-
-  //todo pages with search result
-  console.log("pageNumber : " + props.pageNumber + ", " + store.srPages)
-
-
-
   fetchTranscript();
 });
 

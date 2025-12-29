@@ -29,7 +29,7 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, defineProps, onMounted} from "vue";
+import {ref, defineProps, defineEmits, onMounted, watch} from "vue";
 import {authFetch} from "@/requests";
 
 interface NamedEntity {
@@ -63,7 +63,15 @@ interface Page {
 }
 
 const imgSrc = ref(null)
-const props = defineProps<{ page: Page }>()
+const props = defineProps<{
+  page: Page
+  activeEditPageNumber: number | null
+}>()
+
+const emit = defineEmits<{
+  requestEdit: [pageNumber: number, isClosing: boolean]
+}>()
+
 const text = ref()
 const textEdit = ref()
 const loading = ref(true)
@@ -94,10 +102,12 @@ async function updatePage(page) {
 }
 
 const switchEdit = async (page) => {
+  emit('requestEdit', page.pageNumber, false)
   downloadImage(page)
   editMode.value = true
 }
 const closeEdit = async () => {
+  emit('requestEdit', props.page.pageNumber, true)
   editMode.value = false
 }
 
@@ -115,6 +125,7 @@ async function downloadImage(page) {
 const save = async () => {
   const fileId = props.page.fileId
   const pageNumber = props.page.pageNumber
+  emit('requestEdit', props.page.pageNumber, true)
   editMode.value = false;
 
   try {
@@ -176,6 +187,14 @@ const loadPage = async () => {
   transcript = transcript.replaceAll("\n", "<br/>")
   text.value = transcript
 }
+
+// Watch for changes in activeEditPageNumber to close this page's edit mode if another page opens
+watch(() => props.activeEditPageNumber, (newActivePageNumber) => {
+  // If another page is now active and this page is in edit mode, close it
+  if (newActivePageNumber !== props.page.pageNumber && editMode.value) {
+    editMode.value = false
+  }
+})
 
 onMounted(() => {
   loadPage()

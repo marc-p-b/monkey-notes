@@ -59,7 +59,7 @@
 
 
       <div v-for="page in transcript.pages">
-        <TranscriptPage :page="page"/>
+        <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" @requestEdit="handleEditRequest"/>
       </div>
     </div>
   </div>
@@ -120,6 +120,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const transcript = ref<DtoTranscript>(null)
+const activeEditPageNumber = ref<number | null>(null)
 
 interface DtoTranscript {
   username: string
@@ -237,6 +238,14 @@ const downloadFile = async (fileId: string) => {
 
 function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })
+}
+
+function handleEditRequest(pageNumber: number, isClosing: boolean) {
+  if (isClosing) {
+    activeEditPageNumber.value = null
+  } else {
+    activeEditPageNumber.value = pageNumber
+  }
 }
 
 onMounted(() => {

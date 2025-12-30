@@ -188,6 +188,10 @@ GDRIVE_CLIENT_ID = <<your google console client_id>>
 GDRIVE_SECRET = <<your google console client_secret>>
 OPENAI_API_KEY = <<your openai api key>>
 QWEN_API_KEY = <<your openai api key>>
+EMAIL_ENABLE = <<true/false : enable email features>>
+EMAIL_SENDER = <<email address for sender>>
+MAILJET_PUBLIC = <<mailjet public key>>
+MAILJET_PRIVATE = <<mailjet private key>>
 ```
 
 ## Run MonkeyNotes App

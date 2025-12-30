@@ -56,6 +56,14 @@ app:
       connect-timeout: 3000
       read-timeout: 180000
 
+  email:
+    enable: ${EMAIL_ENABLE}
+    sender: ${EMAIL_SENDER}
+    mailjet.apikey:
+      public: ${MAILJET_PUBLIC}
+      private: ${MAILJET_PRIVATE}
+    reports.delay: 5
+
 #Tooling Spring Boot Starter config
 tooling :
   error :

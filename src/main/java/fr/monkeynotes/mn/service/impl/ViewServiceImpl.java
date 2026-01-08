@@ -247,25 +247,26 @@ public class ViewServiceImpl implements ViewService {
                         .toList();
                 dtoTranscriptPage.setListNamedEntities(namedEntities);
 
+                //schema for this page
+                Optional<String> optSchema = namedEntities.stream()
+                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.schema))
+                        .map(DtoNamedEntity::getValue)
+                        .findFirst();
+                dtoTranscriptPage.setSchemaTitle(optSchema);
 
-//                //schema ref from last page
-//                dtoTranscriptPage.setOptSchemaTitle(optNextPageSchema);
-//                optNextPageSchema = Optional.empty();
-//
-//                //schema ref for next page
-//                optNextPageSchema = namedEntities.stream()
-//                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.refSchema))
-//                        .map(DtoNamedEntity::getValue)
-//                        .findFirst();
-//
-//                //schema for this page
-//                Optional<String> optSchema = namedEntities.stream()
-//                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.schema))
-//                        .map(DtoNamedEntity::getValue)
-//                        .findFirst();
-//                dtoTranscriptPage.setOptSchemaTitle(optSchema);
+                //Schema was set from the previous page
+                dtoTranscriptPage.setSchemaTitle(optNextPageSchema);
+
+                //schema ref for next page
+                optNextPageSchema = namedEntities.stream()
+                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.refSchema))
+                        .map(DtoNamedEntity::getValue)
+                        .findFirst();
 
                 dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
+
+                LOG.info("page {} schema {} {}", dtoTranscriptPage.getPageNumber(), dtoTranscriptPage.isSchema() ? "YES" : "NO", dtoTranscriptPage.getSchemaTitle());
+
                 listDtoTranscriptPages.add(dtoTranscriptPage);
             }
         }

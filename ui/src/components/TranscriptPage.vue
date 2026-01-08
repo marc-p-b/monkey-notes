@@ -1,6 +1,15 @@
 <template>
   <span :id="'pageNumber' + page.pageNumber" />
-  <p v-if="editMode===false" v-html="text" @click.prevent="switchEdit(page)"></p>
+
+
+  <div v-if="page.schema">
+
+    <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img"/>
+    <p v-else>Loading source image...</p>
+
+  </div>
+
+  <p v-else-if="editMode===false" v-html="text" @click.prevent="switchEdit(page)"></p>
   <div v-else class="edit-container">
     <div class="flex-row">
       <div class="left">
@@ -11,8 +20,7 @@
       />
       </div>
       <div class="right">
-        <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img"
-        />
+        <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img"/>
         <p v-else>Loading source image...</p>
       </div>
 
@@ -51,7 +59,6 @@ interface Page {
   username: string
   pageNumber: number
   transcript: string
-  //transcriptHtml: string
   transcriptTook: number
   tokensPrompt: number
   tokensResponse: number
@@ -63,6 +70,8 @@ interface Page {
   cols: number
   rows: number
   deltas: number
+  schema: boolean
+  schemaTitle: string
 }
 
 const imgSrc = ref(null)
@@ -157,6 +166,14 @@ const save = async () => {
 
 const loadPage = async () => {
   let lFix = 0;
+
+  if(props.page.schema) {
+    console.log("schema " + props.page.schemaTitle)
+    downloadImage(props.page)
+  } else {
+    console.log("no schema")
+  }
+
   props.page.listNamedEntities.forEach(ne => {
     let repl = "";
     if (ne.verb == 'h2') {

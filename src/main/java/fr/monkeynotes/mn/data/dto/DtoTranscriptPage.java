@@ -5,6 +5,7 @@ import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class DtoTranscriptPage {
 
@@ -12,7 +13,6 @@ public class DtoTranscriptPage {
     private String username;
     private int pageNumber;
     private String transcript;
-    //private String transcriptHtml;
     private long transcriptTook;
     private int tokensPrompt;
     private int tokensResponse;
@@ -24,8 +24,9 @@ public class DtoTranscriptPage {
     private int cols;
     private int rows;
     private int deltas;
+    private boolean schema;
+    private String schemaTitle;
 
-    //private Optional<String> optSchemaTitle = Optional.empty();
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
         String[]lines = page.getTranscript().split("\n");
@@ -41,7 +42,6 @@ public class DtoTranscriptPage {
                 .setPageNumber(page.getIdTranscriptPage().getPageNumber())
                 .setVersion(page.getVersion())
                 .setTranscript(page.getTranscript())
-                //.setTranscriptHtml(page.getTranscript())
                 .setAiModel(page.getAiModel())
                 .setTranscriptTook(page.getTranscriptTook())
                 .setTokensPrompt(page.getTokensPrompt())
@@ -97,15 +97,6 @@ public class DtoTranscriptPage {
         this.transcript = transcript;
         return this;
     }
-
-//    public String getTranscriptHtml() {
-//        return transcriptHtml;
-//    }
-//
-//    public DtoTranscriptPage setTranscriptHtml(String transcriptHtml) {
-//        this.transcriptHtml = transcriptHtml;
-//        return this;
-//    }
 
     public long getTranscriptTook() {
         return transcriptTook;
@@ -170,16 +161,6 @@ public class DtoTranscriptPage {
         return this;
     }
 
-//    public Optional<String> getOptSchemaTitle() {
-//        return optSchemaTitle;
-//    }
-//
-//    public DtoTranscriptPage setOptSchemaTitle(Optional<String> optSchemaTitle) {
-//        this.optSchemaTitle = optSchemaTitle;
-//        return this;
-//    }
-
-
     public int getCols() {
         return cols;
     }
@@ -204,6 +185,20 @@ public class DtoTranscriptPage {
 
     public DtoTranscriptPage setDeltas(int deltas) {
         this.deltas = deltas;
+        return this;
+    }
+
+    public boolean isSchema() {
+        return schema;
+    }
+
+    public String getSchemaTitle() {
+        return schemaTitle;
+    }
+
+    public DtoTranscriptPage setSchemaTitle(Optional<String> schemaTitle) {
+        this.schema = schemaTitle.isPresent();
+        this.schemaTitle = schemaTitle.orElse(null);
         return this;
     }
 }

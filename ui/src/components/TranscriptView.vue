@@ -22,6 +22,7 @@
                     <li>pages : {{transcript.pages.length}}</li>
                     <li>version : {{transcript.version}}</li>
                   </ul>
+                  <Button @click.prevent="toggleEditModeRequest()" label="edit" :icon="stateEditIcon" :severity="stateEditSeverity"/>
                   <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
                   <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
                   <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
@@ -121,6 +122,10 @@ const error = ref<string | null>(null)
 
 const transcript = ref<DtoTranscript>(null)
 const activeEditPageNumber = ref<number | null>(null)
+
+const stateEditIcon = ref<string>()
+const stateEditSeverity = ref<string>()
+
 
 interface DtoTranscript {
   username: string
@@ -240,7 +245,19 @@ function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })
 }
 
+function toggleEditModeRequest() {
+  if(store.transcript_edit_mode) {
+    store.transcriptViewMode()
+    activeEditPageNumber.value = null
+  } else {
+    store.transcriptEditMode()
+  }
+  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
+  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "success"
+}
+
 function handleEditRequest(pageNumber: number, isClosing: boolean) {
+  
   if (isClosing) {
     activeEditPageNumber.value = null
   } else {
@@ -249,7 +266,10 @@ function handleEditRequest(pageNumber: number, isClosing: boolean) {
 }
 
 onMounted(() => {
-  fetchTranscript();
+  fetchTranscript()
+  store.transcriptViewMode()
+  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
+  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "success"
 });
 
 </script>

@@ -60,6 +60,7 @@ node_modules
 /src/main/resources/application-docker.yaml
 
 /ui/env.js
+/ui/index.html
 /ui/dist/
 /docker/ui/dist/
 

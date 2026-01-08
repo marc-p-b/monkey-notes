@@ -32,6 +32,9 @@
 import {ref, defineProps, defineEmits, onMounted, watch} from "vue";
 import {authFetch} from "@/requests";
 
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
+
 interface NamedEntity {
   uuid: string
   verb: string
@@ -102,6 +105,9 @@ async function updatePage(page) {
 }
 
 const switchEdit = async (page) => {
+  if(store.transcript_edit_mode === false) {
+    return
+  }
   emit('requestEdit', page.pageNumber, false)
   downloadImage(page)
   editMode.value = true

@@ -9,7 +9,8 @@ public interface ImageService {
     void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream) throws IOException;
     void efficientStreamImage(String username, String fileId, int imageNum, OutputStream outputStream, boolean temp) throws IOException;
     double compareImages(BufferedImage image1, BufferedImage image2);
-
+    BufferedImage resizeImage(int maxWidth, int maxHeight, BufferedImage originalImage) throws Exception;
+    BufferedImage cropToContent(BufferedImage image, int padding);
     String imageAsBase64(String username, String fileId, int imageNum);
     String imageAsBase64(URL imageURL);
 }

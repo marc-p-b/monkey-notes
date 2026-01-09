@@ -2,16 +2,14 @@ package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.service.ImageService;
 import fr.monkeynotes.mn.service.UtilsService;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Scalar;
+import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.*;
@@ -132,5 +130,75 @@ public class ImageServiceImpl implements ImageService {
         mat.put(0, 0, pixels);
         return mat;
     }
+
+
+    public BufferedImage cropToContent(BufferedImage image, int padding) {
+        nu.pattern.OpenCV.loadLocally();
+
+        Mat mat = convert(image);
+        Mat gray = new Mat();
+        Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY);
+
+        // Threshold: invert so content (black) becomes white (255)
+        Mat binary = new Mat();
+        Imgproc.threshold(gray, binary, 250, 255, Imgproc.THRESH_BINARY_INV);
+
+        // Find non-zero pixels (the actual content)
+        Mat points = new Mat();
+        Core.findNonZero(binary, points);
+
+        if (points.empty()) {
+            // No content found, return original
+            return image;
+        }
+
+        // Get bounding rectangle of content
+        Rect boundingRect = Imgproc.boundingRect(points);
+
+        // Add padding, clamped to image bounds
+        int x = Math.max(0, boundingRect.x - padding);
+        int y = Math.max(0, boundingRect.y - padding);
+        int width = Math.min(mat.cols() - x, boundingRect.width + 2 * padding);
+        int height = Math.min(mat.rows() - y, boundingRect.height + 2 * padding);
+
+        // Crop
+        Mat cropped = new Mat(mat, new Rect(x, y, width, height));
+
+        return matToBufferedImage(cropped);
+    }
+
+    private BufferedImage matToBufferedImage(Mat mat) {
+        int type = mat.channels() == 1 ? BufferedImage.TYPE_BYTE_GRAY : BufferedImage.TYPE_3BYTE_BGR;
+        BufferedImage image = new BufferedImage(mat.cols(), mat.rows(), type);
+        byte[] data = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        mat.get(0, 0, data);
+        return image;
+    }
+
+
+    public BufferedImage resizeImage(int maxWidth, int maxHeight, BufferedImage originalImage) throws Exception {
+
+        // Calculate new dimensions while preserving aspect ratio
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+
+        double widthRatio = (double) maxWidth / originalWidth;
+        double heightRatio = (double) maxHeight / originalHeight;
+        double ratio = Math.min(widthRatio, heightRatio);
+
+        int newWidth = (int) (originalWidth * ratio);
+        int newHeight = (int) (originalHeight * ratio);
+
+        // Resize image
+        Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+        BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+
+        Graphics2D g2d = resized.createGraphics();
+        g2d.drawImage(tmp, 0, 0, null);
+        g2d.dispose();
+
+        return resized;
+    }
+
 
 }

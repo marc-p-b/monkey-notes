@@ -2,6 +2,7 @@ package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
+import fr.monkeynotes.mn.service.ImageService;
 import fr.monkeynotes.mn.service.PdfService;
 import fr.monkeynotes.mn.service.UtilsService;
 import org.apache.pdfbox.Loader;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -34,41 +36,30 @@ import java.util.Map;
 
 @Service
 public class PdfServiceImpl implements PdfService {
-    public static final int RESIZE_IMAGE_MAX_WIDTH = 1200;
-    public static final int RESIZE_IMAGE_MAX_HEIGHT = 1000;
+    //public static final int RESIZE_IMAGE_MAX_WIDTH = 1200;
+    //public static final int RESIZE_IMAGE_MAX_HEIGHT = 1000;
     private Logger LOG = LoggerFactory.getLogger(PdfService.class);
 
     public static final int PDF2IMAGE_DPI = 72;
     public static final ImageType PDF2IMAGE_IMAGE_TYPE = ImageType.GRAY;
 
+    @Value("${app.defaults.image.resize.max.width}")
+    private int resizeMaxWidth;
+
+    @Value("${app.defaults.image.resize.max.height}")
+    private int resizeMaxHeight;
+
+    @Value("${app.defaults.image.crop.padding}")
+    private int cropPadding;
+
+    @Value("${app.defaults.image.crop.enabled}")
+    private boolean cropEnabled;
+
     @Autowired
     private UtilsService utilsService;
 
-    private BufferedImage resizeImage(BufferedImage originalImage) throws Exception {
-        int maxWidth = RESIZE_IMAGE_MAX_WIDTH;
-        int maxHeight = RESIZE_IMAGE_MAX_HEIGHT;
-
-        // Calculate new dimensions while preserving aspect ratio
-        int originalWidth = originalImage.getWidth();
-        int originalHeight = originalImage.getHeight();
-
-        double widthRatio = (double) maxWidth / originalWidth;
-        double heightRatio = (double) maxHeight / originalHeight;
-        double ratio = Math.min(widthRatio, heightRatio);
-
-        int newWidth = (int) (originalWidth * ratio);
-        int newHeight = (int) (originalHeight * ratio);
-
-        // Resize image
-        Image tmp = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
-        BufferedImage resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-
-        Graphics2D g2d = resized.createGraphics();
-        g2d.drawImage(tmp, 0, 0, null);
-        g2d.dispose();
-
-        return resized;
-    }
+    @Autowired
+    private ImageService imageService;
 
     @Override
     public List<URL> pdf2Images(String username, String fileId, File sourceFile){
@@ -87,7 +78,14 @@ public class PdfServiceImpl implements PdfService {
 
                     //String md5 = imageMd5(image);
 
-                    BufferedImage resizedImage = resizeImage(image);
+                    LOG.info("original image {}x{}", image.getWidth(), image.getHeight());
+                    BufferedImage resizedImage = imageService.resizeImage(resizeMaxWidth, resizeMaxHeight, image);
+                    LOG.info("resized image {}x{}", image.getWidth(), image.getHeight());
+
+                    if(cropEnabled) {
+                        resizedImage = imageService.cropToContent(resizedImage, cropPadding);
+                        LOG.info("cropped image {}x{}", image.getWidth(), image.getHeight());
+                    }
 
                     Path pathPage = utilsService.tempImagePath(fileId, pageNumber);
                     java.io.File outputFile = pathPage.toFile();

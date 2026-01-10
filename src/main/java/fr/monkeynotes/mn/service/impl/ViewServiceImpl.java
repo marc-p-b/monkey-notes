@@ -6,6 +6,7 @@ import fr.monkeynotes.mn.data.dto.*;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.enums.ViewOptionsCompletionStatus;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
@@ -136,7 +137,7 @@ public class ViewServiceImpl implements ViewService {
     }
 
     EntityFile getRootFolder() throws ServiceException {
-        String inboundFolderId = preferencesService.getInputFolderId();
+        String inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
 
         Optional<EntityFile> optFolder = repositoryFile.findById(idFile(inboundFolderId));
         if(optFolder.isEmpty()) {

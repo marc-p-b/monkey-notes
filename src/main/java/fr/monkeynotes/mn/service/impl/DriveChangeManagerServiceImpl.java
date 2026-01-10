@@ -10,6 +10,7 @@ import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.EntityGDriveCredential;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryGDriveCredential;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
@@ -208,7 +209,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
             String inboundFolderId = "";
             try {
-                inboundFolderId = preferencesService.getInputFolderId();
+                inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
             } catch (ServiceException e) {
                 LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
                 return;

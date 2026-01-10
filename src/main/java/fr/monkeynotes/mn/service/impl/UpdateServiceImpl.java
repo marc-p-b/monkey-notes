@@ -7,6 +7,7 @@ import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
@@ -374,7 +375,7 @@ public class UpdateServiceImpl implements UpdateService {
     private String updateAncestorsFolders(String fileId) throws ServiceException {
         String inboundFolderId = "";
         try {
-            inboundFolderId = preferencesService.getInputFolderId();
+            inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
         } catch (ServiceException e) {
             LOG.error("Failed to retrieve inbound folder id {}", inboundFolderId, e);
             return null;
@@ -432,7 +433,7 @@ public class UpdateServiceImpl implements UpdateService {
 
     public void updateAll() {
         try {
-            updateFolder(preferencesService.getInputFolderId());
+            updateFolder(preferencesService.getPreference(PreferenceKey.inputFolderId));
         } catch (ServiceException e) {
             LOG.error("Failed to retrieve preferences", e);
         }

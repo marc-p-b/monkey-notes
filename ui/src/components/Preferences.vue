@@ -36,35 +36,7 @@
     </form>
 
     <form @submit.prevent="submitForm">
-
-      <!-- Use Default Prompt -->
-      <Fieldset legend="Use Default Prompt">
-        <ToggleButton
-            v-model="prefs.useDefaultPrompt"
-            onLabel="Yes"
-            offLabel="No"
-            onIcon="pi pi-check"
-            offIcon="pi pi-times"
-        />
-      </Fieldset>
-
-      <!-- Default Prompt -->
-      <Fieldset legend="Default Prompt">
-        <InputText v-model="prefs.prompt" class="w-full" />
-      </Fieldset>
-
-      <!-- Default Agent Instruction -->
-      <Fieldset legend="Default Agent Instruction">
-        <InputText v-model="prefs.agentInstructions" class="w-full" />
-      </Fieldset>
-
-      <!-- Default Model -->
-      <Fieldset legend="Default Model">
-        <InputText v-model="prefs.model" class="w-full" />
-      </Fieldset>
-
-      <!-- Input Folder ID -->
-      <Fieldset legend="Input Folder ID">
+      <Fieldset legend="Google Drive Input Folder ID">
         <InputText
             v-model="prefs.inputFolderId"
             placeholder="google drive id"
@@ -72,19 +44,9 @@
         />
       </Fieldset>
 
-      <!-- Output Folder ID -->
-      <Fieldset legend="Output Folder ID">
-        <InputText
-            v-model="prefs.outputFolderId"
-            placeholder="google drive id"
-            class="w-full"
-        />
-      </Fieldset>
-
-      <!-- Use Default AI Connect Timeout -->
-      <Fieldset legend="Use Default AI Connect Timeout">
+      <Fieldset legend="Crop image to content">
         <ToggleButton
-            v-model="prefs.useDefaultAiConnectTimeout"
+            v-model="prefs.cropImage"
             onLabel="Yes"
             offLabel="No"
             onIcon="pi pi-check"
@@ -92,36 +54,42 @@
         />
       </Fieldset>
 
-      <!-- AI Read Timeout -->
-      <Fieldset legend="AI Read Timeout">
+      <Fieldset legend="OCR model">
+        <Select v-model="prefs.selectedOcrModel" :options="prefs.ocrModels" placeholder="Select a model" class="w-full" />
+      </Fieldset>
+
+      <Fieldset legend="OCR Prompt">
+        <InputText v-model="prefs.ocrPrompt" class="w-full" :placeholder="prefs.defaultOcrPrompt"/>
+      </Fieldset>
+
+      <Fieldset legend="OCR Read Timeout">
         <InputText
-            v-model="prefs.aiConnectTimeout"
-            placeholder="timeout"
+            v-model="prefs.qwenReadTimeout"
+            :placeholder="prefs.dftQwenReadTimeout"
             class="w-full"
         />
       </Fieldset>
 
-      <!-- Use Default Model Max Token -->
-      <Fieldset legend="Use Default Model Max Token">
-        <ToggleButton
-            v-model="prefs.useDefaultModelMaxTokens"
-            onLabel="Yes"
-            offLabel="No"
-            onIcon="pi pi-check"
-            offIcon="pi pi-times"
-        />
-      </Fieldset>
-
-      <!-- Model Max Token -->
-      <Fieldset legend="Model Max Token">
+      <Fieldset legend="OCR Connect Timeout">
         <InputText
-            v-model="prefs.modelMaxTokens"
-            placeholder="timeout"
+            v-model="prefs.qwenConnectTimeout"
+            :placeholder="prefs.dftQwenConnectTimeout"
             class="w-full"
         />
       </Fieldset>
 
-      <!-- Buttons -->
+      <Fieldset legend="OCR Max Tokens">
+        <InputText
+            v-model="prefs.ocrMaxTokens"
+            :placeholder="prefs.dftQwenMaxTokens"
+            class="w-full"
+        />
+      </Fieldset>
+
+      <Fieldset legend="Agent Instruction">
+        <InputText v-model="prefs.agentInstructions" :placeholder="prefs.dftAgentInstructions" class="w-full" />
+      </Fieldset>
+
       <Fieldset>
         <Button label="Save" type="submit" class="mr-2" />
         <Button label="Reset" type="button" @click="reset" class="p-button-secondary" />
@@ -140,20 +108,32 @@ import {authPostFile} from "../requests";
 
 export interface Prefs {
   set: boolean
-  useDefaultPrompt: boolean
-  prompt?: string
+  ocrPrompt?: string
   agentInstructions?: string
-  useDefaultModel: boolean
   model?: string
   inputFolderId?: string
-  outputFolderId?: string
-  useDefaultAiConnectTimeout: boolean
-  aiConnectTimeout: number
-  useDefaultAiReadTimeout: boolean
-  aiReadTimeout: number
-  useDefaultModelMaxTokens: boolean
-  modelMaxTokens: number
+  qwenConnectTimeout: number
+  qwenReadTimeout: number
+  ocrMaxTokens: number
   username: string
+  ocrModels: string[]
+  selectedOcrModel: string
+  cropImage: boolean
+
+  defaultOcrPrompt: string
+  dftQwenMaxTokens: number
+  dftQwenConnectTimeout: number
+  dftQwenReadTimeout: number
+  dftAgentInstructions: string
+
+
+  /*
+      private int dftQwenMaxTokens;
+    private int dftQwenConnectTimeout;
+    private int dftQwenReadTimeout;
+    private String dftAgentInstructions;
+   */
+
 }
 
 const prefs = ref<Prefs[]>([])
@@ -165,29 +145,12 @@ const googleAuthUrl = ref<string | null>(null)
 
 const message = ref(<string>"")
 
- // async function handleFileSelect() {
- //   console.log("hey")
- // }
-
-
 const handleFileSelect = (event) => {
-  // event.files is always an array, even if single file mode
   const file = event.files[0]
-  console.log('Selected file:', file)
-
-
-// async function handleFileSelect(event) {
-//   console.log("hey")
-//   const file = event.target.files[0];
-//
   const formData = new FormData();
   formData.append("file", file);
-
   authPostFile("data/import", formData);
-
-  console.log("Upload done!");
  }
-
 
 async function downloadExport() {
   const res = await authFetch("data/export")
@@ -253,6 +216,7 @@ async function fetchPreferences() {
     const response = await authFetch("preferences/get");
     if (!response.ok) throw new Error("Network response was not ok");
     prefs.value = await response.json();
+
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load preferences.";
@@ -285,9 +249,6 @@ async function updateAllTranscripts() {
   try {
     const response = await authFetch("transcript/update/all");
     if (!response.ok) throw new Error("Network response was not ok");
-
-    console.log(response)
-
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to update all transcripts.";

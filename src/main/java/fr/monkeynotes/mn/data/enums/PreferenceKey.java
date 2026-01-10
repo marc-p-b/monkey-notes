@@ -3,22 +3,19 @@ package fr.monkeynotes.mn.data.enums;
 public enum PreferenceKey {
     set,
 
-    useDefaultPrompt,
-    prompt,
+    inputFolderId,
+    cropImage,
+
+    ocrPrompt,
+    selectedOcrModel,
+    qwenConnectTimeout,
+    qwenReadTimeout,
+    qwenMaxTokens,
+    dftQwenMaxTokens,
+    dftQwenConnectTimeout,
+    dftQwenReadTimeout,
 
     agentInstructions,
+    dftAssistantInstructions;
 
-    useDefaultModel,
-    model,
-    inputFolderId,
-    outputFolderId,
-
-    useDefaultAiConnectTimeout,
-    aiConnectTimeout,
-
-    useDefaultAiReadTimeout,
-    aiReadTimeout,
-
-    useDefaultModelMaxTokens,
-    modelMaxTokens;
 }

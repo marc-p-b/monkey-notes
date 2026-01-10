@@ -11,6 +11,7 @@ import fr.monkeynotes.mn.data.entity.EntityAgent;
 import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.FileType;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryAgent;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.service.AgentService;
@@ -113,7 +114,7 @@ public class AgentServiceImpl implements AgentService {
         } else {
             String instructions = dftOpenaiAssistantInstructions;
             try {
-                instructions = preferencesService.getAgentInstructions();
+                instructions = preferencesService.getPreference(PreferenceKey.agentInstructions);
             } catch (ServiceException e) {
                 LOG.error("Failed to get default instructions, get default value", e.getMessage());
             }

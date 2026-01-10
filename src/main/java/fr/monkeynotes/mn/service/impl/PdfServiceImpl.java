@@ -2,8 +2,10 @@ package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.service.ImageService;
 import fr.monkeynotes.mn.service.PdfService;
+import fr.monkeynotes.mn.service.PreferencesService;
 import fr.monkeynotes.mn.service.UtilsService;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -52,14 +54,17 @@ public class PdfServiceImpl implements PdfService {
     @Value("${app.defaults.image.crop.padding}")
     private int cropPadding;
 
-    @Value("${app.defaults.image.crop.enabled}")
-    private boolean cropEnabled;
+//    @Value("${app.defaults.image.crop.enabled}")
+//    private boolean cropEnabled;
 
     @Autowired
     private UtilsService utilsService;
 
     @Autowired
     private ImageService imageService;
+
+    @Autowired
+    private PreferencesService preferencesService;
 
     @Override
     public List<URL> pdf2Images(String username, String fileId, File sourceFile){
@@ -82,7 +87,7 @@ public class PdfServiceImpl implements PdfService {
                     BufferedImage resizedImage = imageService.resizeImage(resizeMaxWidth, resizeMaxHeight, image);
                     LOG.info("resized image {}x{}", image.getWidth(), image.getHeight());
 
-                    if(cropEnabled) {
+                    if(preferencesService.getPreferenceAsBoolean(PreferenceKey.cropImage)) {
                         resizedImage = imageService.cropToContent(resizedImage, cropPadding);
                         LOG.info("cropped image {}x{}", image.getWidth(), image.getHeight());
                     }

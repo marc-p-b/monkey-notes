@@ -15,9 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,9 +29,6 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Autowired
     private RepositoryConfig repositoryConfig;
 
-    @Value("${app.defaults.qwen.model}")
-    private String dftQwenModel;
-
     @Value("${app.defaults.qwen.prompt}")
     private String dftQwenPrompt;
 
@@ -41,25 +36,45 @@ public class PreferencesServiceImpl implements PreferencesService {
     private int dftQwenMaxTokens;
 
     @Value("${app.defaults.ai.connect-timeout}")
-    private int dftAiConnectTimeout;
+    private int dftQwenConnectTimeout;
 
     @Value("${app.defaults.ai.read-timeout}")
-    private int dftAiReadTimeout;
+    private int dftQwenReadTimeout;
 
     @Value("${app.openai.assistant.defaults.instructions}")
-    private String dftOpenaiAssistantInstructions;
+    private String dftAgentInstructions;
+
+    @Value("${app.defaults.qwen.models.available}")
+    private String listOcrModelAvailable;
+
+    @Value("${app.defaults.qwen.models.default}")
+    private String dftOCRModel;
 
     @Override
     public DtoPreferences listPreferences() {
 
+        Set<String> ocrModels = Arrays.stream(listOcrModelAvailable.split(",")).collect(Collectors.toSet());
+
+        DtoPreferences dtoPreferences = null;
+
         if(isParametersSet() == false) {
-            return initPreferences(authService.getUsernameFromContext());
+            dtoPreferences = initPreferences(authService.getUsernameFromContext());
         } else {
             Map<String, String> map = repositoryConfig.findAllByConfigId_Username(authService.getUsernameFromContext()).stream()
                     .collect(Collectors.toMap(entityConfig -> entityConfig.getConfigId().getKey(), entityConfig -> entityConfig.getValue()));
-            return fromMap(map)
-                    .setUsername(authService.getUsernameFromContext());
+            dtoPreferences = fromMap(map)
+                    .setUsername(authService.getUsernameFromContext())
+                    .setOcrModels(ocrModels);
         }
+
+        dtoPreferences
+                .setDefaultOcrPrompt(dftQwenPrompt)
+                .setDftQwenMaxTokens(dftQwenMaxTokens)
+                .setDftQwenConnectTimeout(dftQwenConnectTimeout)
+                .setDftQwenReadTimeout(dftQwenReadTimeout)
+                .setDftAgentInstructions(dftAgentInstructions);
+
+        return dtoPreferences;
     }
 
     private DtoPreferences fromMap(Map<String, String> map) {
@@ -72,44 +87,29 @@ public class PreferencesServiceImpl implements PreferencesService {
                     case set:
                         dtoConfigs.setInitialized(Boolean.parseBoolean(entry.getValue()));
                         break;
-                    case agentInstructions:
-                        dtoConfigs.setAgentInstructions(entry.getValue());
-                        break;
-                    case prompt :
-                        dtoConfigs.setPrompt(entry.getValue());
-                        break;
-                    case model:
-                        dtoConfigs.setModel(entry.getValue());
-                        break;
                     case inputFolderId:
                         dtoConfigs.setInputFolderId(entry.getValue());
                         break;
-                    case outputFolderId:
-                        dtoConfigs.setOutputFolderId(entry.getValue());
+                    case cropImage:
+                        dtoConfigs.setCropImage(Boolean.parseBoolean(entry.getValue()));
                         break;
-                    case useDefaultPrompt:
-                        dtoConfigs.setUseDefaultPrompt(Boolean.parseBoolean(entry.getValue()));
+                    case ocrPrompt:
+                        dtoConfigs.setOcrPrompt(entry.getValue());
                         break;
-                    case useDefaultModel:
-                        dtoConfigs.setUseDefaultModel(Boolean.parseBoolean(entry.getValue()));
+                    case qwenConnectTimeout:
+                        dtoConfigs.setQwenConnectTimeout(Integer.parseInt(entry.getValue()));
                         break;
-                    case useDefaultAiConnectTimeout:
-                        dtoConfigs.setUseDefaultAiConnectTimeout(Boolean.parseBoolean(entry.getValue()));
+                    case qwenReadTimeout:
+                        dtoConfigs.setQwenReadTimeout(Integer.parseInt(entry.getValue()));
                         break;
-                    case useDefaultAiReadTimeout:
-                        dtoConfigs.setUseDefaultAiReadTimeout(Boolean.parseBoolean(entry.getValue()));
+                    case qwenMaxTokens:
+                        dtoConfigs.setOcrMaxTokens(Integer.parseInt(entry.getValue()));
                         break;
-                    case useDefaultModelMaxTokens:
-                        dtoConfigs.setUseDefaultModelMaxTokens(Boolean.parseBoolean(entry.getValue()));
+                    case selectedOcrModel:
+                        dtoConfigs.setSelectedOcrModel(entry.getValue());
                         break;
-                    case aiConnectTimeout:
-                        dtoConfigs.setAiConnectTimeout(Integer.parseInt(entry.getValue()));
-                        break;
-                    case aiReadTimeout:
-                        dtoConfigs.setAiReadTimeout(Integer.parseInt(entry.getValue()));
-                        break;
-                    case modelMaxTokens:
-                        dtoConfigs.setModelMaxTokens(Integer.parseInt(entry.getValue()));
+                    case agentInstructions:
+                        dtoConfigs.setAgentInstructions(entry.getValue());
                         break;
                 }
             } catch (IllegalArgumentException e) {
@@ -130,30 +130,27 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     private DtoPreferences initPreferences(String username) {
+        Set<String> ocrModels = Arrays.stream(listOcrModelAvailable.split(",")).collect(Collectors.toSet());
 
-        DtoPreferences dtoConfigs = new DtoPreferences()
-                .setUseDefaultPrompt(true)
-                .setPrompt(dftQwenPrompt)
-                .setUseDefaultPrompt(true)
-                .setModel(dftQwenModel)
-                .setAgentInstructions(dftOpenaiAssistantInstructions)
+        DtoPreferences dtoprefs = new DtoPreferences()
+                .setOcrPrompt(dftQwenPrompt)
+                .setAgentInstructions(dftAgentInstructions)
                 .setInputFolderId("")
-                .setOutputFolderId("")
-                .setUseDefaultAiConnectTimeout(true)
-                .setAiConnectTimeout(dftAiConnectTimeout)
-                .setUseDefaultAiReadTimeout(true)
-                .setAiReadTimeout(dftAiReadTimeout)
-                .setUseDefaultModelMaxTokens(true)
-                .setModelMaxTokens(dftQwenMaxTokens)
+                .setQwenConnectTimeout(dftQwenConnectTimeout)
+                .setQwenReadTimeout(dftQwenReadTimeout)
+                .setOcrMaxTokens(dftQwenMaxTokens)
+                .setSelectedOcrModel(dftOCRModel)
+                .setOcrModels(ocrModels)
+                .setCropImage(true)
                 .setInitialized(false);
 
-        List<EntityPreferences> list = dtoConfigs.toEntities(username);
+        List<EntityPreferences> list = dtoprefs.toEntities(username);
         repositoryConfig.saveAll(list);
 
-        return dtoConfigs;
+        return dtoprefs;
     }
 
-    private String getPreference(PreferenceKey configKey) throws ServiceException {
+    public String getPreference(PreferenceKey configKey) throws ServiceException {
         if(isParametersSet() == false) {
             throw new ServiceException("Preferences not set");
         }
@@ -163,6 +160,15 @@ public class PreferencesServiceImpl implements PreferencesService {
             throw new ServiceException(configKey + " not set");
         }
         return optValue.get().getValue();
+    }
+
+    public boolean getPreferenceAsBoolean(PreferenceKey configKey) throws ServiceException {
+        return Boolean.parseBoolean(getPreference(configKey));
+    }
+
+    @Override
+    public int getPreferenceAsInt(PreferenceKey configKey) throws ServiceException {
+        return Integer.parseInt(getPreference(configKey));
     }
 
     @Override
@@ -177,69 +183,4 @@ public class PreferencesServiceImpl implements PreferencesService {
         repositoryConfig.deleteByConfigId_Username(authService.getUsernameFromContext());
     }
 
-
-    @Override
-    public String getPrompt() throws ServiceException {
-        return getPreference(PreferenceKey.prompt);
-    }
-
-    @Override
-    public String getAgentInstructions() throws ServiceException {
-        return getPreference(PreferenceKey.agentInstructions);
-    }
-
-    @Override
-    public String getModel() throws ServiceException {
-        return getPreference(PreferenceKey.model);
-    }
-
-    @Override
-    public boolean useDefaultPrompt() throws ServiceException {
-        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultPrompt));
-    }
-
-    @Override
-    public boolean useDefaultModel() throws ServiceException {
-        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultModel));
-    }
-
-    @Override
-    public String getInputFolderId() throws ServiceException {
-        return getPreference(PreferenceKey.inputFolderId);
-    }
-
-    @Override
-    public String getOutputFolderId() throws ServiceException {
-        return getPreference(PreferenceKey.outputFolderId);
-    }
-
-    @Override
-    public boolean useDefaultAiConnectTimeout() throws ServiceException {
-        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultAiReadTimeout));
-    }
-
-    @Override
-    public int getAiConnectTimeout() throws ServiceException {
-        return Integer.valueOf(getPreference(PreferenceKey.aiConnectTimeout));
-    }
-
-    @Override
-    public boolean useDefaultAiReadTimeout() throws ServiceException {
-        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultAiReadTimeout));
-    }
-
-    @Override
-    public int getAiReadTimeout() throws ServiceException {
-        return Integer.valueOf(getPreference(PreferenceKey.aiReadTimeout));
-    }
-
-    @Override
-    public boolean useDefaultModelMaxTokens() throws ServiceException {
-        return Boolean.valueOf(getPreference(PreferenceKey.useDefaultModelMaxTokens));
-    }
-
-    @Override
-    public int getModelMaxTokens() throws ServiceException {
-        return Integer.valueOf(getPreference(PreferenceKey.modelMaxTokens));
-    }
 }

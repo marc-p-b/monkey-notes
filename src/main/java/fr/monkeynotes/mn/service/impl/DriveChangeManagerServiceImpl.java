@@ -11,8 +11,10 @@ import fr.monkeynotes.mn.data.entity.EntityGDriveCredential;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryGDriveCredential;
+import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
 import fr.monkeynotes.mn.monitoring.SupplyAsync;
@@ -95,6 +97,9 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private RepositoryGDriveCredential repositoryGDriveCredential;
 
     @Autowired
+    private RepositoryUser repositoryUser;
+
+    @Autowired
     private AuthService authService;
 
     @Autowired
@@ -112,13 +117,22 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         driveService.connectCallback(runnable);
 
         LOG.info("Watch drive updates for all users");
+
         repositoryGDriveCredential.findAll()
                 .stream()
                 .map(EntityGDriveCredential::getId)
                 .forEach(username -> {
                     try {
                         NoAuthContextHolder.setContext(new NoAuthContext(username));
-                        watch(true);
+                        SyncOption syncOption = SyncOption.valueOf(preferencesService.getPreference(PreferenceKey.syncOption));
+
+                        if(syncOption.equals(SyncOption.gdrive)) {
+                            LOG.info("Watch Google Drive updates for user {}", username);
+                            watch(true);
+                        }
+
+                    } catch (ServiceException e) {
+                        LOG.error("Google drive startup : unable to retrieve prefs for user {}", username);
                     } finally {
                         NoAuthContextHolder.clearContext();
                     }

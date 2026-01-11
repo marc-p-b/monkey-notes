@@ -96,6 +96,13 @@ public class ImageServiceImpl implements ImageService {
         Mat matA = convert(image1);
         Mat matB = convert(image2);
 
+        // Resize matB to match matA dimensions if they differ
+        if (matA.cols() != matB.cols() || matA.rows() != matB.rows()) {
+            Mat resizedB = new Mat();
+            Imgproc.resize(matB, resizedB, new Size(matA.cols(), matA.rows()));
+            matB = resizedB;
+        }
+
         Mat grayA = new Mat();
         Mat grayB = new Mat();
 

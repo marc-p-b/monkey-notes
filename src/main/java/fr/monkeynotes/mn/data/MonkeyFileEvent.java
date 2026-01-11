@@ -1,27 +1,24 @@
 package fr.monkeynotes.mn.data;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.time.OffsetDateTime;
-
 enum FileEventType {
     created,
     modified,
     deleted,
 }
 
-public class InboundFileEvent {
+public class MonkeyFileEvent {
     private String path;
     private String fileName;
     private FileEventType eventType;
     private String timestamp;
     private int fileSize;
+    private String content;
 
     public String getPath() {
         return path;
     }
 
-    public InboundFileEvent setPath(String path) {
+    public MonkeyFileEvent setPath(String path) {
         this.path = path;
         return this;
     }
@@ -30,7 +27,7 @@ public class InboundFileEvent {
         return fileName;
     }
 
-    public InboundFileEvent setFileName(String fileName) {
+    public MonkeyFileEvent setFileName(String fileName) {
         this.fileName = fileName;
         return this;
     }
@@ -39,7 +36,7 @@ public class InboundFileEvent {
         return eventType;
     }
 
-    public InboundFileEvent setEventType(FileEventType eventType) {
+    public MonkeyFileEvent setEventType(FileEventType eventType) {
         this.eventType = eventType;
         return this;
     }
@@ -48,7 +45,7 @@ public class InboundFileEvent {
         return timestamp;
     }
 
-    public InboundFileEvent setTimestamp(String timestamp) {
+    public MonkeyFileEvent setTimestamp(String timestamp) {
         this.timestamp = timestamp;
         return this;
     }
@@ -57,8 +54,17 @@ public class InboundFileEvent {
         return fileSize;
     }
 
-    public InboundFileEvent setFileSize(int fileSize) {
+    public MonkeyFileEvent setFileSize(int fileSize) {
         this.fileSize = fileSize;
+        return this;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public MonkeyFileEvent setContent(String content) {
+        this.content = content;
         return this;
     }
 }

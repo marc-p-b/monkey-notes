@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.service;
 
 import fr.monkeynotes.mn.data.File2Process;
+import fr.monkeynotes.mn.data.MonkeyFileEvent;
 
 import java.util.List;
 
@@ -11,4 +12,5 @@ public interface UpdateService {
     void forcePageUpdate(String fileId, int pageNumber);
     void requestForceTranscriptUpdate(String fileId);
     void forceTranscriptUpdate(String fileId);
+    void monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent);
 }

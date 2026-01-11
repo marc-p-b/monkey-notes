@@ -9,6 +9,7 @@ import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
+import fr.monkeynotes.mn.data.repository.RepositoryMonkeyFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
@@ -32,10 +33,15 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -85,6 +91,9 @@ public class UpdateServiceImpl implements UpdateService {
 
     @Autowired
     private NamedEntitiesService namedEntitiesService;
+
+    @Autowired
+    private RepositoryMonkeyFile repositoryMonkeyFile;
 
     @Override
     public void runListAsyncProcess(List<File2Process> files2Process) {
@@ -634,6 +643,8 @@ public class UpdateServiceImpl implements UpdateService {
 
             Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
 
+
+            //TODO why setFilePath ... after constructor (already doing the samed thing ??)
             File2Process file2Process = new File2Process(file)
                     .setFilePath(downloadFileFromDrive)
                     .setParentFolderId(fileParent.getId())
@@ -644,5 +655,86 @@ public class UpdateServiceImpl implements UpdateService {
         } catch (ServiceException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
+
+        Base64.Decoder decoder = Base64.getDecoder();
+        byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
+
+
+        byte[] hash = null;
+        String md5;
+        try {
+            hash = MessageDigest.getInstance("MD5").digest(bytes);
+            md5 = HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        UUID mkFileUUID = UUID.randomUUID();
+
+        // "/storage/emulated/0/note/00-Test/Notebook-1/Notebook-1.pdf";
+        final String root = "/storage/emulated/0/note";
+
+        Pattern p = Pattern.compile("^" + root + "(.*)/([^/]+)/([^/]+)$");
+        Matcher m = p.matcher(monkeyFileEvent.getPath());
+
+        String virtualPath;
+        String basePath;
+        String filename;
+
+        if (m.find()) {
+            basePath = m.group(1);
+            filename = m.group(3);
+
+            virtualPath = basePath + "/" + filename;
+
+        } else {
+            LOG.warn("Unvalid filepath {}", monkeyFileEvent.getPath());
+            return;
+        }
+
+
+        Optional<EntityMonkeyFile> optMonkeyFolder = repositoryMonkeyFile.findById(basePath);
+        if(optMonkeyFolder.isPresent() == false) {
+
+            EntityMonkeyFile monkeyFolder = new EntityMonkeyFile()
+                    .setPath(basePath)
+                    .setUuid(UUID.randomUUID());
+
+            repositoryMonkeyFile.save(monkeyFolder);
+            optMonkeyFolder = Optional.of(monkeyFolder);
+        }
+        EntityMonkeyFile monkeyFolder = optMonkeyFolder.get();
+
+
+        EntityMonkeyFile monkeyFile = new EntityMonkeyFile()
+                .setPath(virtualPath)
+                .setUuid(mkFileUUID);
+
+        Path downloadDir = utilsService.downloadDir(monkeyFolder.getUuid().toString());
+        Path targetFilePath = Paths.get(downloadDir.toString(), mkFileUUID.toString());
+
+        LOG.info("Write {} uuid {} to {}", filename, mkFileUUID, targetFilePath);
+        try {
+            Files.write(targetFilePath, bytes);
+        } catch (IOException e) {
+            LOG.error("Failed to write file", e);
+        }
+
+
+
+File2Process f2p = new File2Process()
+        .setFileId(mkFileUUID.toString())
+        .setFileName(filename)
+        .setMd5(md5)
+        .setMimeType(MIME_PDF);
+
+        runListAsyncProcess(List.of(f2p));
+
+
+
     }
 }

@@ -28,6 +28,9 @@ public class File2Process {
         this.mimeType = file.getMd5Checksum() != null ? file.getMimeType() : "unknown";
     }
 
+    public File2Process() {
+    }
+
     public EntityFile asEntity(String username) {
 
         return new EntityFile()

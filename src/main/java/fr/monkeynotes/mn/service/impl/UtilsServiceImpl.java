@@ -68,6 +68,9 @@ public class UtilsServiceImpl implements UtilsService {
     private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
 
     @Autowired
+    private RepositoryConfig repositoryConfig;
+
+    @Autowired
     private RepositoryAgent repositoryAgent;
 
     @EventListener(ApplicationReadyEvent.class)
@@ -97,13 +100,13 @@ public class UtilsServiceImpl implements UtilsService {
     @Override
     public void deleteAllData() {
         LOG.info("************** Deleting all data **************");
-        repositoryNamedEntity.deleteAll();
         repositoryNamedEntityIndex.deleteAll();
+        repositoryNamedEntity.deleteAll();
         repositoryTranscriptPageDiff.deleteAll();
         repositoryTranscriptPage.deleteAll();
         repositoryTranscript.deleteAll();
         repositoryFile.deleteAll();
-        repositoryAgent.deleteAll();
+        repositoryConfig.deleteAll();
         LOG.info("**************        Done      ***************");
     }
 

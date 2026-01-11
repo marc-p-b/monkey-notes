@@ -33,6 +33,12 @@
           <FileUpload mode="basic" @select="handleFileSelect($event)" customUpload auto severity="secondary"  />
         </div>
       </Fieldset>
+
+      <Fieldset legend="Wipe all data" class="data-fieldset">
+        <div class="actions">
+          <Button label="Wipe all data" severity="danger" @click="wipe" />
+        </div>
+      </Fieldset>
     </form>
 
     <form @submit.prevent="submitForm">
@@ -95,6 +101,9 @@
         <Button label="Reset" type="button" @click="reset" class="p-button-secondary" />
       </Fieldset>
     </form>
+
+    <ConfirmDialog />
+
   </div>
 
   <p>{{message}}</p>
@@ -105,6 +114,10 @@
 import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
 import {authPostFile} from "../requests";
+
+import { useConfirm } from "primevue/useconfirm";
+
+const confirm = useConfirm();
 
 export interface Prefs {
   set: boolean
@@ -125,14 +138,6 @@ export interface Prefs {
   dftQwenConnectTimeout: number
   dftQwenReadTimeout: number
   dftAgentInstructions: string
-
-
-  /*
-      private int dftQwenMaxTokens;
-    private int dftQwenConnectTimeout;
-    private int dftQwenReadTimeout;
-    private String dftAgentInstructions;
-   */
 
 }
 
@@ -256,6 +261,24 @@ async function updateAllTranscripts() {
     loading.value = false;
   }
 }
+
+function wipe() {
+  confirm.require({
+    message: 'Are you sure you want to wipe all data? This cannot be undone.',
+    header: 'Confirm',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      // your actual wipe logic here
+      await authFetch("data/wipe", { method: "DELETE" });
+      message.value = "All data wiped";
+    },
+    reject: () => {
+      // optional: do nothing or show cancelled message
+    }
+  });
+}
+
 
 onMounted(() => {
   fetchGoogleAuth();

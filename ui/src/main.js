@@ -7,6 +7,7 @@ import App from "./App.vue";
 import Aura from "@primeuix/themes/aura";
 import router from './router'
 import { createPinia } from 'pinia'
+import ConfirmationService from 'primevue/confirmationservice';
 
 // this to unsure env.js is loaded ! - maybe not so useful (see index.html and env.js)
 // env.js MUST be loaded before anything else (unless dist version wont work properly)
@@ -30,4 +31,5 @@ app.use(PrimeVue, {
 });
 app.use(createPinia())
 app.use(router)
-app.mount("#app");
+app.use(ConfirmationService)
+app.mount("#app")

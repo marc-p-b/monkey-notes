@@ -46,11 +46,4 @@ public class AdminController {
         return ResponseEntity.ok().body("OK");
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/admin/reset")
-    public ResponseEntity<String> reset() {
-        utilsService.deleteAllData();
-        return ResponseEntity.ok().body("OK");
-    }
-
 }

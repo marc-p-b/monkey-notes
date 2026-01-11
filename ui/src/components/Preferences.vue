@@ -42,7 +42,18 @@
     </form>
 
     <form @submit.prevent="submitForm">
-      <Fieldset legend="Google Drive Input Folder ID">
+
+      <Fieldset legend="Sync Option">
+        <SelectButton
+            v-model="prefs.syncOption"
+            :options="syncOptions"
+            optionLabel="label"
+            optionValue="value"
+        />
+      </Fieldset>
+
+
+      <Fieldset v-if="prefs.syncOption === 'gdrive'" legend="Google Drive Input Folder ID">
         <InputText
             v-model="prefs.inputFolderId"
             placeholder="google drive id"
@@ -104,9 +115,13 @@
 
     <ConfirmDialog />
 
-  </div>
+    <Dialog v-model:visible="errorDialogVisibility" modal header="Error !" :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+      <p class="mb-8">
+        {{message}}
+      </p>
+    </Dialog>
 
-  <p>{{message}}</p>
+  </div>
 
 </template>
 
@@ -118,6 +133,14 @@ import {authPostFile} from "../requests";
 import { useConfirm } from "primevue/useconfirm";
 
 const confirm = useConfirm();
+
+const syncOptions = [
+  { label: "No Sync", value: "none" },
+  { label: "Google Drive Sync", value: "gdrive" },
+  { label: "Monkey Notes Companion App Sync", value: "monkey" }
+];
+
+
 
 export interface Prefs {
   set: boolean
@@ -139,6 +162,8 @@ export interface Prefs {
   dftQwenReadTimeout: number
   dftAgentInstructions: string
 
+  syncOption: string
+
 }
 
 const prefs = ref<Prefs[]>([])
@@ -149,6 +174,8 @@ const googleConnectRequired = ref(false)
 const googleAuthUrl = ref<string | null>(null)
 
 const message = ref(<string>"")
+const errorDialogVisibility = ref(false)
+
 
 const handleFileSelect = (event) => {
   const file = event.files[0]
@@ -172,6 +199,18 @@ async function downloadExport() {
 
 
 const submitForm = async () => {
+
+  // console.log(prefs.value.syncOption)
+  // console.log(prefs.value.inputFolderId)
+
+  if(prefs.value.syncOption === 'gdrive' && prefs.value.inputFolderId === '') {
+    message.value = 'Google drive input folder id is required.'
+    errorDialogVisibility.value = true
+    // console.log('error')
+    //errorDialogVisibility=true
+    return
+  }
+
   try {
     const response = await authFetch("preferences/form", {
       method: "POST",
@@ -222,6 +261,8 @@ async function fetchPreferences() {
     if (!response.ok) throw new Error("Network response was not ok");
     prefs.value = await response.json();
 
+    console.log(prefs.value.syncOption);
+
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to load preferences.";
@@ -269,7 +310,6 @@ function wipe() {
     icon: 'pi pi-exclamation-triangle',
     acceptClass: 'p-button-danger',
     accept: async () => {
-      // your actual wipe logic here
       await authFetch("data/wipe", { method: "DELETE" });
       message.value = "All data wiped";
     },

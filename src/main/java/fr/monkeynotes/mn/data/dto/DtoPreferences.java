@@ -3,6 +3,7 @@ package fr.monkeynotes.mn.data.dto;
 import fr.monkeynotes.mn.data.entity.EntityPreferences;
 import fr.monkeynotes.mn.data.entity.EntityPreferencesId;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,7 @@ public class DtoPreferences {
     private boolean initialized = false;
     private String username;
 
+    private SyncOption syncOption;
     private String inputFolderId;
     private boolean cropImage;
 
@@ -33,6 +35,7 @@ public class DtoPreferences {
         List<EntityPreferences> list = Arrays.asList(
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.set), Boolean.toString(initialized)),
 
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.syncOption), syncOption.name()),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.inputFolderId), inputFolderId),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.cropImage), Boolean.toString(cropImage)),
 
@@ -184,6 +187,15 @@ public class DtoPreferences {
 
     public DtoPreferences setDftAgentInstructions(String dftAgentInstructions) {
         this.dftAgentInstructions = dftAgentInstructions;
+        return this;
+    }
+
+    public SyncOption getSyncOption() {
+        return syncOption;
+    }
+
+    public DtoPreferences setSyncOption(SyncOption syncOption) {
+        this.syncOption = syncOption;
         return this;
     }
 }

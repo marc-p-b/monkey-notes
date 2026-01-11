@@ -5,6 +5,7 @@ import fr.monkeynotes.mn.data.dto.DtoPreferences;
 import fr.monkeynotes.mn.data.entity.EntityPreferences;
 import fr.monkeynotes.mn.data.entity.EntityPreferencesId;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryConfig;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.PreferencesService;
@@ -87,6 +88,9 @@ public class PreferencesServiceImpl implements PreferencesService {
                     case set:
                         dtoConfigs.setInitialized(Boolean.parseBoolean(entry.getValue()));
                         break;
+                    case syncOption:
+                        dtoConfigs.setSyncOption(SyncOption.valueOf(entry.getValue()));
+                        break;
                     case inputFolderId:
                         dtoConfigs.setInputFolderId(entry.getValue());
                         break;
@@ -136,6 +140,7 @@ public class PreferencesServiceImpl implements PreferencesService {
                 .setOcrPrompt(dftQwenPrompt)
                 .setAgentInstructions(dftAgentInstructions)
                 .setInputFolderId("")
+                .setSyncOption(SyncOption.none)
                 .setQwenConnectTimeout(dftQwenConnectTimeout)
                 .setQwenReadTimeout(dftQwenReadTimeout)
                 .setOcrMaxTokens(dftQwenMaxTokens)

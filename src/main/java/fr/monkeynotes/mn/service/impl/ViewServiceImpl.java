@@ -266,7 +266,7 @@ public class ViewServiceImpl implements ViewService {
 
                 dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
 
-                LOG.info("page {} schema {} {}", dtoTranscriptPage.getPageNumber(), dtoTranscriptPage.isSchema() ? "YES" : "NO", dtoTranscriptPage.getSchemaTitle());
+                //LOG.info("page {} schema {} {}", dtoTranscriptPage.getPageNumber(), dtoTranscriptPage.isSchema() ? "YES" : "NO", dtoTranscriptPage.getSchemaTitle());
 
                 listDtoTranscriptPages.add(dtoTranscriptPage);
             }

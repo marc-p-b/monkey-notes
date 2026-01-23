@@ -109,7 +109,7 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             List<URL> listImages = new ArrayList<>();
             try {
-                pdfService.pdf2Images(
+                listImages = pdfService.pdf2Images(
                         authService.getUsernameFromContext(),
                         file2Process.getFileId(),
                         file2Process.getFilePath().toFile());

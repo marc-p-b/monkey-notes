@@ -107,94 +107,103 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             // PDF 2 images / temp dir
             // --------------------------------------
-            List<URL> listImages = pdfService.pdf2Images(
-                    authService.getUsernameFromContext(),
-                    file2Process.getFileId(),
-                    file2Process.getFilePath().toFile());
-            LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
-            fileEvent.setTotalPages(listImages.size());
-
-
-            // --------------------------------------
-            // Get list of modified or created images
-            // --------------------------------------
-            Images2Process images2Process = getModifiedOrNewImages2Process(file2Process, listImages);
-            List<Image2Process> modifiedOrNewImages = images2Process.getListImage2Process();
-            LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
-
-            processService.updateProcess(processId, "created or modified pages : " + modifiedOrNewImages.size());
-            fileEvent.setModifiedPages(modifiedOrNewImages.size());
-
-            if(modifiedOrNewImages.isEmpty()) {
-                LOG.info("No new or modified images, exiting from update process");
-                return;
-            }
-
-            // --------------------------------------
-            // Move new files to regular dir
-            // --------------------------------------
-            Path tempDir = utilsService.tempImageDir(file2Process.getFileId());
-            Path imageDir = utilsService.imageDir(file2Process.getFileId());
-
+            List<URL> listImages = new ArrayList<>();
             try {
-                if(imageDir.toFile().exists()) {
-                    LOG.info("delete {}", imageDir);
-                    Utils.deleteDirectory(imageDir);
-
-                    if(tempDir.toFile().exists()) {
-                        LOG.info("move {} to {}", tempDir, imageDir);
-                        Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                }
-            } catch (IOException e) {
-                LOG.error("ERROR moving dirs", e);
-            }
-
-            modifiedOrNewImages.stream()
-                .forEach(i2p-> {
-                    try {
-                        i2p.updateUrl(utilsService.imageURL(authService.getUsernameFromContext(), i2p.getFileId(), i2p.getPageNumber()));
-                    } catch (MalformedURLException e) {
-                        LOG.error("failed to create url for fileid {} page {}", i2p.getFileId(), i2p.getPageNumber(), e);
-                    }
-                });
-
-            // --------------------------------------
-            // Call LLM
-            // --------------------------------------
-            List<CompletionResponse> listCompletionResponse = new ArrayList<>();
-            for (Image2Process image2Process : modifiedOrNewImages) {
-                URL imageUrl = image2Process.getUrl();
-
-                CompletionResponse completionResponse = qwenService.analyzeImage(
+                pdfService.pdf2Images(
+                        authService.getUsernameFromContext(),
                         file2Process.getFileId(),
-                        imageUrl);
-                completionResponse.setFile2Process(file2Process);
-                completionResponse.setPageNumber(image2Process.getPageNumber());
-                listCompletionResponse.add(completionResponse);
-                if (completionResponse.isCompleted()) {
-                    LOG.info("FileId LLM OCR {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
-                    processService.updateProcess(processId, "llm ocr done fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
-                } else {
-                    LOG.warn("FileId LLM OCR {} Image {} failed", file2Process.getFileId(), imageUrl);
-                    processService.updateProcess(processId, "llm ocr failed fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
-                }
+                        file2Process.getFilePath().toFile());
+                LOG.info("PDF fileId {} file {} image list {}", file2Process.getFileId(), file2Process.getFilePath(), listImages.size());
+                fileEvent.setTotalPages(listImages.size());
+            } catch (Exception e) {
+                LOG.error("Failed to get image list {}", file2Process.getFileId(), e);
             }
 
-            // --------------------------------------
-            // Create transcript db entities
-            // --------------------------------------
-            saveTranscript(file2Process.getFileId(), listCompletionResponse, listImages.size());
+            // todo : replace this quick fix of listimage is empty
+            if (listImages.isEmpty()) {
+                LOG.error("No images to process");
+            } else {
+                // --------------------------------------
+                // Get list of modified or created images
+                // --------------------------------------
+                Images2Process images2Process = getModifiedOrNewImages2Process(file2Process, listImages);
+                List<Image2Process> modifiedOrNewImages = images2Process.getListImage2Process();
+                LOG.info("PDF fileId {} has {} modified or new pages", file2Process.getFileId(), modifiedOrNewImages.size());
 
-            // --------------------------------------
-            // Create transcript page db entities
-            // --------------------------------------
-            saveTranscriptPages(file2Process.getFileId(), listCompletionResponse, modifiedOrNewImages);
+                processService.updateProcess(processId, "created or modified pages : " + modifiedOrNewImages.size());
+                fileEvent.setModifiedPages(modifiedOrNewImages.size());
 
-            // --------------------------------------
-            // Identify named entities
-            // --------------------------------------
-            namedEntitiesService.saveNamedEntities(file2Process.getFileId(), listCompletionResponse);
+                if (modifiedOrNewImages.isEmpty()) {
+                    LOG.info("No new or modified images, exiting from update process");
+                    return;
+                }
+
+                // --------------------------------------
+                // Move new files to regular dir
+                // --------------------------------------
+                Path tempDir = utilsService.tempImageDir(file2Process.getFileId());
+                Path imageDir = utilsService.imageDir(file2Process.getFileId());
+
+                try {
+                    if (imageDir.toFile().exists()) {
+                        LOG.info("delete {}", imageDir);
+                        Utils.deleteDirectory(imageDir);
+
+                        if (tempDir.toFile().exists()) {
+                            LOG.info("move {} to {}", tempDir, imageDir);
+                            Files.move(tempDir, imageDir, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    }
+                } catch (IOException e) {
+                    LOG.error("ERROR moving dirs", e);
+                }
+
+                modifiedOrNewImages.stream()
+                        .forEach(i2p -> {
+                            try {
+                                i2p.updateUrl(utilsService.imageURL(authService.getUsernameFromContext(), i2p.getFileId(), i2p.getPageNumber()));
+                            } catch (MalformedURLException e) {
+                                LOG.error("failed to create url for fileid {} page {}", i2p.getFileId(), i2p.getPageNumber(), e);
+                            }
+                        });
+
+                // --------------------------------------
+                // Call LLM
+                // --------------------------------------
+                List<CompletionResponse> listCompletionResponse = new ArrayList<>();
+                for (Image2Process image2Process : modifiedOrNewImages) {
+                    URL imageUrl = image2Process.getUrl();
+
+                    CompletionResponse completionResponse = qwenService.analyzeImage(
+                            file2Process.getFileId(),
+                            imageUrl);
+                    completionResponse.setFile2Process(file2Process);
+                    completionResponse.setPageNumber(image2Process.getPageNumber());
+                    listCompletionResponse.add(completionResponse);
+                    if (completionResponse.isCompleted()) {
+                        LOG.info("FileId LLM OCR {} Image {} transcript length {}", file2Process.getFileId(), imageUrl, completionResponse.getTranscript().length());
+                        processService.updateProcess(processId, "llm ocr done fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
+                    } else {
+                        LOG.warn("FileId LLM OCR {} Image {} failed", file2Process.getFileId(), imageUrl);
+                        processService.updateProcess(processId, "llm ocr failed fileId " + file2Process.getFileId() + " page " + image2Process.getPageNumber());
+                    }
+                }
+
+                // --------------------------------------
+                // Create transcript db entities
+                // --------------------------------------
+                saveTranscript(file2Process.getFileId(), listCompletionResponse, listImages.size());
+
+                // --------------------------------------
+                // Create transcript page db entities
+                // --------------------------------------
+                saveTranscriptPages(file2Process.getFileId(), listCompletionResponse, modifiedOrNewImages);
+
+                // --------------------------------------
+                // Identify named entities
+                // --------------------------------------
+                namedEntitiesService.saveNamedEntities(file2Process.getFileId(), listCompletionResponse);
+            }
         }
         createFileEntities(files2Process);
 

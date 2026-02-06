@@ -676,10 +676,11 @@ public class UpdateServiceImpl implements UpdateService {
         UUID mkFileUUID = UUID.randomUUID();
 
         // "/storage/emulated/0/note/00-Test/Notebook-1/Notebook-1.pdf";
-        final String root = "/storage/emulated/0/note";
+        //final String root = "/storage/emulated/0/note";
+        final String root = "";
 
         Pattern p = Pattern.compile("^" + root + "(.*)/([^/]+)/([^/]+)$");
-        Matcher m = p.matcher(monkeyFileEvent.getPath());
+        Matcher m = p.matcher(monkeyFileEvent.getFilePath());
 
         String virtualPath;
         String basePath;
@@ -692,7 +693,7 @@ public class UpdateServiceImpl implements UpdateService {
             virtualPath = basePath + "/" + filename;
 
         } else {
-            LOG.warn("Unvalid filepath {}", monkeyFileEvent.getPath());
+            LOG.warn("Unvalid filepath {}", monkeyFileEvent.getFilePath());
             return;
         }
 

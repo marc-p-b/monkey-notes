@@ -7,19 +7,19 @@ enum FileEventType {
 }
 
 public class MonkeyFileEvent {
-    private String path;
+    private String filePath;
     private String fileName;
     private FileEventType eventType;
     private String timestamp;
     private int fileSize;
     private String content;
 
-    public String getPath() {
-        return path;
+    public String getFilePath() {
+        return filePath;
     }
 
-    public MonkeyFileEvent setPath(String path) {
-        this.path = path;
+    public MonkeyFileEvent setFilePath(String filePath) {
+        this.filePath = filePath;
         return this;
     }
 

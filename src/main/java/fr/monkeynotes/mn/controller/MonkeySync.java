@@ -2,7 +2,6 @@ package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.data.MonkeyFileEvent;
 import fr.monkeynotes.mn.service.UpdateService;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +23,7 @@ public class MonkeySync {
     @PostMapping(value = "/sync/pdf", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> syncPdf(@RequestBody MonkeyFileEvent fileEvent) {
 
-        LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getPath(), fileEvent.getFileSize());
+        LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getFilePath(), fileEvent.getFileSize());
 
         updateService.monkeySyncUpdate(fileEvent);
 

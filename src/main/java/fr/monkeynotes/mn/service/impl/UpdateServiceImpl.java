@@ -102,14 +102,18 @@ public class UpdateServiceImpl implements UpdateService {
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 
         for(File2Process file2Process : files2Process) {
+
             // --------------------------------------
-            // get full path of the current file
+            // Legacy file : get full path of the current file
             // --------------------------------------
-            try {
-                updateAncestorsFolders(file2Process.getFileId());
-            } catch (ServiceException e) {
-                LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+            if (file2Process.isLegacy()) {
+                try {
+                    updateAncestorsFolders(file2Process);
+                } catch (ServiceException e) {
+                    LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+                }
             }
+
             AsyncProcessFileEvent fileEvent = new AsyncProcessFileEvent(file2Process.getFileId(), file2Process.getFileName(), file2Process.getParentFolderName());
             processService.attachFileEvent(processId, fileEvent);
 
@@ -381,7 +385,12 @@ public class UpdateServiceImpl implements UpdateService {
         return listDocs;
     }
 
-    private String updateAncestorsFolders(String fileId) throws ServiceException {
+    private String updateAncestorsFolders(File2Process f2p) throws ServiceException {
+
+        if(f2p.isLegacy() == false) {
+            throw new ServiceException("Ancestors folders update only applies to legacy files");
+        }
+
         String inboundFolderId = "";
         try {
             inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
@@ -390,7 +399,7 @@ public class UpdateServiceImpl implements UpdateService {
             return null;
         }
 
-        File file = driveUtilsService.getDriveFileDetails(fileId);
+        File file = driveUtilsService.getDriveFileDetails(f2p.getFileId());
         List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
 
         Collections.reverse(ancestors);
@@ -673,7 +682,7 @@ public class UpdateServiceImpl implements UpdateService {
             throw new RuntimeException(e);
         }
 
-        UUID mkFileUUID = UUID.randomUUID();
+
 
         // "/storage/emulated/0/note/00-Test/Notebook-1/Notebook-1.pdf";
         //final String root = "/storage/emulated/0/note";
@@ -701,41 +710,46 @@ public class UpdateServiceImpl implements UpdateService {
         Optional<EntityMonkeyFile> optMonkeyFolder = repositoryMonkeyFile.findById(basePath);
         if(optMonkeyFolder.isPresent() == false) {
 
-            EntityMonkeyFile monkeyFolder = new EntityMonkeyFile()
-                    .setPath(basePath)
-                    .setUuid(UUID.randomUUID());
+            EntityMonkeyFile monkeyFolder = null;
+            try {
+                monkeyFolder = new EntityMonkeyFile(basePath);
+            } catch (NoSuchAlgorithmException e) {
+                //TODO ERROR
+                return;
+            }
 
             repositoryMonkeyFile.save(monkeyFolder);
             optMonkeyFolder = Optional.of(monkeyFolder);
         }
         EntityMonkeyFile monkeyFolder = optMonkeyFolder.get();
 
+        EntityMonkeyFile monkeyFile = null;
+        try {
+            monkeyFile = new EntityMonkeyFile(virtualPath);
+        } catch (NoSuchAlgorithmException e) {
+            //TODO ERROR
+            return;
+        }
 
-        EntityMonkeyFile monkeyFile = new EntityMonkeyFile()
-                .setPath(virtualPath)
-                .setUuid(mkFileUUID);
+        Path downloadDir = utilsService.downloadDir(monkeyFolder.getId());
+        Path targetFilePath = Paths.get(downloadDir.toString(), monkeyFile.getId());
 
-        Path downloadDir = utilsService.downloadDir(monkeyFolder.getUuid().toString());
-        Path targetFilePath = Paths.get(downloadDir.toString(), mkFileUUID.toString());
-
-        LOG.info("Write {} uuid {} to {}", filename, mkFileUUID, targetFilePath);
+        LOG.info("Write {} msId {} to {}", filename, monkeyFile.getId(), targetFilePath);
         try {
             Files.write(targetFilePath, bytes);
         } catch (IOException e) {
             LOG.error("Failed to write file", e);
         }
 
+        File2Process f2p = new File2Process()
+            .setFileId(monkeyFile.getId())
+            .setFileName(filename)
+            .setFilePath(targetFilePath)
+            .setMd5(md5)
+            .setMimeType(MIME_PDF);
 
+            f2p.setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
+            runListAsyncProcess(List.of(f2p));
 
-File2Process f2p = new File2Process()
-        .setFileId(mkFileUUID.toString())
-        .setFileName(filename)
-        .setMd5(md5)
-        .setMimeType(MIME_PDF);
-
-        runListAsyncProcess(List.of(f2p));
-
-
-
-    }
+        }
 }

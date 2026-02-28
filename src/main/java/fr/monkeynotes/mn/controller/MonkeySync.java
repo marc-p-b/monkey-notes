@@ -25,7 +25,7 @@ public class MonkeySync {
 
         LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getFilePath(), fileEvent.getFileSize());
 
-        //updateService.monkeySyncUpdate(fileEvent);
+        updateService.monkeySyncUpdate(fileEvent);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

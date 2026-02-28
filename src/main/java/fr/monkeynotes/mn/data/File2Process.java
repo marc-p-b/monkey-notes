@@ -7,9 +7,18 @@ import fr.monkeynotes.mn.data.enums.FileType;
 
 import java.nio.file.Path;
 
+
+
 public class File2Process {
+
+    public enum File2ProcessType {
+        legacy,
+        monkeySync;
+    }
     private String fileId;
     private Path filePath;
+
+    private File2ProcessType file2ProcessType;
 
     private String fileName;
     private String md5;
@@ -26,9 +35,28 @@ public class File2Process {
         this.fileName = file.getName() != null ? file.getName() : "unknown";
         this.md5 = file.getMd5Checksum() != null ? file.getMd5Checksum() : "unknown";
         this.mimeType = file.getMd5Checksum() != null ? file.getMimeType() : "unknown";
+
+        this.file2ProcessType = File2ProcessType.legacy;
     }
 
     public File2Process() {
+    }
+
+    public File2ProcessType getFile2ProcessType() {
+        return file2ProcessType;
+    }
+
+    public File2Process setFile2ProcessType(File2ProcessType file2ProcessType) {
+        this.file2ProcessType = file2ProcessType;
+        return this;
+    }
+
+    public boolean isLegacy() {
+        return file2ProcessType == File2ProcessType.legacy;
+    }
+
+    public boolean isMonkeySync() {
+        return file2ProcessType == File2ProcessType.monkeySync;
     }
 
     public EntityFile asEntity(String username) {

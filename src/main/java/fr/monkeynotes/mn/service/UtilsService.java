@@ -1,11 +1,14 @@
 package fr.monkeynotes.mn.service;
 
+import fr.monkeynotes.mn.data.entity.EntityMonkeyFile;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 
 public interface UtilsService {
     Path downloadDir(String fileId);
@@ -26,4 +29,7 @@ public interface UtilsService {
     Path getUserTranscriptsPath();
     String getLocalFileName(String fileId);
     void deleteAllData();
+
+    String sha256(String input);
+    EntityMonkeyFile createMonkeyFile(String path);
 }

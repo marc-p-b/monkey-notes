@@ -108,7 +108,7 @@ public class UpdateServiceImpl implements UpdateService {
             // --------------------------------------
             if (file2Process.isLegacy()) {
                 try {
-                    updateAncestorsFolders(file2Process);
+                    updateAncestorsFoldersGDrive(file2Process);
                 } catch (ServiceException e) {
                     LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
                 }
@@ -385,7 +385,87 @@ public class UpdateServiceImpl implements UpdateService {
         return listDocs;
     }
 
-    private String updateAncestorsFolders(File2Process f2p) throws ServiceException {
+    //private void updateAncestorsMonkeyFolders(File2Process f2p) {
+    private String updateAncestorsMonkeyFolders(String path) {
+
+        //String path = f2p.getFilePath().toString();
+
+
+
+
+
+        Optional<EntityFile> optRootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder);
+        EntityFile rootFolder = null;
+        if(optRootFolder.isPresent() == false) {
+            EntityMonkeyFile rootEntityMonkeyFile = utilsService.createMonkeyFile(ROOT_FOLDER);
+            rootFolder = new EntityFile()
+                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), rootEntityMonkeyFile.getId()))
+                    .setType(FileType.folder)
+                    .setName(ROOT_FOLDER);
+            repositoryFile.save(rootFolder);
+        } else {
+            rootFolder = optRootFolder.get();
+        }
+
+        String[] folders = path.split("/");
+        StringBuilder sb = new StringBuilder();
+        String parentId = rootFolder.getIdFile().getFileId();
+        for(String folder : folders) {
+            if(folder.isEmpty()) {
+                continue;
+            }
+            sb.append("/").append(folder);
+
+            String currentFolderPath = sb.toString();
+            EntityMonkeyFile emf = findOrCreateMonkeyFile(currentFolderPath);
+            EntityFile entityFileFolder = findOrCreateFolder(emf, parentId);
+            parentId = entityFileFolder.getIdFile().getFileId();
+
+        }
+
+        return parentId;
+
+    }
+
+
+    private EntityFile findOrCreateFolder(EntityMonkeyFile entityMonkeyFolder, String parentId) {
+
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), entityMonkeyFolder.getId());
+
+        //TODO force folder type ?
+        Optional<EntityFile> optFolder = repositoryFile.findById(idFile);
+
+        if(optFolder.isPresent()) {
+            return optFolder.get();
+        } else {
+
+            EntityFile folder = new EntityFile()
+                    .setIdFile(idFile)
+                    .setParentFolderId(parentId)
+                    .setType(FileType.folder)
+                    .setName(entityMonkeyFolder.getPath());
+
+            return repositoryFile.save(folder);
+        }
+    }
+
+
+    private EntityMonkeyFile findOrCreateMonkeyFile(String path) {
+
+        //TODO add username
+        String mFileId = utilsService.sha256(path);
+
+        Optional<EntityMonkeyFile> optionalEntityMonkeyFile = repositoryMonkeyFile.findById(mFileId);
+        if(optionalEntityMonkeyFile.isPresent()) {
+            return optionalEntityMonkeyFile.get();
+        } else {
+            return repositoryMonkeyFile.save(new EntityMonkeyFile(mFileId, path));
+        }
+    }
+
+
+
+    private String updateAncestorsFoldersGDrive(File2Process f2p) throws ServiceException {
 
         if(f2p.isLegacy() == false) {
             throw new ServiceException("Ancestors folders update only applies to legacy files");
@@ -424,8 +504,10 @@ public class UpdateServiceImpl implements UpdateService {
             }
             folders.add(folder);
         }
+
+        //TODO try to save even already exists ?
         repositoryFile.saveAll(folders);
-        //todo return dto instead
+
         return ROOT_FOLDER + ancestors.stream().map(File::getName).collect(Collectors.joining(ROOT_FOLDER));
     }
 
@@ -683,55 +765,38 @@ public class UpdateServiceImpl implements UpdateService {
         }
 
 
+        //TODO myst be retrieved from WS
+        final String root = "/storage/emulated/0/Documents";
 
-        // "/storage/emulated/0/note/00-Test/Notebook-1/Notebook-1.pdf";
-        //final String root = "/storage/emulated/0/note";
-        final String root = "";
+        Path path = Paths.get(monkeyFileEvent.getFilePath().replaceAll(root, ""));
 
-        Pattern p = Pattern.compile("^" + root + "(.*)/([^/]+)/([^/]+)$");
-        Matcher m = p.matcher(monkeyFileEvent.getFilePath());
+        String basePath = path.getParent().toString();
+        String filename = path.getFileName().toString();
+        String virtualPath = basePath + "/" + filename;
 
-        String virtualPath;
-        String basePath;
-        String filename;
+//        Optional<EntityMonkeyFile> optMonkeyFolder = repositoryMonkeyFile.findById(basePath);
+//        if(optMonkeyFolder.isPresent() == false) {
+//
+//            EntityMonkeyFile monkeyFolder = null;
+//            try {
+//                monkeyFolder = new EntityMonkeyFile(basePath);
+//            } catch (NoSuchAlgorithmException e) {
+//                //TODO ERROR
+//                return;
+//            }
+//
+//            repositoryMonkeyFile.save(monkeyFolder);
+//            optMonkeyFolder = Optional.of(monkeyFolder);
+//        }
+//        EntityMonkeyFile monkeyFolder = optMonkeyFolder.get();
 
-        if (m.find()) {
-            basePath = m.group(1);
-            filename = m.group(3);
-
-            virtualPath = basePath + "/" + filename;
-
-        } else {
-            LOG.warn("Unvalid filepath {}", monkeyFileEvent.getFilePath());
-            return;
-        }
 
 
-        Optional<EntityMonkeyFile> optMonkeyFolder = repositoryMonkeyFile.findById(basePath);
-        if(optMonkeyFolder.isPresent() == false) {
 
-            EntityMonkeyFile monkeyFolder = null;
-            try {
-                monkeyFolder = new EntityMonkeyFile(basePath);
-            } catch (NoSuchAlgorithmException e) {
-                //TODO ERROR
-                return;
-            }
+        EntityMonkeyFile monkeyFile = utilsService.createMonkeyFile(virtualPath);
+        String monkeyFolderId = updateAncestorsMonkeyFolders(basePath);
 
-            repositoryMonkeyFile.save(monkeyFolder);
-            optMonkeyFolder = Optional.of(monkeyFolder);
-        }
-        EntityMonkeyFile monkeyFolder = optMonkeyFolder.get();
-
-        EntityMonkeyFile monkeyFile = null;
-        try {
-            monkeyFile = new EntityMonkeyFile(virtualPath);
-        } catch (NoSuchAlgorithmException e) {
-            //TODO ERROR
-            return;
-        }
-
-        Path downloadDir = utilsService.downloadDir(monkeyFolder.getId());
+        Path downloadDir = utilsService.downloadDir(monkeyFolderId );
         Path targetFilePath = Paths.get(downloadDir.toString(), monkeyFile.getId());
 
         LOG.info("Write {} msId {} to {}", filename, monkeyFile.getId(), targetFilePath);

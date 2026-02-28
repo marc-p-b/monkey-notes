@@ -1,8 +1,6 @@
 package fr.monkeynotes.mn.service.impl;
 
-import fr.monkeynotes.mn.data.entity.EntityFile;
-import fr.monkeynotes.mn.data.entity.EntityUser;
-import fr.monkeynotes.mn.data.entity.IdFile;
+import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;
@@ -21,6 +19,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,6 +72,8 @@ public class UtilsServiceImpl implements UtilsService {
 
     @Autowired
     private RepositoryAgent repositoryAgent;
+    @Autowired
+    private RepositoryMonkeyFile repositoryMonkeyFile;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
@@ -107,6 +109,7 @@ public class UtilsServiceImpl implements UtilsService {
         repositoryTranscript.deleteAll();
         repositoryFile.deleteAll();
         repositoryConfig.deleteAll();
+        repositoryMonkeyFile.deleteAll();
         LOG.info("**************        Done      ***************");
     }
 
@@ -231,4 +234,32 @@ public class UtilsServiceImpl implements UtilsService {
         Optional<EntityFile> optionalEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
         return optionalEntityFile.isPresent() ? optionalEntityFile.get().getName() : fileId;
     }
+
+    @Override
+    public String sha256(String input) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            LOG.error(e.getMessage(), e);
+            return null;
+        }
+        byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return "ms" + hexString;
+    }
+
+    @Override
+    public EntityMonkeyFile createMonkeyFile(String path) {
+        EntityMonkeyFile entityMonkeyFile = new EntityMonkeyFile(sha256(path), path);
+        repositoryMonkeyFile.save(entityMonkeyFile);
+        return entityMonkeyFile;
+    }
+
 }

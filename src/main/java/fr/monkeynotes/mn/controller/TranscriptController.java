@@ -19,6 +19,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -55,7 +57,8 @@ public class TranscriptController {
 
     @GetMapping("/transcript/recent")
     public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
-        return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
+        return ResponseEntity.ok(new ArrayList<>());
+        //return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 
     @GetMapping(value = "/transcript/pdf/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)

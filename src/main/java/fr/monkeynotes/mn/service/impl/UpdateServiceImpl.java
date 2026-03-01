@@ -380,20 +380,12 @@ public class UpdateServiceImpl implements UpdateService {
                 })
                 .toList();
 
-        //TODO do this after processing ?
+        //TODO why do this after processing ? if processing fails, all files cannot be registered
         repositoryFile.saveAll(listDocs);
         return listDocs;
     }
 
-    //private void updateAncestorsMonkeyFolders(File2Process f2p) {
     private String updateAncestorsMonkeyFolders(String path) {
-
-        //String path = f2p.getFilePath().toString();
-
-
-
-
-
         Optional<EntityFile> optRootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder);
         EntityFile rootFolder = null;
         if(optRootFolder.isPresent() == false) {
@@ -403,6 +395,9 @@ public class UpdateServiceImpl implements UpdateService {
                     .setType(FileType.folder)
                     .setName(ROOT_FOLDER);
             repositoryFile.save(rootFolder);
+
+            preferencesService.setInputFolderId(rootEntityMonkeyFile.getId());
+
         } else {
             rootFolder = optRootFolder.get();
         }
@@ -764,7 +759,6 @@ public class UpdateServiceImpl implements UpdateService {
             throw new RuntimeException(e);
         }
 
-
         //TODO myst be retrieved from WS
         final String root = "/storage/emulated/0/Documents";
 
@@ -773,25 +767,6 @@ public class UpdateServiceImpl implements UpdateService {
         String basePath = path.getParent().toString();
         String filename = path.getFileName().toString();
         String virtualPath = basePath + "/" + filename;
-
-//        Optional<EntityMonkeyFile> optMonkeyFolder = repositoryMonkeyFile.findById(basePath);
-//        if(optMonkeyFolder.isPresent() == false) {
-//
-//            EntityMonkeyFile monkeyFolder = null;
-//            try {
-//                monkeyFolder = new EntityMonkeyFile(basePath);
-//            } catch (NoSuchAlgorithmException e) {
-//                //TODO ERROR
-//                return;
-//            }
-//
-//            repositoryMonkeyFile.save(monkeyFolder);
-//            optMonkeyFolder = Optional.of(monkeyFolder);
-//        }
-//        EntityMonkeyFile monkeyFolder = optMonkeyFolder.get();
-
-
-
 
         EntityMonkeyFile monkeyFile = utilsService.createMonkeyFile(virtualPath);
         String monkeyFolderId = updateAncestorsMonkeyFolders(basePath);
@@ -810,6 +785,7 @@ public class UpdateServiceImpl implements UpdateService {
             .setFileId(monkeyFile.getId())
             .setFileName(filename)
             .setFilePath(targetFilePath)
+            .setParentFolderId(monkeyFolderId)
             .setMd5(md5)
             .setMimeType(MIME_PDF);
 

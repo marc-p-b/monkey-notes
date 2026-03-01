@@ -57,8 +57,8 @@ public class TranscriptController {
 
     @GetMapping("/transcript/recent")
     public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
-        return ResponseEntity.ok(new ArrayList<>());
-        //return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
+        // TODO make me configurable
+        return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 
     @GetMapping(value = "/transcript/pdf/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)

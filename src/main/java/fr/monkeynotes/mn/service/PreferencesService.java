@@ -14,4 +14,5 @@ public interface PreferencesService {
     boolean getPreferenceAsBoolean(PreferenceKey configKey) throws ServiceException;
     int getPreferenceAsInt(PreferenceKey configKey) throws ServiceException;
     void setInputFolderId(String id);
+    void setRemoteRootFolderPath(String remoteRootFolderPath);
 }

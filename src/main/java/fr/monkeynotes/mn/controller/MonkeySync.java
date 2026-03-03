@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.data.MonkeyFileEvent;
+import fr.monkeynotes.mn.data.SyncEventResponse;
 import fr.monkeynotes.mn.service.UpdateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,13 +22,25 @@ public class MonkeySync {
     private UpdateService updateService;
 
     @PostMapping(value = "/sync/pdf", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> syncPdf(@RequestBody MonkeyFileEvent fileEvent) {
+    public ResponseEntity<SyncEventResponse> syncPdf(@RequestBody MonkeyFileEvent fileEvent) {
 
         LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getFilePath(), fileEvent.getFileSize());
 
-        updateService.monkeySyncUpdate(fileEvent);
+        SyncEventResponse syncEventResponse = updateService.monkeySyncUpdate(fileEvent);
 
-        return new ResponseEntity<>(HttpStatus.OK);
+        SyncEventResponse.SyncEventStatus status = syncEventResponse.getStatus();
+                syncEventResponse.getStatus();
+
+        switch (status) {
+            case refused -> {
+                return new ResponseEntity<>(syncEventResponse, HttpStatus.NOT_ACCEPTABLE);
+            }
+            case accepted -> {
+                return new ResponseEntity<>(syncEventResponse, HttpStatus.OK);
+            }
+
+        }
+        return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }

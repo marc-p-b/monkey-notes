@@ -8,7 +8,6 @@ import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
 
 public interface UtilsService {
     Path downloadDir(String fileId);
@@ -30,6 +29,6 @@ public interface UtilsService {
     String getLocalFileName(String fileId);
     void deleteAllData();
 
-    String sha256(String input);
+    String createMonkeySyncId(String input);
     EntityMonkeyFile createMonkeyFile(String path);
 }

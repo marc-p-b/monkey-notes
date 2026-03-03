@@ -40,8 +40,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -448,7 +446,7 @@ public class UpdateServiceImpl implements UpdateService {
     private EntityMonkeyFile findOrCreateMonkeyFile(String path) {
 
         //TODO add username
-        String mFileId = utilsService.sha256(path);
+        String mFileId = utilsService.createMonkeySyncId(path);
 
         Optional<EntityMonkeyFile> optionalEntityMonkeyFile = repositoryMonkeyFile.findById(mFileId);
         if(optionalEntityMonkeyFile.isPresent()) {
@@ -744,7 +742,7 @@ public class UpdateServiceImpl implements UpdateService {
     }
 
     @Override
-    public void monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
+    public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
 
         Base64.Decoder decoder = Base64.getDecoder();
         byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
@@ -760,9 +758,29 @@ public class UpdateServiceImpl implements UpdateService {
         }
 
         //TODO myst be retrieved from WS
-        final String root = "/storage/emulated/0/Documents";
+        //final String root = "/storage/emulated/0/Documents";
 
-        Path path = Paths.get(monkeyFileEvent.getFilePath().replaceAll(root, ""));
+        String currentRemoteFolderPath = null;
+        String remoteFolderPath = monkeyFileEvent.getRootFolderPath();
+        try {
+            currentRemoteFolderPath = preferencesService.getPreference(PreferenceKey.remoteRootFolderPath);
+        } catch (ServiceException e) {
+
+            return SyncEventResponse.refusedSyncEventResponse("error");
+            //todo error !
+        }
+
+        if(currentRemoteFolderPath == null) {
+            preferencesService.setRemoteRootFolderPath(remoteFolderPath);
+        }
+
+        if(currentRemoteFolderPath != null && currentRemoteFolderPath.equals(remoteFolderPath) == false) {
+            LOG.error("Sync for file {} : remote root folder has changed and cannot be used : {} current folder is : {}",
+                    monkeyFileEvent.getFileName(), remoteFolderPath, currentRemoteFolderPath);
+            return SyncEventResponse.refusedSyncEventResponse("remote root folder has changed");
+        }
+
+        Path path = Paths.get(monkeyFileEvent.getFilePath().replaceAll(monkeyFileEvent.getRootFolderPath(), ""));
 
         String basePath = path.getParent().toString();
         String filename = path.getFileName().toString();
@@ -791,6 +809,8 @@ public class UpdateServiceImpl implements UpdateService {
 
             f2p.setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
             runListAsyncProcess(List.of(f2p));
+
+            return SyncEventResponse.acceptedSyncEventResponse(monkeyFile.getId());
 
         }
 }

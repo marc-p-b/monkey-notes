@@ -195,4 +195,10 @@ public class PreferencesServiceImpl implements PreferencesService {
         EntityPreferences entityPreferences = new EntityPreferences(new EntityPreferencesId(authService.getUsernameFromContext(), PreferenceKey.inputFolderId), id);
         repositoryConfig.save(entityPreferences);
     }
+
+    public void setRemoteRootFolderPath(String remoteRootFolderPath) {
+        //TODO only used when using monkeysync
+        EntityPreferences entityPreferences = new EntityPreferences(new EntityPreferencesId(authService.getUsernameFromContext(), PreferenceKey.remoteRootFolderPath), remoteRootFolderPath);
+        repositoryConfig.save(entityPreferences);
+    }
 }

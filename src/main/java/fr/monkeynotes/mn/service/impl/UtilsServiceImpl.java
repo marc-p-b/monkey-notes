@@ -32,6 +32,7 @@ public class UtilsServiceImpl implements UtilsService {
     public static final String DOWNLOADS = "downloads";
     public static final String IMAGES = "images";
     public static final String TRANSCRIPTS = "transcripts";
+    public static final String MONKEYSYNC_ID_PREFIX = "ms";
     private Logger LOG = LoggerFactory.getLogger(UtilsService.class);
 
     @Value("${app.paths.user_data}")
@@ -236,7 +237,7 @@ public class UtilsServiceImpl implements UtilsService {
     }
 
     @Override
-    public String sha256(String input) {
+    public String createMonkeySyncId(String input) {
         MessageDigest digest = null;
         try {
             digest = MessageDigest.getInstance("SHA-256");
@@ -252,12 +253,12 @@ public class UtilsServiceImpl implements UtilsService {
             if (hex.length() == 1) hexString.append('0');
             hexString.append(hex);
         }
-        return "ms" + hexString;
+        return MONKEYSYNC_ID_PREFIX + hexString;
     }
 
     @Override
     public EntityMonkeyFile createMonkeyFile(String path) {
-        EntityMonkeyFile entityMonkeyFile = new EntityMonkeyFile(sha256(path), path);
+        EntityMonkeyFile entityMonkeyFile = new EntityMonkeyFile(createMonkeySyncId(path), path);
         repositoryMonkeyFile.save(entityMonkeyFile);
         return entityMonkeyFile;
     }

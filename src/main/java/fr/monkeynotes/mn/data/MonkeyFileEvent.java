@@ -13,6 +13,7 @@ public class MonkeyFileEvent {
     private String timestamp;
     private int fileSize;
     private String content;
+    private String rootFolderPath;
 
     public String getFilePath() {
         return filePath;
@@ -65,6 +66,15 @@ public class MonkeyFileEvent {
 
     public MonkeyFileEvent setContent(String content) {
         this.content = content;
+        return this;
+    }
+
+    public String getRootFolderPath() {
+        return rootFolderPath;
+    }
+
+    public MonkeyFileEvent setRootFolderPath(String rootFolderPath) {
+        this.rootFolderPath = rootFolderPath;
         return this;
     }
 }

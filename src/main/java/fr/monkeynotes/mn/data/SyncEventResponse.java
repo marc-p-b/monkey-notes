@@ -21,7 +21,7 @@ public class SyncEventResponse {
 
     public static SyncEventResponse refusedSyncEventResponse(String message) {
         return new SyncEventResponse()
-                .setStatus(SyncEventStatus.accepted)
+                .setStatus(SyncEventStatus.refused)
                 .setMessage(message)
                 .setId("");
     }

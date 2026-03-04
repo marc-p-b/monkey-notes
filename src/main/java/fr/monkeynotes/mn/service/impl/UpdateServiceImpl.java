@@ -12,17 +12,19 @@ import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryMonkeyFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
-import fr.monkeynotes.mn.monitoring.AsyncResult;
-import fr.monkeynotes.mn.monitoring.MonitoringAsync;
-import fr.monkeynotes.mn.monitoring.MonitoringService;
-import fr.monkeynotes.mn.monitoring.SupplyAsyncAuthenticated;
+import fr.monkeynotes.mn.monitoring.*;
 import fr.monkeynotes.mn.service.*;
+import fr.monkeynotes.mn.tasks.FlushMonkeySyncTask;
 import fr.monkeynotes.mn.utils.TranscriptUtils;
 import fr.monkeynotes.mn.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -37,9 +39,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -747,7 +753,6 @@ public class UpdateServiceImpl implements UpdateService {
         Base64.Decoder decoder = Base64.getDecoder();
         byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
 
-
         byte[] hash = null;
         String md5;
         try {
@@ -757,17 +762,14 @@ public class UpdateServiceImpl implements UpdateService {
             throw new RuntimeException(e);
         }
 
-        //TODO myst be retrieved from WS
-        //final String root = "/storage/emulated/0/Documents";
-
         String currentRemoteFolderPath = null;
         String remoteFolderPath = monkeyFileEvent.getRootFolderPath();
         try {
             currentRemoteFolderPath = preferencesService.getPreference(PreferenceKey.remoteRootFolderPath);
         } catch (ServiceException e) {
-
-            return SyncEventResponse.refusedSyncEventResponse("error");
-            //todo error !
+            //todo is this the best way ?
+            preferencesService.setRemoteRootFolderPath(remoteFolderPath);
+            currentRemoteFolderPath = remoteFolderPath;
         }
 
         if(currentRemoteFolderPath == null) {
@@ -808,9 +810,65 @@ public class UpdateServiceImpl implements UpdateService {
             .setMimeType(MIME_PDF);
 
             f2p.setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
-            runListAsyncProcess(List.of(f2p));
+
+            String username = authService.getUsernameFromContext();
+
+            if (mapScheduled.containsKey(username)) {
+                mapScheduled.get(username).add(f2p);
+            } else {
+                mapScheduled.put(username, new ArrayList<>());
+                mapScheduled.get(username).add(f2p);
+            }
 
             return SyncEventResponse.acceptedSyncEventResponse(monkeyFile.getId());
-
         }
+
+
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
+
+    //private Set<File2Process> setFiles2Process = Collections.synchronizedSet(new HashSet<>());
+    private ConcurrentHashMap<String, List<File2Process>> mapScheduled = new ConcurrentHashMap<>();
+
+    @Autowired
+    private ApplicationContext ctx;
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void init() {
+        taskScheduler.scheduleWithFixedDelay(new FlushMonkeySyncTask(ctx), Duration.ofSeconds(30));
+
+    }
+
+    public void flushMonkeySync(){
+        HashMap<String, List<File2Process>> mapScheduledCopy = new HashMap<>();
+        mapScheduled.forEach((key, list) ->
+                mapScheduledCopy.put(key, new ArrayList<>(list))
+        );
+        mapScheduled.clear();
+
+        for (Map.Entry<String, List<File2Process>> entry : mapScheduledCopy.entrySet()) {
+
+            String username = entry.getKey();
+            List<File2Process> list = entry.getValue();
+
+
+
+            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
+                    () -> runListAsyncProcessForUser(list, username));
+            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.flushMonkeySyncs, monitoringService.getCurrentMonitoringData(),
+                    "flush monkey syncs (" + list.size() + " files)");
+            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+
+            processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
+        }
+    }
+
+    public void runListAsyncProcessForUser(List<File2Process> files2Process, String username) {
+        NoAuthContextHolder.setContext(new NoAuthContext(username));
+        runListAsyncProcess(files2Process);
+    }
+
+
+
+
 }

@@ -5,7 +5,6 @@ import fr.monkeynotes.mn.data.MonkeyFileEvent;
 import fr.monkeynotes.mn.data.SyncEventResponse;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface UpdateService {
     void runListAsyncProcess(List<File2Process> files2Process);
@@ -15,4 +14,6 @@ public interface UpdateService {
     void requestForceTranscriptUpdate(String fileId);
     void forceTranscriptUpdate(String fileId);
     SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent);
+    void flushMonkeySync();
+    void runListAsyncProcessForUser(List<File2Process> files2Process, String username);
 }

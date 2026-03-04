@@ -97,9 +97,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     private RepositoryGDriveCredential repositoryGDriveCredential;
 
     @Autowired
-    private RepositoryUser repositoryUser;
-
-    @Autowired
     private AuthService authService;
 
     @Autowired

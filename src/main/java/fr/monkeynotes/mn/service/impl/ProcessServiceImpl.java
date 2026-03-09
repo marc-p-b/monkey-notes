@@ -71,7 +71,16 @@ public class ProcessServiceImpl implements ProcessService {
         // Remove already notified entries
         keysToRemove.forEach(mapAsyncProcess::remove);
 
+
+        newlyNotified.values().stream()
+                .filter(a->a.getUsername() == null)
+                .forEach(process->{
+                    LOG.error("Process {} has no username {}", process.getId(), process.getUsername());
+                });
+
+
         return newlyNotified.values().stream()
+            .filter(a->a.getUsername() != null)
             .collect(Collectors.groupingBy(AsyncProcess::getUsername));
     }
 

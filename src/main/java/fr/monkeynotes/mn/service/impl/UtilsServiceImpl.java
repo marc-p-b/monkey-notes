@@ -73,8 +73,6 @@ public class UtilsServiceImpl implements UtilsService {
 
     @Autowired
     private RepositoryAgent repositoryAgent;
-    @Autowired
-    private RepositoryMonkeyFile repositoryMonkeyFile;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
@@ -110,7 +108,6 @@ public class UtilsServiceImpl implements UtilsService {
         repositoryTranscript.deleteAll();
         repositoryFile.deleteAll();
         repositoryConfig.deleteAll();
-        repositoryMonkeyFile.deleteAll();
         LOG.info("**************        Done      ***************");
     }
 
@@ -256,11 +253,5 @@ public class UtilsServiceImpl implements UtilsService {
         return MONKEYSYNC_ID_PREFIX + hexString;
     }
 
-    @Override
-    public EntityMonkeyFile createMonkeyFile(String path) {
-        EntityMonkeyFile entityMonkeyFile = new EntityMonkeyFile(createMonkeySyncId(path), path);
-        repositoryMonkeyFile.save(entityMonkeyFile);
-        return entityMonkeyFile;
-    }
 
 }

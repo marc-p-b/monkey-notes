@@ -9,7 +9,6 @@ import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
-import fr.monkeynotes.mn.data.repository.RepositoryMonkeyFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
 import fr.monkeynotes.mn.monitoring.*;
@@ -41,11 +40,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,8 +93,6 @@ public class UpdateServiceImpl implements UpdateService {
     @Autowired
     private NamedEntitiesService namedEntitiesService;
 
-    @Autowired
-    private RepositoryMonkeyFile repositoryMonkeyFile;
 
     @Override
     public void runListAsyncProcess(List<File2Process> files2Process) {
@@ -106,6 +101,9 @@ public class UpdateServiceImpl implements UpdateService {
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 
         for(File2Process file2Process : files2Process) {
+
+            LOG.info("Processing file name {} id {}",
+                    file2Process.getFileName(), file2Process.getFileName());
 
             // --------------------------------------
             // Legacy file : get full path of the current file
@@ -393,14 +391,16 @@ public class UpdateServiceImpl implements UpdateService {
         Optional<EntityFile> optRootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder);
         EntityFile rootFolder = null;
         if(optRootFolder.isPresent() == false) {
-            EntityMonkeyFile rootEntityMonkeyFile = utilsService.createMonkeyFile(ROOT_FOLDER);
+            // create monkey sync root if necessary
+            String msId = utilsService.createMonkeySyncId(ROOT_FOLDER);
             rootFolder = new EntityFile()
-                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), rootEntityMonkeyFile.getId()))
+                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), msId))
                     .setType(FileType.folder)
                     .setName(ROOT_FOLDER);
             repositoryFile.save(rootFolder);
 
-            preferencesService.setInputFolderId(rootEntityMonkeyFile.getId());
+            //also save it as root in prefs
+            preferencesService.setInputFolderId(msId);
 
         } else {
             rootFolder = optRootFolder.get();
@@ -416,8 +416,8 @@ public class UpdateServiceImpl implements UpdateService {
             sb.append("/").append(folder);
 
             String currentFolderPath = sb.toString();
-            EntityMonkeyFile emf = findOrCreateMonkeyFile(currentFolderPath);
-            EntityFile entityFileFolder = findOrCreateFolder(emf, parentId);
+
+            EntityFile entityFileFolder = findOrCreateFolder(utilsService.createMonkeySyncId(currentFolderPath), currentFolderPath, parentId);
             parentId = entityFileFolder.getIdFile().getFileId();
 
         }
@@ -427,9 +427,9 @@ public class UpdateServiceImpl implements UpdateService {
     }
 
 
-    private EntityFile findOrCreateFolder(EntityMonkeyFile entityMonkeyFolder, String parentId) {
+    private EntityFile findOrCreateFolder(String id, String path, String parentId) {
 
-        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), entityMonkeyFolder.getId());
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), id);
 
         //TODO force folder type ?
         Optional<EntityFile> optFolder = repositoryFile.findById(idFile);
@@ -442,25 +442,25 @@ public class UpdateServiceImpl implements UpdateService {
                     .setIdFile(idFile)
                     .setParentFolderId(parentId)
                     .setType(FileType.folder)
-                    .setName(entityMonkeyFolder.getPath());
+                    .setName(path);
 
             return repositoryFile.save(folder);
         }
     }
 
 
-    private EntityMonkeyFile findOrCreateMonkeyFile(String path) {
-
-        //TODO add username
-        String mFileId = utilsService.createMonkeySyncId(path);
-
-        Optional<EntityMonkeyFile> optionalEntityMonkeyFile = repositoryMonkeyFile.findById(mFileId);
-        if(optionalEntityMonkeyFile.isPresent()) {
-            return optionalEntityMonkeyFile.get();
-        } else {
-            return repositoryMonkeyFile.save(new EntityMonkeyFile(mFileId, path));
-        }
-    }
+//    private EntityMonkeyFile findOrCreateMonkeyFile(String path) {
+//
+//        //TODO add username
+//        String mFileId = utilsService.createMonkeySyncId(path);
+//
+//        Optional<EntityMonkeyFile> optionalEntityMonkeyFile = repositoryMonkeyFile.findById(mFileId);
+//        if(optionalEntityMonkeyFile.isPresent()) {
+//            return optionalEntityMonkeyFile.get();
+//        } else {
+//            return repositoryMonkeyFile.save(new EntityMonkeyFile(mFileId, path));
+//        }
+//    }
 
 
 
@@ -788,13 +788,14 @@ public class UpdateServiceImpl implements UpdateService {
         String filename = path.getFileName().toString();
         String virtualPath = basePath + "/" + filename;
 
-        EntityMonkeyFile monkeyFile = utilsService.createMonkeyFile(virtualPath);
+        //EntityMonkeyFile monkeyFile = utilsService.createMonkeyFile(virtualPath);
+        String msId = utilsService.createMonkeySyncId(virtualPath);
         String monkeyFolderId = updateAncestorsMonkeyFolders(basePath);
 
         Path downloadDir = utilsService.downloadDir(monkeyFolderId );
-        Path targetFilePath = Paths.get(downloadDir.toString(), monkeyFile.getId());
+        Path targetFilePath = Paths.get(downloadDir.toString(), msId);
 
-        LOG.info("Write {} msId {} to {}", filename, monkeyFile.getId(), targetFilePath);
+        //LOG.info("Write {} msId {} to {}", filename, msId, targetFilePath);
         try {
             Files.write(targetFilePath, bytes);
         } catch (IOException e) {
@@ -802,25 +803,27 @@ public class UpdateServiceImpl implements UpdateService {
         }
 
         File2Process f2p = new File2Process()
-            .setFileId(monkeyFile.getId())
+            .setFileId(msId)
             .setFileName(filename)
             .setFilePath(targetFilePath)
             .setParentFolderId(monkeyFolderId)
             .setMd5(md5)
-            .setMimeType(MIME_PDF);
+            .setMimeType(MIME_PDF)
+            .setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
 
-            f2p.setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
+        LOG.info("Adding file name {} id {} status {} - remote path {}",
+                f2p.getFileName(), f2p.getFileName(), monkeyFileEvent.getEventType(), virtualPath);
 
             String username = authService.getUsernameFromContext();
 
             if (mapScheduled.containsKey(username)) {
                 mapScheduled.get(username).add(f2p);
             } else {
-                mapScheduled.put(username, new ArrayList<>());
+                mapScheduled.put(username, new HashSet<>());
                 mapScheduled.get(username).add(f2p);
             }
 
-            return SyncEventResponse.acceptedSyncEventResponse(monkeyFile.getId());
+            return SyncEventResponse.acceptedSyncEventResponse(msId);
         }
 
 
@@ -828,7 +831,7 @@ public class UpdateServiceImpl implements UpdateService {
     private ThreadPoolTaskScheduler taskScheduler;
 
     //private Set<File2Process> setFiles2Process = Collections.synchronizedSet(new HashSet<>());
-    private ConcurrentHashMap<String, List<File2Process>> mapScheduled = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Set<File2Process>> mapScheduled = new ConcurrentHashMap<>();
 
     @Autowired
     private ApplicationContext ctx;

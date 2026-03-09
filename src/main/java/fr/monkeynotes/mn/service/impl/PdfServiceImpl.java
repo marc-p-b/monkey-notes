@@ -85,11 +85,11 @@ public class PdfServiceImpl implements PdfService {
 
                     LOG.info("original image {}x{}", image.getWidth(), image.getHeight());
                     BufferedImage resizedImage = imageService.resizeImage(resizeMaxWidth, resizeMaxHeight, image);
-                    LOG.info("resized image {}x{}", image.getWidth(), image.getHeight());
+                    LOG.info("resized image {}x{}", resizedImage.getWidth(), resizedImage.getHeight());
 
                     if(preferencesService.getPreferenceAsBoolean(PreferenceKey.cropImage)) {
                         resizedImage = imageService.cropToContent(resizedImage, cropPadding);
-                        LOG.info("cropped image {}x{}", image.getWidth(), image.getHeight());
+                        LOG.info("cropped image {}x{}", resizedImage.getWidth(), resizedImage.getHeight());
                     }
 
                     Path pathPage = utilsService.tempImagePath(fileId, pageNumber);

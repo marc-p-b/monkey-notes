@@ -1,7 +1,5 @@
 package fr.monkeynotes.mn.service;
 
-import fr.monkeynotes.mn.data.entity.EntityMonkeyFile;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,5 +28,4 @@ public interface UtilsService {
     void deleteAllData();
 
     String createMonkeySyncId(String input);
-    EntityMonkeyFile createMonkeyFile(String path);
 }

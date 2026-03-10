@@ -10,13 +10,11 @@ import java.io.IOException;
 
 public class RefreshWatchTask implements Runnable{
 	private ApplicationContext ctx;
-	//private Authentication auth;
 	private String username;
 
 
 	public RefreshWatchTask(ApplicationContext ctx, String username){
 		this.ctx = ctx;
-		//this.auth = auth;
 		this.username = username;
 	}
 

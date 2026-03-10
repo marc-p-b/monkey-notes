@@ -93,6 +93,19 @@ public class UpdateServiceImpl implements UpdateService {
     @Autowired
     private NamedEntitiesService namedEntitiesService;
 
+    @Autowired
+    private ApplicationContext ctx;
+
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
+
+    private ConcurrentHashMap<String, Set<File2Process>> mapScheduled = new ConcurrentHashMap<>();
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void init() {
+        taskScheduler.scheduleWithFixedDelay(new FlushMonkeySyncTask(ctx), Duration.ofSeconds(30));
+
+    }
 
     @Override
     public void runListAsyncProcess(List<File2Process> files2Process) {
@@ -426,7 +439,6 @@ public class UpdateServiceImpl implements UpdateService {
 
     }
 
-
     private EntityFile findOrCreateFolder(String id, String path, String parentId) {
 
         IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), id);
@@ -447,22 +459,6 @@ public class UpdateServiceImpl implements UpdateService {
             return repositoryFile.save(folder);
         }
     }
-
-
-//    private EntityMonkeyFile findOrCreateMonkeyFile(String path) {
-//
-//        //TODO add username
-//        String mFileId = utilsService.createMonkeySyncId(path);
-//
-//        Optional<EntityMonkeyFile> optionalEntityMonkeyFile = repositoryMonkeyFile.findById(mFileId);
-//        if(optionalEntityMonkeyFile.isPresent()) {
-//            return optionalEntityMonkeyFile.get();
-//        } else {
-//            return repositoryMonkeyFile.save(new EntityMonkeyFile(mFileId, path));
-//        }
-//    }
-
-
 
     private String updateAncestorsFoldersGDrive(File2Process f2p) throws ServiceException {
 
@@ -718,7 +714,6 @@ public class UpdateServiceImpl implements UpdateService {
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
         processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
-
     }
 
     @MonitoringAsync
@@ -747,6 +742,7 @@ public class UpdateServiceImpl implements UpdateService {
         }
     }
 
+    //TODO dedicated service ?
     @Override
     public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
 
@@ -788,14 +784,12 @@ public class UpdateServiceImpl implements UpdateService {
         String filename = path.getFileName().toString();
         String virtualPath = basePath + "/" + filename;
 
-        //EntityMonkeyFile monkeyFile = utilsService.createMonkeyFile(virtualPath);
         String msId = utilsService.createMonkeySyncId(virtualPath);
         String monkeyFolderId = updateAncestorsMonkeyFolders(basePath);
 
         Path downloadDir = utilsService.downloadDir(monkeyFolderId );
         Path targetFilePath = Paths.get(downloadDir.toString(), msId);
 
-        //LOG.info("Write {} msId {} to {}", filename, msId, targetFilePath);
         try {
             Files.write(targetFilePath, bytes);
         } catch (IOException e) {
@@ -814,34 +808,19 @@ public class UpdateServiceImpl implements UpdateService {
         LOG.info("Adding file name {} id {} status {} - remote path {}",
                 f2p.getFileName(), f2p.getFileName(), monkeyFileEvent.getEventType(), virtualPath);
 
-            String username = authService.getUsernameFromContext();
+        String username = authService.getUsernameFromContext();
 
-            if (mapScheduled.containsKey(username)) {
-                mapScheduled.get(username).add(f2p);
-            } else {
-                mapScheduled.put(username, new HashSet<>());
-                mapScheduled.get(username).add(f2p);
-            }
-
-            return SyncEventResponse.acceptedSyncEventResponse(msId);
+        if (mapScheduled.containsKey(username)) {
+            mapScheduled.get(username).add(f2p);
+        } else {
+            mapScheduled.put(username, new HashSet<>());
+            mapScheduled.get(username).add(f2p);
         }
 
-
-    @Autowired
-    private ThreadPoolTaskScheduler taskScheduler;
-
-    //private Set<File2Process> setFiles2Process = Collections.synchronizedSet(new HashSet<>());
-    private ConcurrentHashMap<String, Set<File2Process>> mapScheduled = new ConcurrentHashMap<>();
-
-    @Autowired
-    private ApplicationContext ctx;
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void init() {
-        taskScheduler.scheduleWithFixedDelay(new FlushMonkeySyncTask(ctx), Duration.ofSeconds(30));
-
+        return SyncEventResponse.acceptedSyncEventResponse(msId);
     }
 
+    //todo dedicated service ?
     public void flushMonkeySync(){
         HashMap<String, List<File2Process>> mapScheduledCopy = new HashMap<>();
         mapScheduled.forEach((key, list) ->
@@ -854,8 +833,6 @@ public class UpdateServiceImpl implements UpdateService {
             String username = entry.getKey();
             List<File2Process> list = entry.getValue();
 
-
-
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     () -> runListAsyncProcessForUser(list, username));
             processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.flushMonkeySyncs, monitoringService.getCurrentMonitoringData(),
@@ -866,12 +843,10 @@ public class UpdateServiceImpl implements UpdateService {
         }
     }
 
+    //todo dedicated service ?
     public void runListAsyncProcessForUser(List<File2Process> files2Process, String username) {
         NoAuthContextHolder.setContext(new NoAuthContext(username));
         runListAsyncProcess(files2Process);
     }
-
-
-
 
 }

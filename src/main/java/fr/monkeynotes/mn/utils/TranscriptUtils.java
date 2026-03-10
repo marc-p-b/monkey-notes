@@ -56,8 +56,7 @@ public class TranscriptUtils {
             return new ArrayList<>();
         }
 
-        //String regex = "\\[\\s*\\/\\s*((?i)(XT|T|D|DU|P|@|SREF|S))(?:\\s+([^\\]]+))?\\]";
-
+        //TODO update with <>() support
         String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L|V|X))(?:\\s*:\\s*([^\\]]+))?\\]";
         //format [VERB:value] where VERB is XT, T, D, DU, P, @, SREF, S, L (upper or lower)
         //with spaces or not :

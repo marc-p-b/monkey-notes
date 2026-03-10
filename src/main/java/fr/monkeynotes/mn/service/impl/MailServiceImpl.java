@@ -170,5 +170,4 @@ public class MailServiceImpl implements MailService {
             LOG.error("Failed to send email", e);
         }
     }
-
 }

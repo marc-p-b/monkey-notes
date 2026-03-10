@@ -24,6 +24,7 @@ public class PreferencesInterceptor implements HandlerInterceptor {
 
         Optional<String> optAuthUrl = driveService.requireAuth();
         if (optAuthUrl.isPresent() || preferencesService.isParametersNotSet()) {
+            //todo fix this URL ?
             response.sendRedirect("/v/preferences");
         }
         return true;

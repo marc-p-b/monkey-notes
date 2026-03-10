@@ -8,7 +8,6 @@ import org.springframework.context.ApplicationContext;
 
 public class RefreshTokenTask implements Runnable{
 	private ApplicationContext ctx;
-	//private Authentication auth;
 	private String username;
 
 	public RefreshTokenTask(ApplicationContext ctx, String username) {

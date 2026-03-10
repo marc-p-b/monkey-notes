@@ -194,21 +194,6 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return result.getFiles();
     }
 
-//    //todo folder id as param
-//    @Override
-//    public void deleteSimilarNameFromTranscripts(String name, String folderId) {
-//        LOG.info("delete previous files {}", name);
-//        try {
-//            List<File> list = listFileByName(name, folderId);
-//            for(File file : list) {
-//                LOG.info("deleted file {} id {}", file.getName(), file.getId());
-//                delete(file.getId());
-//            }
-//        } catch (IOException e) {
-//            LOG.error("file does not exists with name {}", name, e);
-//        }
-//    }
-
     @Override
     public File upload(String name, String folderId, java.io.File file) {
         LOG.info("upload file {}", name);
@@ -232,21 +217,4 @@ public class DriveServiceUtilsImpl implements DriveUtilsService {
         return null;
     }
 
-//    @Override
-//    public File createFolder(String name, String parentFolderId) {
-//        File fileMetadata = new File();
-//        fileMetadata.setName(name);
-//        fileMetadata.setParents(Collections.singletonList(parentFolderId));
-//        fileMetadata.setMimeType(DriveFileTypes.GOOGLE_DRIVE_FOLDER_MIME_TYPE);
-//
-//        try {
-//            File driveFile = driveService.getDrive().files().create(fileMetadata)
-//                    .setFields("id, parents")
-//                    .execute();
-//            return driveFile;
-//        } catch (IOException e) {
-//            LOG.error("error creating folder {}", name, e);
-//        }
-//        return null;
-//    }
 }

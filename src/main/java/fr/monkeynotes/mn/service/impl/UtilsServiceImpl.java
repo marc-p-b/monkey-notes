@@ -1,6 +1,8 @@
 package fr.monkeynotes.mn.service.impl;
 
-import fr.monkeynotes.mn.data.entity.*;
+import fr.monkeynotes.mn.data.entity.EntityFile;
+import fr.monkeynotes.mn.data.entity.EntityUser;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.repository.*;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.UtilsService;

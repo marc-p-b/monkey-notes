@@ -1,7 +1,5 @@
 package fr.monkeynotes.mn.data;
 
-
-
 public class SyncEventResponse {
     private String id;
     private SyncEventStatus status;

@@ -12,7 +12,10 @@ import org.springframework.stereotype.Service;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -184,7 +187,6 @@ public class ImageServiceImpl implements ImageService {
 
 
     public BufferedImage resizeImage(int maxWidth, int maxHeight, BufferedImage originalImage) throws Exception {
-
         // Calculate new dimensions while preserving aspect ratio
         int originalWidth = originalImage.getWidth();
         int originalHeight = originalImage.getHeight();
@@ -206,6 +208,4 @@ public class ImageServiceImpl implements ImageService {
 
         return resized;
     }
-
-
 }

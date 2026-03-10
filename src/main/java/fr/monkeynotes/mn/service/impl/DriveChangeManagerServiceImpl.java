@@ -14,7 +14,6 @@ import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryGDriveCredential;
-import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
 import fr.monkeynotes.mn.monitoring.SupplyAsync;
@@ -257,9 +256,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             mapScheduled.put(fileId, changedFile);
 
                         }
-//                    else {
-//                        LOG.info("rejected file {}", fileId);
-//                    }
                     } else {
                         LOG.warn("No file with this id found {}", fileId);
                     }
@@ -293,7 +289,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
 
         mapAuth2SetFlushedFileId.keySet().stream()
             .forEach(username -> {
-                //String username = e.getKey();
                 Set<String> fileIds = mapAuth2SetFlushedFileId.get(username);
 
                 SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
@@ -419,7 +414,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    //TODO
+    //TODO implement
     public void watchStop() throws IOException {
 //        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
 //        driveService.getDrive().channels().stop(responseChannel);
@@ -427,7 +422,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
 
-    //TODO
+    //TODO implement
     @Override
     public Map<String, Object> getStatus() {
 //        List<String> listScheduled = mapScheduled.entrySet().stream()

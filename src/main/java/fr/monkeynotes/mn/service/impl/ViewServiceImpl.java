@@ -102,21 +102,6 @@ public class ViewServiceImpl implements ViewService {
                     listDtoRecent.add(dtoTranscriptDetails);
                 }
             }
-
-
-            //this is slow ! (and bad !)
-            //List<String> parents = driveUtilsService.getDriveParents(entityTranscript.getIdFile().getFileId());\
-//            if(parents.isEmpty() == false) {
-//                IdFile parentIdFile = IdFile.createIdFile(authService.getUsernameFromContext(), parents.get(0));
-//                Optional<EntityFile> parentFile = repositoryFile.findById(parentIdFile);
-//                if(parentFile.isPresent()) {
-//                    dtoTranscriptDetails = new DtoTranscriptDetails(
-//                            DtoTranscript.fromEntity(entityTranscript),
-//                            DtoFile.fromEntity(parentFile.get()));
-//
-//                    listDtoRecent.add(dtoTranscriptDetails);
-//                }
-//            }
         }
         return listDtoRecent;
     }
@@ -252,8 +237,6 @@ public class ViewServiceImpl implements ViewService {
     }
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
-        //List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
-
         //todo optimize ? include in all requests ? // remove n ?
         //TODO replace optional ?
 

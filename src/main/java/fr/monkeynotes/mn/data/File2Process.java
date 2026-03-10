@@ -7,8 +7,6 @@ import fr.monkeynotes.mn.data.enums.FileType;
 
 import java.nio.file.Path;
 
-
-
 public class File2Process {
 
     public enum File2ProcessType {

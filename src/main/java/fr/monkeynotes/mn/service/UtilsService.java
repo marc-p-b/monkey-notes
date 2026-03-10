@@ -18,7 +18,6 @@ public interface UtilsService {
     Path tempImagePath(String username, String fileId, int imageNumber);
     URL imageURL(String username, String fileId, int imageNumber) throws MalformedURLException;
     URL tempImageURL(String username, String fileId, int imageNumber) throws MalformedURLException;
-    //Path fileWorkingDir(UtilsServiceImpl.WorkingDir dirType, String fileId);
     void efficientStreamFile(File file, OutputStream outputStream) throws IOException;
     Path getUserDataPath();
     Path getUserImagesPath();
@@ -26,6 +25,5 @@ public interface UtilsService {
     Path getUserTranscriptsPath();
     String getLocalFileName(String fileId);
     void deleteAllData();
-
     String createMonkeySyncId(String input);
 }

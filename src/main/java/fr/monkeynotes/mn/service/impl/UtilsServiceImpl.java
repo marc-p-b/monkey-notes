@@ -34,7 +34,6 @@ public class UtilsServiceImpl implements UtilsService {
     public static final String DOWNLOADS = "downloads";
     public static final String IMAGES = "images";
     public static final String TRANSCRIPTS = "transcripts";
-    public static final String MONKEYSYNC_ID_PREFIX = "ms";
     private Logger LOG = LoggerFactory.getLogger(UtilsService.class);
 
     @Value("${app.paths.user_data}")
@@ -72,9 +71,6 @@ public class UtilsServiceImpl implements UtilsService {
 
     @Autowired
     private RepositoryConfig repositoryConfig;
-
-    @Autowired
-    private RepositoryAgent repositoryAgent;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
@@ -234,26 +230,4 @@ public class UtilsServiceImpl implements UtilsService {
         Optional<EntityFile> optionalEntityFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
         return optionalEntityFile.isPresent() ? optionalEntityFile.get().getName() : fileId;
     }
-
-    @Override
-    public String createMonkeySyncId(String input) {
-        MessageDigest digest = null;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            LOG.error(e.getMessage(), e);
-            return null;
-        }
-        byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
-        }
-        return MONKEYSYNC_ID_PREFIX + hexString;
-    }
-
-
 }

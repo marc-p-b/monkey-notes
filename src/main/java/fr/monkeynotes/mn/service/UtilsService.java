@@ -25,5 +25,4 @@ public interface UtilsService {
     Path getUserTranscriptsPath();
     String getLocalFileName(String fileId);
     void deleteAllData();
-    String createMonkeySyncId(String input);
 }

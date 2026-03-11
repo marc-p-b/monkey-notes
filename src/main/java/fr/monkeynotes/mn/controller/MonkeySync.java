@@ -2,6 +2,7 @@ package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.data.MonkeyFileEvent;
 import fr.monkeynotes.mn.data.SyncEventResponse;
+import fr.monkeynotes.mn.service.MonkeySyncService;
 import fr.monkeynotes.mn.service.UpdateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,14 +20,14 @@ public class MonkeySync {
     private Logger LOG = LoggerFactory.getLogger(MonkeySync.class);
 
     @Autowired
-    private UpdateService updateService;
+    private MonkeySyncService monkeySyncService;
 
     @PostMapping(value = "/sync/pdf", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SyncEventResponse> syncPdf(@RequestBody MonkeyFileEvent fileEvent) {
 
         LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getFilePath(), fileEvent.getFileSize());
 
-        SyncEventResponse syncEventResponse = updateService.monkeySyncUpdate(fileEvent);
+        SyncEventResponse syncEventResponse = monkeySyncService.monkeySyncUpdate(fileEvent);
 
         SyncEventResponse.SyncEventStatus status = syncEventResponse.getStatus();
                 syncEventResponse.getStatus();

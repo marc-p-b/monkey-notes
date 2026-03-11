@@ -11,7 +11,10 @@ import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
-import fr.monkeynotes.mn.monitoring.*;
+import fr.monkeynotes.mn.monitoring.AsyncResult;
+import fr.monkeynotes.mn.monitoring.MonitoringAsync;
+import fr.monkeynotes.mn.monitoring.MonitoringService;
+import fr.monkeynotes.mn.monitoring.SupplyAsyncAuthenticated;
 import fr.monkeynotes.mn.service.*;
 import fr.monkeynotes.mn.tasks.FlushMonkeySyncTask;
 import fr.monkeynotes.mn.utils.TranscriptUtils;
@@ -34,15 +37,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -99,7 +98,6 @@ public class UpdateServiceImpl implements UpdateService {
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
 
-    private ConcurrentHashMap<String, Set<File2Process>> mapScheduled = new ConcurrentHashMap<>();
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
@@ -400,66 +398,6 @@ public class UpdateServiceImpl implements UpdateService {
         return listDocs;
     }
 
-    private String updateAncestorsMonkeyFolders(String path) {
-        Optional<EntityFile> optRootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder);
-        EntityFile rootFolder = null;
-        if(optRootFolder.isPresent() == false) {
-            // create monkey sync root if necessary
-            String msId = utilsService.createMonkeySyncId(ROOT_FOLDER);
-            rootFolder = new EntityFile()
-                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), msId))
-                    .setType(FileType.folder)
-                    .setName(ROOT_FOLDER);
-            repositoryFile.save(rootFolder);
-
-            //also save it as root in prefs
-            preferencesService.setInputFolderId(msId);
-
-        } else {
-            rootFolder = optRootFolder.get();
-        }
-
-        String[] folders = path.split("/");
-        StringBuilder sb = new StringBuilder();
-        String parentId = rootFolder.getIdFile().getFileId();
-        for(String folder : folders) {
-            if(folder.isEmpty()) {
-                continue;
-            }
-            sb.append("/").append(folder);
-
-            String currentFolderPath = sb.toString();
-
-            EntityFile entityFileFolder = findOrCreateFolder(utilsService.createMonkeySyncId(currentFolderPath), currentFolderPath, parentId);
-            parentId = entityFileFolder.getIdFile().getFileId();
-
-        }
-
-        return parentId;
-
-    }
-
-    private EntityFile findOrCreateFolder(String id, String path, String parentId) {
-
-        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), id);
-
-        //TODO force folder type ?
-        Optional<EntityFile> optFolder = repositoryFile.findById(idFile);
-
-        if(optFolder.isPresent()) {
-            return optFolder.get();
-        } else {
-
-            EntityFile folder = new EntityFile()
-                    .setIdFile(idFile)
-                    .setParentFolderId(parentId)
-                    .setType(FileType.folder)
-                    .setName(path);
-
-            return repositoryFile.save(folder);
-        }
-    }
-
     private String updateAncestorsFoldersGDrive(File2Process f2p) throws ServiceException {
 
         if(f2p.isLegacy() == false) {
@@ -742,111 +680,5 @@ public class UpdateServiceImpl implements UpdateService {
         }
     }
 
-    //TODO dedicated service ?
-    @Override
-    public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
-
-        Base64.Decoder decoder = Base64.getDecoder();
-        byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
-
-        byte[] hash = null;
-        String md5;
-        try {
-            hash = MessageDigest.getInstance("MD5").digest(bytes);
-            md5 = HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-
-        String currentRemoteFolderPath = null;
-        String remoteFolderPath = monkeyFileEvent.getRootFolderPath();
-        try {
-            currentRemoteFolderPath = preferencesService.getPreference(PreferenceKey.remoteRootFolderPath);
-        } catch (ServiceException e) {
-            //todo is this the best way ?
-            preferencesService.setRemoteRootFolderPath(remoteFolderPath);
-            currentRemoteFolderPath = remoteFolderPath;
-        }
-
-        if(currentRemoteFolderPath == null) {
-            preferencesService.setRemoteRootFolderPath(remoteFolderPath);
-        }
-
-        if(currentRemoteFolderPath != null && currentRemoteFolderPath.equals(remoteFolderPath) == false) {
-            LOG.error("Sync for file {} : remote root folder has changed and cannot be used : {} current folder is : {}",
-                    monkeyFileEvent.getFileName(), remoteFolderPath, currentRemoteFolderPath);
-            return SyncEventResponse.refusedSyncEventResponse("remote root folder has changed");
-        }
-
-        Path path = Paths.get(monkeyFileEvent.getFilePath().replaceAll(monkeyFileEvent.getRootFolderPath(), ""));
-
-        String basePath = path.getParent().toString();
-        String filename = path.getFileName().toString();
-        String virtualPath = basePath + "/" + filename;
-
-        String msId = utilsService.createMonkeySyncId(virtualPath);
-        String monkeyFolderId = updateAncestorsMonkeyFolders(basePath);
-
-        Path downloadDir = utilsService.downloadDir(monkeyFolderId );
-        Path targetFilePath = Paths.get(downloadDir.toString(), msId);
-
-        try {
-            Files.write(targetFilePath, bytes);
-        } catch (IOException e) {
-            LOG.error("Failed to write file", e);
-        }
-
-        File2Process f2p = new File2Process()
-            .setFileId(msId)
-            .setFileName(filename)
-            .setFilePath(targetFilePath)
-            .setParentFolderId(monkeyFolderId)
-            .setMd5(md5)
-            .setMimeType(MIME_PDF)
-            .setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
-
-        LOG.info("Adding file name {} id {} status {} - remote path {}",
-                f2p.getFileName(), f2p.getFileName(), monkeyFileEvent.getEventType(), virtualPath);
-
-        String username = authService.getUsernameFromContext();
-
-        if (mapScheduled.containsKey(username)) {
-            mapScheduled.get(username).add(f2p);
-        } else {
-            mapScheduled.put(username, new HashSet<>());
-            mapScheduled.get(username).add(f2p);
-        }
-
-        return SyncEventResponse.acceptedSyncEventResponse(msId);
-    }
-
-    //todo dedicated service ?
-    public void flushMonkeySync(){
-        HashMap<String, List<File2Process>> mapScheduledCopy = new HashMap<>();
-        mapScheduled.forEach((key, list) ->
-                mapScheduledCopy.put(key, new ArrayList<>(list))
-        );
-        mapScheduled.clear();
-
-        for (Map.Entry<String, List<File2Process>> entry : mapScheduledCopy.entrySet()) {
-
-            String username = entry.getKey();
-            List<File2Process> list = entry.getValue();
-
-            SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
-                    () -> runListAsyncProcessForUser(list, username));
-            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.flushMonkeySyncs, monitoringService.getCurrentMonitoringData(),
-                    "flush monkey syncs (" + list.size() + " files)");
-            CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
-
-            processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
-        }
-    }
-
-    //todo dedicated service ?
-    public void runListAsyncProcessForUser(List<File2Process> files2Process, String username) {
-        NoAuthContextHolder.setContext(new NoAuthContext(username));
-        runListAsyncProcess(files2Process);
-    }
 
 }

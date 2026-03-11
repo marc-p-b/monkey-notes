@@ -2,7 +2,7 @@ package fr.monkeynotes.mn.tasks;
 
 import fr.monkeynotes.mn.data.NoAuthContextHolder;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
-import fr.monkeynotes.mn.service.UpdateService;
+import fr.monkeynotes.mn.service.MonkeySyncService;
 import org.springframework.context.ApplicationContext;
 
 public class FlushMonkeySyncTask implements Runnable{
@@ -15,7 +15,7 @@ public class FlushMonkeySyncTask implements Runnable{
 	@Override
 	public void run() {
 		try {
-			UpdateService service = ctx.getBean(UpdateService.class);
+			MonkeySyncService service = ctx.getBean(MonkeySyncService.class);
 
 			MonitoringService monitoringService = ctx.getBean(MonitoringService.class);
 			monitoringService.start("FlushMonkeySyncTask", "run");

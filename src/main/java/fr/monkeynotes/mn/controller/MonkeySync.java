@@ -2,6 +2,8 @@ package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.data.MonkeyFileEvent;
 import fr.monkeynotes.mn.data.SyncEventResponse;
+import fr.monkeynotes.mn.data.entity.EntityTranscript;
+import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.service.MonkeySyncService;
 import fr.monkeynotes.mn.service.UpdateService;
 import org.slf4j.Logger;
@@ -10,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 public class MonkeySync {
@@ -42,6 +44,29 @@ public class MonkeySync {
 
         }
         return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Autowired
+    private RepositoryTranscript repositoryTranscript;
+
+    @GetMapping(value = "/sync/status/{msId}")
+    public ResponseEntity<String> syncUpdate(@PathVariable String msId) {
+
+        LOG.info("request update for {}", msId);
+
+        Optional<EntityTranscript> optionalEntityTranscript = repositoryTranscript.findAllByIdFile_FileId(msId);
+
+        if(optionalEntityTranscript.isPresent()) {
+            return ResponseEntity.ok("processed");
+        }
+
+        return ResponseEntity.ok("ko");
+    }
+
+    @GetMapping(value = "/sync/delete/{msId}")
+    public ResponseEntity<String> syncDelete(@PathVariable String msId) {
+
+        return ResponseEntity.ok("ok");
     }
 
 }

@@ -150,7 +150,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
 
             SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
                     () -> runListAsyncProcessForUser(list, username));
-            processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.flushMonkeySyncs, monitoringService.getCurrentMonitoringData(),
+            processService.registerSyncProcess(username, AsyncProcessName.flushMonkeySyncs, monitoringService.getCurrentMonitoringData(),
                     "flush monkey syncs (" + list.size() + " files)");
             CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 

@@ -7,6 +7,7 @@ import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
@@ -118,7 +119,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
                 .setParentFolderId(monkeyFolderId)
                 .setMd5(md5)
                 .setMimeType(MIME_PDF)
-                .setFile2ProcessType(File2Process.File2ProcessType.monkeySync);
+                .setSyncOption(SyncOption.monkey);
 
         LOG.info("Adding file name {} id {} status {} - remote path {}",
                 f2p.getFileName(), f2p.getFileName(), monkeyFileEvent.getEventType(), virtualPath);

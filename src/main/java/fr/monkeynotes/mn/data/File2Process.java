@@ -4,19 +4,16 @@ import com.google.api.services.drive.model.File;
 import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.FileType;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 
 import java.nio.file.Path;
 
 public class File2Process {
 
-    public enum File2ProcessType {
-        legacy,
-        monkeySync;
-    }
     private String fileId;
     private Path filePath;
 
-    private File2ProcessType file2ProcessType;
+    private SyncOption syncOption;
 
     private String fileName;
     private String md5;
@@ -33,29 +30,13 @@ public class File2Process {
         this.fileName = file.getName() != null ? file.getName() : "unknown";
         this.md5 = file.getMd5Checksum() != null ? file.getMd5Checksum() : "unknown";
         this.mimeType = file.getMd5Checksum() != null ? file.getMimeType() : "unknown";
-
-        this.file2ProcessType = File2ProcessType.legacy;
+        this.syncOption = SyncOption.gdrive;
     }
 
     public File2Process() {
     }
 
-    public File2ProcessType getFile2ProcessType() {
-        return file2ProcessType;
-    }
 
-    public File2Process setFile2ProcessType(File2ProcessType file2ProcessType) {
-        this.file2ProcessType = file2ProcessType;
-        return this;
-    }
-
-    public boolean isLegacy() {
-        return file2ProcessType == File2ProcessType.legacy;
-    }
-
-    public boolean isMonkeySync() {
-        return file2ProcessType == File2ProcessType.monkeySync;
-    }
 
     public EntityFile asEntity(String username) {
 
@@ -64,7 +45,8 @@ public class File2Process {
                 .setIdFile(IdFile.createIdFile(username, fileId))
                 .setName(fileName)
                 .setMd5(md5)
-                .setParentFolderId(parentFolderId);
+                .setParentFolderId(parentFolderId)
+                .setSyncOption(syncOption);
 
     }
 
@@ -137,6 +119,15 @@ public class File2Process {
 
     public File2Process setForce(boolean force) {
         this.force = force;
+        return this;
+    }
+
+    public SyncOption getSyncOption() {
+        return syncOption;
+    }
+
+    public File2Process setSyncOption(SyncOption syncOption) {
+        this.syncOption = syncOption;
         return this;
     }
 }

@@ -8,6 +8,7 @@ import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
@@ -114,12 +115,12 @@ public class UpdateServiceImpl implements UpdateService {
         for(File2Process file2Process : files2Process) {
 
             LOG.info("Processing file name {} id {}",
-                    file2Process.getFileName(), file2Process.getFileName());
+                    file2Process.getFileName(), file2Process.getFileId());
 
             // --------------------------------------
             // Legacy file : get full path of the current file
             // --------------------------------------
-            if (file2Process.isLegacy()) {
+            if (file2Process.getSyncOption().equals(SyncOption.gdrive)) {
                 try {
                     updateAncestorsFoldersGDrive(file2Process);
                 } catch (ServiceException e) {
@@ -400,7 +401,7 @@ public class UpdateServiceImpl implements UpdateService {
 
     private String updateAncestorsFoldersGDrive(File2Process f2p) throws ServiceException {
 
-        if(f2p.isLegacy() == false) {
+        if(f2p.getSyncOption().equals(SyncOption.gdrive) == false) {
             throw new ServiceException("Ancestors folders update only applies to legacy files");
         }
 
@@ -659,25 +660,55 @@ public class UpdateServiceImpl implements UpdateService {
 
         //TODO update process
 
-        try {
-            File file = driveUtilsService.getDriveFileDetails(fileId);
 
-            File fileParent = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
-
-            Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
+        Optional<EntityFile> optFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
 
-            //TODO why setFilePath ... after constructor (already doing the samed thing ??)
-            File2Process file2Process = new File2Process(file)
-                    .setFilePath(downloadFileFromDrive)
+        if(optFile.isPresent() == false) {
+            return;
+        }
+        EntityFile entityFile = optFile.get();
+        Optional<EntityFile> optFileParent = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), entityFile.getParentFolderId()));
+
+        if(optFileParent.isPresent() == false) {
+            return;
+        }
+        EntityFile entityFileParent = optFileParent.get();
+
+        File2Process file2Process = null;
+        if(entityFile.getSyncOption().equals(SyncOption.gdrive)) {
+            try {
+                File file = driveUtilsService.getDriveFileDetails(fileId);
+                File fileParent = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
+                Path downloadPath = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
+                file2Process = new File2Process(file)
+                    .setFilePath(downloadPath)
                     .setParentFolderId(fileParent.getId())
                     .setParentFolderName(fileParent.getName())
                     .setForce(true);
 
-            runListAsyncProcess(List.of(file2Process));
-        } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            }  catch (ServiceException e) {
+                throw new RuntimeException(e);
+            }
+            //used to be download
+        } else if (entityFile.getSyncOption().equals(SyncOption.monkey)) {
+            Path downloadPath = Path.of(utilsService.getUserDownloadsPath().toString(), entityFile.getParentFolderId(), fileId);
+
+            //todo need to unify paths management ; here the path is build to match initial download location
+            // might be different when updating a gdrive file (
+
+            file2Process = new File2Process()
+                    .setFileId(fileId)
+                    .setFileName(entityFile.getName())
+                    .setSyncOption(entityFile.getSyncOption()) //when set to monkey, only transcript is updated
+                    .setFilePath(downloadPath) //todo useful ?
+                    .setParentFolderId(entityFile.getParentFolderId())
+                    .setParentFolderName(entityFileParent.getName()) //todo useful ?
+                    .setForce(true);
         }
+
+            runListAsyncProcess(List.of(file2Process));
+
     }
 
 

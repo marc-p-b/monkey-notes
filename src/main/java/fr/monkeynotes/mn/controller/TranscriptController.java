@@ -4,7 +4,10 @@ import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptDetails;
 import fr.monkeynotes.mn.data.dto.FileNode;
+import fr.monkeynotes.mn.data.entity.EntityFile;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.ViewOptionsCompletionStatus;
+import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +25,7 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 public class TranscriptController {
@@ -61,15 +65,26 @@ public class TranscriptController {
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 
+    @Autowired
+    private RepositoryFile repositoryFile;
+
+    @Autowired
+    private AuthService authService;
+
     @GetMapping(value = "/transcript/pdf/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> getTranscriptPdf(@PathVariable String fileId) throws IOException {
         File file = viewService.createTranscriptPdf(fileId);
+
+        Optional<EntityFile> entityFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
         StreamingResponseBody stream = outputStream -> {
             utilsService.efficientStreamFile(file, outputStream);
         };
 
-        String docName = driveUtilsService.getFileName(fileId) + ".pdf";
+        //String docName = driveUtilsService.getFileName(fileId) + ".pdf";
+
+        String docName = entityFile.get().getName();
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + docName)
                 .contentType(MediaType.APPLICATION_PDF)

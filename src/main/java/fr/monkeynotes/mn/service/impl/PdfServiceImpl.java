@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 public class PdfServiceImpl implements PdfService {
@@ -255,7 +256,23 @@ public class PdfServiceImpl implements PdfService {
 
     @NotNull
     private static String replaceCars4Pdf(DtoTranscriptPage transcriptPage, Map<String, String> replacements) {
-        String text = transcriptPage.getTranscript().replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+
+        Pattern replaceUnsafePattern = Pattern.compile(
+                "[\\p{Cc}&&[^\\r\\n\\t]]" +   // control chars (sauf CR/LF/TAB)
+                        "|[\\p{Cf}\\p{Co}\\p{Cn}\\p{Cs}]" + // format, PUA, unassigned, surrogates
+                        "|[\\uFFFD\\uFFFE\\uFFFF]" +   // replacement char, BOM, non-chars
+                        "|[\\uE000-\\uF8FF]"            // PUA BMP
+        );
+
+        String text = transcriptPage.getTranscript();
+
+        if (text != null) {
+            text = replaceUnsafePattern.matcher(text).replaceAll("(!)");
+        }
+
+
+//        String text =
+//                .replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
         for(Map.Entry<String, String> replacement : replacements.entrySet()) {
             text = text.replaceAll(replacement.getKey(), replacement.getValue());
         }

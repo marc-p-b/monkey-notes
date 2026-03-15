@@ -267,7 +267,9 @@ public class ViewServiceImpl implements ViewService {
 
                 //schema ref for next page
                 optNextPageSchema = namedEntities.stream()
-                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.refSchema))
+                        .filter(ne->{
+                            return (ne.getVerb().equals(NamedEntityVerb.refSchema) || ne.getVerb().equals(NamedEntityVerb.refSchema2));
+                        })
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
 

@@ -56,20 +56,24 @@ public class TranscriptUtils {
             return new ArrayList<>();
         }
 
-        //TODO update with <>() support
-        String regex = "\\[\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L|V|X))(?:\\s*:\\s*([^\\]]+))?\\]";
+        Pattern p = Pattern.compile(
+                "(?<open>[<(\\[])\\s*(?<verb>(?:SN|S|T|D|P|@|L|V|X))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
+                Pattern.CASE_INSENSITIVE
+        );
+
+        //String regex = "\\<\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L|V|X))(?:\\s*:\\s*([^\\>]+))?\\]";
         //format [VERB:value] where VERB is XT, T, D, DU, P, @, SREF, S, L (upper or lower)
         //with spaces or not :
         // [ t: myTAG]
         // [T : myTAG ]
 
-        Pattern p = Pattern.compile(regex);
+        //Pattern p = Pattern.compile(regex);
 
         Matcher m = p.matcher(text);
         List<DtoNamedEntity> identities = new ArrayList<>();
         while (m.find()) {
 
-            NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(1));
+            NamedEntityVerb verb = NamedEntityVerb.fromString(m.group(2));
             String value = m.group(3);
             if(value != null) {
                 value = value.trim();

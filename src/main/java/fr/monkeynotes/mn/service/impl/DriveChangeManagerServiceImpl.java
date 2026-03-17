@@ -281,11 +281,11 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
-        if(processService.concurrentProcessFull()) {
-            LOG.warn("Flush skipped, too much concurrent processes");
-            //TODO push a message to user ? or ui ?
-            return;
-        }
+        // todo Keep process limitation here or just before processing ? unify with updateService
+//        if(processService.concurrentProcessFull()) {
+//            LOG.warn("Flush skipped, too much concurrent processes");
+//            return;
+//        }
 
         mapAuth2SetFlushedFileId.keySet().stream()
             .forEach(username -> {

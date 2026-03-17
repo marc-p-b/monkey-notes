@@ -110,6 +110,13 @@ public class UpdateServiceImpl implements UpdateService {
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
         final String processId = monitoringService.getCurrentMonitoringData().getId();
+
+        if(processService.concurrentProcessFull()) {
+            LOG.warn("Async process skipped, too much concurrent processes");
+            processService.updateProcess(processId, "stalled - wait for available processing slot");
+            return;
+        }
+
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 
         for(File2Process file2Process : files2Process) {

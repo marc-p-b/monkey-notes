@@ -13,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Optional;
 
 @RestController
@@ -44,6 +46,35 @@ public class MonkeySync {
 
         }
         return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @PostMapping(value = "/sync/pdf2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<SyncEventResponse> syncPdf2(
+            @RequestPart("event") MonkeyFileEvent fileEvent,
+            @RequestPart("file") MultipartFile file) {
+        SyncEventResponse syncEventResponse = null;
+
+        try {
+            syncEventResponse = monkeySyncService.monkeySyncUpdate2(fileEvent, file.getBytes());
+        } catch (IOException e) {
+            LOG.error("Error while reading file {}", fileEvent.getFilePath(), e);
+            return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        SyncEventResponse.SyncEventStatus status = syncEventResponse.getStatus();
+        syncEventResponse.getStatus();
+
+        switch (status) {
+            case refused -> {
+                return new ResponseEntity<>(syncEventResponse, HttpStatus.NOT_ACCEPTABLE);
+            }
+            case accepted -> {
+                return new ResponseEntity<>(syncEventResponse, HttpStatus.OK);
+            }
+
+        }
+        return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+
     }
 
     @Autowired

@@ -61,14 +61,22 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
 
     @Override
     public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
-
         Base64.Decoder decoder = Base64.getDecoder();
         byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
+
+        return monkeySyncUpdate2(monkeyFileEvent, bytes);
+    }
+
+    @Override
+    public SyncEventResponse monkeySyncUpdate2(MonkeyFileEvent monkeyFileEvent, byte[] fileContent) {
+
+        //Base64.Decoder decoder = Base64.getDecoder();
+        //byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
 
         byte[] hash = null;
         String md5;
         try {
-            hash = MessageDigest.getInstance("MD5").digest(bytes);
+            hash = MessageDigest.getInstance("MD5").digest(fileContent);
             md5 = HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
@@ -107,7 +115,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
         Path targetFilePath = Paths.get(downloadDir.toString(), msId);
 
         try {
-            Files.write(targetFilePath, bytes);
+            Files.write(targetFilePath, fileContent);
         } catch (IOException e) {
             LOG.error("Failed to write file", e);
         }

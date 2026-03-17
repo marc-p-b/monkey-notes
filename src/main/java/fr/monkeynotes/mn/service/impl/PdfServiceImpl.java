@@ -65,9 +65,9 @@ public class PdfServiceImpl implements PdfService {
     public List<URL> pdf2Images(String username, String fileId, File sourceFile){
         LOG.info("Converting {} to images", sourceFile);
 
-        List<URL> listImages = null;
+        List<URL> listImages = new ArrayList<>();
         try {
-            listImages = new ArrayList<>();
+            //listImages = new ArrayList<>();
 
             if (sourceFile.exists()) {
                 PDDocument document = Loader.loadPDF(sourceFile);

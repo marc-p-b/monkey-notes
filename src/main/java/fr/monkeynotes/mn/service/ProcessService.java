@@ -21,5 +21,4 @@ public interface ProcessService {
     void attachFileEvent(String processId, AsyncProcessFileEvent event);
     List<AsyncProcess> getAllProcesses();
     Map<String, List<AsyncProcess>> getCompletedProcessesToNotify();
-    //void processDebug();
 }

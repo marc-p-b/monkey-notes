@@ -31,12 +31,6 @@ public class QwenServiceImpl implements QwenService {
     @Value("${app.qwen.key}")
     private String qwenApiKey;
 
-//    @Value("${app.defaults.qwen.model}")
-//    private String defaultModel;
-
-//    @Value("${app.defaults.qwen.prompt}")
-//    private String defaultPrompt;
-
     @Value("${app.dry-run:false}")
     private boolean dryRun;
 
@@ -45,7 +39,6 @@ public class QwenServiceImpl implements QwenService {
 
     @Autowired
     private ImageService imageService;
-
 
     private CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
         LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);

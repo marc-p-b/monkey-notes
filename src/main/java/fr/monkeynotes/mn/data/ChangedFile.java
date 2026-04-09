@@ -8,12 +8,10 @@ public class ChangedFile {
         private Change change;
         private ScheduledFuture<?> future;
         private long timestamp;
-        //private Authentication auth;
         private String username;
 
         public ChangedFile(Change change, String username) {
                 this.change = change;
-                //this.auth = authentication;
                 this.username = username;
                 timestamp = System.currentTimeMillis();
         }

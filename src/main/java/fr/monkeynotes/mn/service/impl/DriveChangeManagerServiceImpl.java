@@ -11,6 +11,7 @@ import fr.monkeynotes.mn.data.entity.EntityGDriveCredential;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryGDriveCredential;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
@@ -112,13 +113,22 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         driveService.connectCallback(runnable);
 
         LOG.info("Watch drive updates for all users");
+
         repositoryGDriveCredential.findAll()
                 .stream()
                 .map(EntityGDriveCredential::getId)
                 .forEach(username -> {
                     try {
                         NoAuthContextHolder.setContext(new NoAuthContext(username));
-                        watch(true);
+                        SyncOption syncOption = SyncOption.valueOf(preferencesService.getPreference(PreferenceKey.syncOption));
+
+                        if(syncOption.equals(SyncOption.gdrive)) {
+                            LOG.info("Watch Google Drive updates for user {}", username);
+                            watch(true);
+                        }
+
+                    } catch (ServiceException e) {
+                        LOG.error("Google drive startup : unable to retrieve prefs for user {}", username);
                     } finally {
                         NoAuthContextHolder.clearContext();
                     }
@@ -246,9 +256,6 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                             mapScheduled.put(fileId, changedFile);
 
                         }
-//                    else {
-//                        LOG.info("rejected file {}", fileId);
-//                    }
                     } else {
                         LOG.warn("No file with this id found {}", fileId);
                     }
@@ -274,15 +281,14 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
                 //regroup by user
                 .collect(Collectors.groupingBy(e->e.getValue().getUsername(), Collectors.mapping(e->e.getKey(), Collectors.toSet())));
 
-        if(processService.concurrentProcessFull()) {
-            LOG.warn("Flush skipped, too much concurrent processes");
-            //TODO push a message to user ? or ui ?
-            return;
-        }
+        // todo Keep process limitation here or just before processing ? unify with updateService
+//        if(processService.concurrentProcessFull()) {
+//            LOG.warn("Flush skipped, too much concurrent processes");
+//            return;
+//        }
 
         mapAuth2SetFlushedFileId.keySet().stream()
             .forEach(username -> {
-                //String username = e.getKey();
                 Set<String> fileIds = mapAuth2SetFlushedFileId.get(username);
 
                 SupplyAsync sa = new SupplyAsync(monitoringService, monitoringService.getCurrentMonitoringData(),
@@ -408,7 +414,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
         }
     }
 
-    //TODO
+    //TODO implement
     public void watchStop() throws IOException {
 //        LOG.info("stop watch channel id {}", responseChannel.getResourceId());
 //        driveService.getDrive().channels().stop(responseChannel);
@@ -416,7 +422,7 @@ public class DriveChangeManagerServiceImpl implements DriveChangeManagerService 
     }
 
 
-    //TODO
+    //TODO implement
     @Override
     public Map<String, Object> getStatus() {
 //        List<String> listScheduled = mapScheduled.entrySet().stream()

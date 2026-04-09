@@ -86,19 +86,15 @@ public class DriveServiceImpl implements DriveService {
     }
 
     private Credential getCredential(){
-        //LOG.info("Get credential user {}", authService.getUsernameFromContext());
         return mapCredentials.get(authService.getUsernameFromContext());
     }
 
     private Credential setCredential(Credential credential){
-        //LOG.info("Set credential user {}", authService.getUsernameFromContext());
         mapCredentials.put(authService.getUsernameFromContext(), credential);
         return credential;
     }
 
     private Drive mapGetDrive(){
-        //LOG.info("Get drive user {}", authService.getUsernameFromContext());
-
         if(mapDrive == null || mapDrive.containsKey(authService.getUsernameFromContext()) == false) {
             requireAuth();
         }
@@ -158,20 +154,10 @@ public class DriveServiceImpl implements DriveService {
         } catch (IOException e) {
             LOG.error("Failed to load credential", e);
         }
-
-//        if(getCredential() != null) {
-//            LOG.info("Credentials ok");
-//        } else {
-//            LOG.error("Credentials failure");
-//        }
         return Optional.empty();
     }
 
     public String requiredNewAuth() {
-
-
-        //.setState("token=" + authService.getCurrentAuthToken())
-
         String token = "token=";
         if (authService.getCurrentAuthToken().isPresent()) {
             token = "token=" + authService.getCurrentAuthToken().get();

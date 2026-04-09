@@ -37,19 +37,14 @@ public class AuthServiceImpl implements AuthService {
         if(NoAuthContextHolder.getContext() != null) {
             return NoAuthContextHolder.getContext().getUsername();
         }
-//        else {
-//            LOG.warn("NoAuthContextHolder context is set");
-//
-//        }
 
         Optional<Authentication> optionalAuthentication = getLoggedAuthentication();
         if(optionalAuthentication.isEmpty()) {
-            //LOG.error("No authentication found");
             return null;
         }
 
         //TODO cannot cast !
-        UsernamePasswordAuthenticationToken u = (UsernamePasswordAuthenticationToken) optionalAuthentication.get();//.getPrincipal();
+        UsernamePasswordAuthenticationToken u = (UsernamePasswordAuthenticationToken) optionalAuthentication.get();
         return u.getPrincipal().toString();
     }
 

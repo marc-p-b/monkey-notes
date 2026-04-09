@@ -1,6 +1,20 @@
 package fr.monkeynotes.mn.data.enums;
 
 public enum NamedEntityVerb {
+
+    /*
+        T tag
+        D date (YY/MM/DD)
+        P person
+        @ email
+        L link
+        SN schema next page
+        S schema current page
+        V checked box
+        X unchecked box
+     */
+
+
     tag("T", true),
     dateUs("DU", false),
     dateIntl("D", false),
@@ -9,6 +23,7 @@ public enum NamedEntityVerb {
     link("L", false),
     schema("S", false),
     refSchema("SREF", false),
+    refSchema2("SN", false),
     noTranscript("XT", false),
     checked("V", false),
     unchecked("X", false),

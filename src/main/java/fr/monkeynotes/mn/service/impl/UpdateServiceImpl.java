@@ -8,6 +8,7 @@ import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.AsyncProcessName;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
@@ -16,12 +17,17 @@ import fr.monkeynotes.mn.monitoring.MonitoringAsync;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
 import fr.monkeynotes.mn.monitoring.SupplyAsyncAuthenticated;
 import fr.monkeynotes.mn.service.*;
+import fr.monkeynotes.mn.tasks.FlushMonkeySyncTask;
 import fr.monkeynotes.mn.utils.TranscriptUtils;
 import fr.monkeynotes.mn.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +39,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -86,21 +93,48 @@ public class UpdateServiceImpl implements UpdateService {
     @Autowired
     private NamedEntitiesService namedEntitiesService;
 
+    @Autowired
+    private ApplicationContext ctx;
+
+    @Autowired
+    private ThreadPoolTaskScheduler taskScheduler;
+
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void init() {
+        taskScheduler.scheduleWithFixedDelay(new FlushMonkeySyncTask(ctx), Duration.ofSeconds(30));
+
+    }
+
     @Override
     public void runListAsyncProcess(List<File2Process> files2Process) {
 
         final String processId = monitoringService.getCurrentMonitoringData().getId();
+
+        if(processService.concurrentProcessFull()) {
+            LOG.warn("Async process skipped, too much concurrent processes");
+            processService.updateProcess(processId, "stalled - wait for available processing slot");
+            return;
+        }
+
         processService.updateProcess(processId, "files to process : " + files2Process.size());
 
         for(File2Process file2Process : files2Process) {
+
+            LOG.info("Processing file name {} id {}",
+                    file2Process.getFileName(), file2Process.getFileId());
+
             // --------------------------------------
-            // get full path of the current file
+            // Legacy file : get full path of the current file
             // --------------------------------------
-            try {
-                updateAncestorsFolders(file2Process.getFileId());
-            } catch (ServiceException e) {
-                LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+            if (file2Process.getSyncOption().equals(SyncOption.gdrive)) {
+                try {
+                    updateAncestorsFoldersGDrive(file2Process);
+                } catch (ServiceException e) {
+                    LOG.warn("Failed to get full folder path {}", file2Process.getFileId(), e);
+                }
             }
+
             AsyncProcessFileEvent fileEvent = new AsyncProcessFileEvent(file2Process.getFileId(), file2Process.getFileName(), file2Process.getParentFolderName());
             processService.attachFileEvent(processId, fileEvent);
 
@@ -376,12 +410,17 @@ public class UpdateServiceImpl implements UpdateService {
                 })
                 .toList();
 
-        //TODO do this after processing ?
+        //TODO why do this after processing ? if processing fails, all files cannot be registered
         repositoryFile.saveAll(listDocs);
         return listDocs;
     }
 
-    private String updateAncestorsFolders(String fileId) throws ServiceException {
+    private String updateAncestorsFoldersGDrive(File2Process f2p) throws ServiceException {
+
+        if(f2p.getSyncOption().equals(SyncOption.gdrive) == false) {
+            throw new ServiceException("Ancestors folders update only applies to legacy files");
+        }
+
         String inboundFolderId = "";
         try {
             inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
@@ -390,7 +429,7 @@ public class UpdateServiceImpl implements UpdateService {
             return null;
         }
 
-        File file = driveUtilsService.getDriveFileDetails(fileId);
+        File file = driveUtilsService.getDriveFileDetails(f2p.getFileId());
         List<File> ancestors = driveUtilsService.getAncestorsUntil(file, inboundFolderId, ANCESTORS_RETRIEVE_MAX_DEPTH,null);
 
         Collections.reverse(ancestors);
@@ -415,8 +454,10 @@ public class UpdateServiceImpl implements UpdateService {
             }
             folders.add(folder);
         }
+
+        //TODO try to save even already exists ?
         repositoryFile.saveAll(folders);
-        //todo return dto instead
+
         return ROOT_FOLDER + ancestors.stream().map(File::getName).collect(Collectors.joining(ROOT_FOLDER));
     }
 
@@ -628,7 +669,6 @@ public class UpdateServiceImpl implements UpdateService {
         CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
 
         processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
-
     }
 
     @MonitoringAsync
@@ -636,22 +676,56 @@ public class UpdateServiceImpl implements UpdateService {
 
         //TODO update process
 
-        try {
-            File file = driveUtilsService.getDriveFileDetails(fileId);
 
-            File fileParent = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
+        Optional<EntityFile> optFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
-            Path downloadFileFromDrive = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
 
-            File2Process file2Process = new File2Process(file)
-                    .setFilePath(downloadFileFromDrive)
+        if(optFile.isPresent() == false) {
+            return;
+        }
+        EntityFile entityFile = optFile.get();
+        Optional<EntityFile> optFileParent = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), entityFile.getParentFolderId()));
+
+        if(optFileParent.isPresent() == false) {
+            return;
+        }
+        EntityFile entityFileParent = optFileParent.get();
+
+        File2Process file2Process = null;
+        if(entityFile.getSyncOption().equals(SyncOption.gdrive)) {
+            try {
+                File file = driveUtilsService.getDriveFileDetails(fileId);
+                File fileParent = driveUtilsService.getDriveFileDetails(file.getParents().get(0));
+                Path downloadPath = driveUtilsService.downloadFileFromDrive(fileId, file.getName(), utilsService.downloadDir(fileId));
+                file2Process = new File2Process(file)
+                    .setFilePath(downloadPath)
                     .setParentFolderId(fileParent.getId())
                     .setParentFolderName(fileParent.getName())
                     .setForce(true);
 
-            runListAsyncProcess(List.of(file2Process));
-        } catch (ServiceException e) {
-            throw new RuntimeException(e);
+            }  catch (ServiceException e) {
+                throw new RuntimeException(e);
+            }
+            //used to be download
+        } else if (entityFile.getSyncOption().equals(SyncOption.monkey)) {
+            Path downloadPath = Path.of(utilsService.getUserDownloadsPath().toString(), entityFile.getParentFolderId(), fileId);
+
+            //todo need to unify paths management ; here the path is build to match initial download location
+            // might be different when updating a gdrive file (
+
+            file2Process = new File2Process()
+                    .setFileId(fileId)
+                    .setFileName(entityFile.getName())
+                    .setSyncOption(entityFile.getSyncOption()) //when set to monkey, only transcript is updated
+                    .setFilePath(downloadPath) //todo useful ?
+                    .setParentFolderId(entityFile.getParentFolderId())
+                    .setParentFolderName(entityFileParent.getName()) //todo useful ?
+                    .setForce(true);
         }
+
+            runListAsyncProcess(List.of(file2Process));
+
     }
+
+
 }

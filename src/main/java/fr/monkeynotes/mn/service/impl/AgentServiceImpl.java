@@ -61,22 +61,19 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private AuthService authService;
 
-//    @Autowired
-//    private PreferencesService prefsService;
-
     @Autowired
     private RepositoryFile repositoryFile;
 
+    @Autowired
+    private PreferencesService preferencesService;
 
     @Value("${app.openai.assistant.defaults.instructions}")
     private String dftOpenaiAssistantInstructions;
 
-    //make this multiuser
+    //TODO make this multiuser
     private SseEmitter emitter;
     private Long lastId = 0L;
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    @Autowired
-    private PreferencesService preferencesService;
 
     @Override
     public DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options) {

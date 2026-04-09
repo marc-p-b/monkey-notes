@@ -158,14 +158,6 @@ public class SearchServiceImpl implements SearchService {
             Map<String, List<DtoSearchResult>> mapResults = dtoSearchResults.stream()
                     .collect(Collectors.groupingBy(DtoSearchResult::getTitle));
             return mapResults;
-//            UnifiedHighlighter highlighter = new UnifiedHighlighter(searcher, analyzer);
-//            highlighter.setHighlightPhrasesStrictly(true);
-//            highlighter.setMaxLength(9999);
-//
-//            String[] fragments = highlighter.highlight("content", query, topDocs);
-//            for (int i = 0; i < fragments.length; i++) {
-//                System.out.println("Doc " + topDocs.scoreDocs[i].doc + ": " + fragments[i]);
-//            }
 
         } catch (ParseException e) {
             throw new RuntimeException(e);

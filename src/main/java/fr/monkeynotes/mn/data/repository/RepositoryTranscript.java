@@ -9,12 +9,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
 public interface RepositoryTranscript extends JpaRepository<EntityTranscript, IdFile> {
     List<EntityTranscript> findAllByIdFileIn(Set<IdFile> idFiles);
     List<EntityTranscript> findAllByIdFile_Username(String username);
+    Optional<EntityTranscript> findAllByIdFile_FileId(String id);
 
     @Query("SELECT t FROM transcript t where t.idFile.username = :username ORDER BY t.transcripted_at DESC")
     List<EntityTranscript> findRecentByIdFile_Username(@Param("username") String username, Pageable pageable);

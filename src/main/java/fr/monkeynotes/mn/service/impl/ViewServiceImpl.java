@@ -75,15 +75,24 @@ public class ViewServiceImpl implements ViewService {
         return null;
     }
 
+    //TODO make Specialized id objects
+
     @Override
     public List<DtoTranscriptDetails> listRecentTranscripts(int from, int to) {
         List<EntityTranscript> list = repositoryTranscript.findRecentByIdFile_Username(authService.getUsernameFromContext(), PageRequest.of(from,to));
+
+        //idFile -> idParent
+        Map<IdFile, String> map = repositoryFile.findAllById(list.stream().map(EntityTranscript::getIdFile).collect(Collectors.toList())).stream()
+                .collect(Collectors.toMap(f->f.getIdFile(), f->f.getParentFolderId()));
+
+
         List<DtoTranscriptDetails> listDtoRecent = new ArrayList<>();
         for (EntityTranscript entityTranscript : list) {
             DtoTranscriptDetails dtoTranscriptDetails = null;
-            List<String> parents = driveUtilsService.getDriveParents(entityTranscript.getIdFile().getFileId());
-            if(parents.isEmpty() == false) {
-                IdFile parentIdFile = IdFile.createIdFile(authService.getUsernameFromContext(), parents.get(0));
+
+
+            if(map.containsKey(entityTranscript.getIdFile())) {
+                IdFile parentIdFile =IdFile.createIdFile(authService.getUsernameFromContext(), map.get(entityTranscript.getIdFile()));
                 Optional<EntityFile> parentFile = repositoryFile.findById(parentIdFile);
                 if(parentFile.isPresent()) {
                     dtoTranscriptDetails = new DtoTranscriptDetails(
@@ -228,8 +237,6 @@ public class ViewServiceImpl implements ViewService {
     }
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
-        //List<Optional<EntityTranscriptPage>> listPages = new ArrayList<>();
-
         //todo optimize ? include in all requests ? // remove n ?
         //TODO replace optional ?
 
@@ -260,7 +267,9 @@ public class ViewServiceImpl implements ViewService {
 
                 //schema ref for next page
                 optNextPageSchema = namedEntities.stream()
-                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.refSchema))
+                        .filter(ne->{
+                            return (ne.getVerb().equals(NamedEntityVerb.refSchema) || ne.getVerb().equals(NamedEntityVerb.refSchema2));
+                        })
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
 

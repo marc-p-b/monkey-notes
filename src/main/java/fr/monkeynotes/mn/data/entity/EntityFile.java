@@ -1,7 +1,8 @@
 package fr.monkeynotes.mn.data.entity;
 
-import jakarta.persistence.*;
 import fr.monkeynotes.mn.data.enums.FileType;
+import fr.monkeynotes.mn.data.enums.SyncOption;
+import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
@@ -18,6 +19,9 @@ public class EntityFile {
     private OffsetDateTime discovered_at;
     @Enumerated(EnumType.STRING)
     private FileType type;
+
+    @Enumerated(EnumType.STRING)
+    private SyncOption syncOption;
 
     public EntityFile() {
         this.discovered_at = OffsetDateTime.now();
@@ -74,6 +78,15 @@ public class EntityFile {
 
     public EntityFile setType(FileType type) {
         this.type = type;
+        return this;
+    }
+
+    public SyncOption getSyncOption() {
+        return syncOption;
+    }
+
+    public EntityFile setSyncOption(SyncOption syncOption) {
+        this.syncOption = syncOption;
         return this;
     }
 }

@@ -7,6 +7,8 @@ public enum PreferenceKey {
     inputFolderId,
     cropImage,
 
+    remoteRootFolderPath,
+
     ocrPrompt,
     selectedOcrModel,
     qwenConnectTimeout,

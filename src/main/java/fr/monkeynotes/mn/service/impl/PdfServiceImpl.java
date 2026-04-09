@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -35,11 +34,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 public class PdfServiceImpl implements PdfService {
-    //public static final int RESIZE_IMAGE_MAX_WIDTH = 1200;
-    //public static final int RESIZE_IMAGE_MAX_HEIGHT = 1000;
     private Logger LOG = LoggerFactory.getLogger(PdfService.class);
 
     public static final int PDF2IMAGE_DPI = 72;
@@ -54,9 +52,6 @@ public class PdfServiceImpl implements PdfService {
     @Value("${app.defaults.image.crop.padding}")
     private int cropPadding;
 
-//    @Value("${app.defaults.image.crop.enabled}")
-//    private boolean cropEnabled;
-
     @Autowired
     private UtilsService utilsService;
 
@@ -70,9 +65,9 @@ public class PdfServiceImpl implements PdfService {
     public List<URL> pdf2Images(String username, String fileId, File sourceFile){
         LOG.info("Converting {} to images", sourceFile);
 
-        List<URL> listImages = null;
+        List<URL> listImages = new ArrayList<>();
         try {
-            listImages = new ArrayList<>();
+            //listImages = new ArrayList<>();
 
             if (sourceFile.exists()) {
                 PDDocument document = Loader.loadPDF(sourceFile);
@@ -85,11 +80,11 @@ public class PdfServiceImpl implements PdfService {
 
                     LOG.info("original image {}x{}", image.getWidth(), image.getHeight());
                     BufferedImage resizedImage = imageService.resizeImage(resizeMaxWidth, resizeMaxHeight, image);
-                    LOG.info("resized image {}x{}", image.getWidth(), image.getHeight());
+                    LOG.info("resized image {}x{}", resizedImage.getWidth(), resizedImage.getHeight());
 
                     if(preferencesService.getPreferenceAsBoolean(PreferenceKey.cropImage)) {
                         resizedImage = imageService.cropToContent(resizedImage, cropPadding);
-                        LOG.info("cropped image {}x{}", image.getWidth(), image.getHeight());
+                        LOG.info("cropped image {}x{}", resizedImage.getWidth(), resizedImage.getHeight());
                     }
 
                     Path pathPage = utilsService.tempImagePath(fileId, pageNumber);
@@ -110,35 +105,6 @@ public class PdfServiceImpl implements PdfService {
         }
         return null;
     }
-
-    //seems not reliable between 2 pdf conversions..
-//    private String imageMd5(BufferedImage image) throws NoSuchAlgorithmException {
-//        MessageDigest md = MessageDigest.getInstance("MD5");
-//
-//        if (image.getRaster().getDataBuffer() instanceof DataBufferByte) {
-//            byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-//            md.update(pixels);
-//        } else {
-//            int width = image.getWidth();
-//            int height = image.getHeight();
-//            int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
-//            for (int pixel : pixels) {
-//                md.update((byte) ((pixel >> 24) & 0xFF));
-//                md.update((byte) ((pixel >> 16) & 0xFF));
-//                md.update((byte) ((pixel >> 8) & 0xFF));
-//                md.update((byte) (pixel & 0xFF));
-//            }
-//        }
-//        return toHex(md.digest());
-//    }
-//
-//    private String toHex(byte[] bytes) {
-//        StringBuilder sb = new StringBuilder();
-//        for (byte b : bytes) {
-//            sb.append(String.format("%02x", b));
-//        }
-//        return sb.toString();
-//    }
 
     @Override
     public java.io.File createTranscriptPdf(String fileId, List<DtoTranscript> listDtoTranscript) throws IOException {
@@ -290,7 +256,23 @@ public class PdfServiceImpl implements PdfService {
 
     @NotNull
     private static String replaceCars4Pdf(DtoTranscriptPage transcriptPage, Map<String, String> replacements) {
-        String text = transcriptPage.getTranscript().replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
+
+        Pattern replaceUnsafePattern = Pattern.compile(
+                "[\\p{Cc}&&[^\\r\\n\\t]]" +   // control chars (sauf CR/LF/TAB)
+                        "|[\\p{Cf}\\p{Co}\\p{Cn}\\p{Cs}]" + // format, PUA, unassigned, surrogates
+                        "|[\\uFFFD\\uFFFE\\uFFFF]" +   // replacement char, BOM, non-chars
+                        "|[\\uE000-\\uF8FF]"            // PUA BMP
+        );
+
+        String text = transcriptPage.getTranscript();
+
+        if (text != null) {
+            text = replaceUnsafePattern.matcher(text).replaceAll("(!)");
+        }
+
+
+//        String text =
+//                .replaceAll("[\\p{Cc}&&[^\\r\\n]]|[\\p{Cf}\\p{Co}\\p{Cn}]", "(!)");
         for(Map.Entry<String, String> replacement : replacements.entrySet()) {
             text = text.replaceAll(replacement.getKey(), replacement.getValue());
         }

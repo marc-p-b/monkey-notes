@@ -194,12 +194,16 @@ const loadPage = async () => {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-envelope'></i></span>")
     } else if (ne.verb == 'link') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-link'></i></span>")
-    } else if (ne.verb == 'dateUs' || ne.verb == 'dateIntl') {
+    } else if (ne.verb == 'dateUS' || ne.verb == 'dateEU' || ne.verb == 'dateISO') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-calendar'></i></span>")
     } else if (ne.verb == 'checked') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' checked /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
     } else if (ne.verb == 'unchecked') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
+    } else if (ne.verb == 'diagram') {
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-tag'></i></span>")
+    } else if (ne.verb == 'diagramNextPage') {
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-tag'></i></span>")
     } else {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|")
     }

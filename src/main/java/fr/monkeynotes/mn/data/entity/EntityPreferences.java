@@ -1,11 +1,14 @@
 package fr.monkeynotes.mn.data.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 
 @Entity(name="preferences")
 public class EntityPreferences {
     private EntityPreferencesId configId;
+    // TODO : optimise (prompts coult be long but not other configs)
+    @Column(length = 2048)
     private String value;
 
     public EntityPreferences() {

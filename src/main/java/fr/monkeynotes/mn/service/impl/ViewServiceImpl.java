@@ -257,7 +257,7 @@ public class ViewServiceImpl implements ViewService {
 
                 //schema for this page
                 Optional<String> optSchema = namedEntities.stream()
-                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.schema))
+                        .filter(ne->ne.getVerb().equals(NamedEntityVerb.diagram))
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
                 dtoTranscriptPage.setSchemaTitle(optSchema);
@@ -268,7 +268,7 @@ public class ViewServiceImpl implements ViewService {
                 //schema ref for next page
                 optNextPageSchema = namedEntities.stream()
                         .filter(ne->{
-                            return (ne.getVerb().equals(NamedEntityVerb.refSchema) || ne.getVerb().equals(NamedEntityVerb.refSchema2));
+                            return (ne.getVerb().equals(NamedEntityVerb.diagramNextPage) || ne.getVerb().equals(NamedEntityVerb.refSchema2_DEL));
                         })
                         .map(DtoNamedEntity::getValue)
                         .findFirst();

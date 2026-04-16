@@ -57,17 +57,10 @@ public class TranscriptUtils {
         }
 
         Pattern p = Pattern.compile(
-                "(?<open>[<(\\[])\\s*(?<verb>(?:SN|S|T|D|P|@|L|V|X))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
+                "(?<open>[<(\\[])\\s*(?<verb>(?:DG|DGN|T|DT|DE|DU|P|@|L|V|X))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
                 Pattern.CASE_INSENSITIVE
         );
 
-        //String regex = "\\<\\s*((?i)(XT|T|D|DU|P|@|SREF|S|L|V|X))(?:\\s*:\\s*([^\\>]+))?\\]";
-        //format [VERB:value] where VERB is XT, T, D, DU, P, @, SREF, S, L (upper or lower)
-        //with spaces or not :
-        // [ t: myTAG]
-        // [T : myTAG ]
-
-        //Pattern p = Pattern.compile(regex);
 
         Matcher m = p.matcher(text);
         List<DtoNamedEntity> identities = new ArrayList<>();
@@ -82,17 +75,25 @@ public class TranscriptUtils {
             Pattern patternDate = Pattern.compile("\\d\\d/\\d\\d/\\d\\d");
 
             if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {
-                if (verb.equals(NamedEntityVerb.dateUs)) {
+                if (verb.equals(NamedEntityVerb.dateISO)) {
                     LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("yy/MM/dd"));
                     LocalDateTime ldt = ld.atStartOfDay();
                     Instant instant = ldt.toInstant(ZoneOffset.UTC);
                     value = DateTimeFormatter.ISO_INSTANT.format(instant);
-                } else if (verb.equals(NamedEntityVerb.dateIntl)) {
+                } else if (verb.equals(NamedEntityVerb.dateEU)) {
                     LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("dd/MM/yy"));
                     LocalDateTime ldt = ld.atStartOfDay();
                     Instant instant = ldt.toInstant(ZoneOffset.UTC);
                     value = DateTimeFormatter.ISO_INSTANT.format(instant);
+                } else if (verb.equals(NamedEntityVerb.dateUS)) {
+                    LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("MM/dd/yy"));
+                    LocalDateTime ldt = ld.atStartOfDay();
+                    Instant instant = ldt.toInstant(ZoneOffset.UTC);
+                    value = DateTimeFormatter.ISO_INSTANT.format(instant);
+                } else {
+                    // TODO: Not a valid date
                 }
+
             }
             identities.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
         }

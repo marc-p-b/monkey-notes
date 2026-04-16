@@ -106,14 +106,25 @@ Frontend API endpoint configured in `ui/env.js` for production.
 
 ## Named Entity Syntax
 
+
+Markdown titles: `# Title`, `## Subtitle`
+
 The OCR system recognizes these patterns in handwritten notes:
-- Markdown titles: `# Title`, `## Subtitle`
-- Tags: `[T:tag-name]`
-- People: `[p:person-name]`
-- Emails: `[@:email@domain.com]`
-- EU dates: `[d:DD/MM/YY]`
-- US dates: `[du:MM/DD/YY]`
-- Checkboxes: `[X:todo]`, `[V:done]`
+
+- < VERB : VALUE >
+- ( VERB : VALUE )
+- [ VERB : VALUE ]
+
+- DG : diagram current page
+- DGN : diagram next page
+- DT : date (DD/MM/YY)
+- DI : date inverted (YY/MM/DD)
+- T : tag
+- P : person
+- @ : email
+- L : link
+- V : checked checkbox
+- X : unchecked checkbox
 
 ## External Services
 
@@ -128,3 +139,7 @@ The OCR system recognizes these patterns in handwritten notes:
 - Frontend dev server runs at localhost:5173, backend at localhost:8080
 - On first run, admin password is printed to logs
 - JWT-based stateless authentication throughout
+
+## OCR Prompts
+
+handwritten notes in french. extract text from image. do not add other text.

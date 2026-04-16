@@ -4,27 +4,28 @@ public enum NamedEntityVerb {
 
     /*
         T tag
-        D date (YY/MM/DD)
+        DI date iso (YY/MM/DD)
+        DE date EU (DD/MM/YY)
+        DU date US (MM/DD/YY)
         P person
         @ email
         L link
-        SN schema next page
-        S schema current page
+        DGN schema next page
+        DG schema current page
         V checked box
         X unchecked box
      */
 
 
     tag("T", true),
-    dateUs("DU", false),
-    dateIntl("D", false),
+    dateISO("DT", false),
+    dateEU("DE", false),
+    dateUS("DU", false),
     person("P", true),
     email("@", true),
     link("L", false),
-    schema("S", false),
-    refSchema("SREF", false),
-    refSchema2("SN", false),
-    noTranscript("XT", false),
+    diagram("DG", false),
+    diagramNextPage("DGN", false),
     checked("V", false),
     unchecked("X", false),
     h2("#", false),
@@ -32,7 +33,9 @@ public enum NamedEntityVerb {
     h4("###", false),
     h5("####", false),
     h6("#####", false),
-    unknown("", false);
+    unknown("", false),
+    refSchema2_DEL("", false),
+    noTranscript_DEL("", false);
 
     private String name;
     private boolean indexable;

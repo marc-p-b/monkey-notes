@@ -143,3 +143,80 @@ The OCR system recognizes these patterns in handwritten notes:
 ## OCR Prompts
 
 handwritten notes in french. extract text from image. do not add other text.
+
+# Syncing test logs
+
+```
+Boox export
+
+------------------------------
+monkeyFileEvent.filePath: /storage/emulated/0/note/test3/Folder-1/Notebook-1.pdf
+monkeyFileEvent.fileName: 2026-06-04_11_46_02.pdf
+monkeyFileEvent.rootFolderPath: /storage/emulated/0/note/test3
+currentRemoteFolderPath: /storage/emulated/0/note/test3
+basePath: /Folder-1
+filename: Notebook-1.pdf
+virtualPath: /Folder-1/Notebook-1.pdf
+msId: ms0a253c889670c4a3fef36915fe106fbd516ca7222601c06d055533f5e2137644
+targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c938aa6733d007a753947bbf6293ef475e32797cfd7f1e2d7c1264/ms0a253c889670c4a3fef36915fe106fbd516ca7222601c06d055533f5e2137644
+------------------------------
+[a1cbb87bbb42] [MonkeySync.syncPdf] [] Adding file name Notebook-1.pdf id Notebook-1.pdf status created - remote path /Folder-1/Notebook-1.pdf
+------------------------------
+monkeyFileEvent.filePath: /storage/emulated/0/note/test3/Folder-1/Notebook-2.pdf
+monkeyFileEvent.fileName: Notebook-2.pdf
+monkeyFileEvent.rootFolderPath: /storage/emulated/0/note/test3
+currentRemoteFolderPath: /storage/emulated/0/note/test3
+basePath: /Folder-1
+filename: Notebook-2.pdf
+virtualPath: /Folder-1/Notebook-2.pdf
+msId: ms288c629820a9a9644adf5d8b5c1e989e493165a8fbe67be0e3a229e7b6c9b580
+targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c938aa6733d007a753947bbf6293ef475e32797cfd7f1e2d7c1264/ms288c629820a9a9644adf5d8b5c1e989e493165a8fbe67be0e3a229e7b6c9b580
+------------------------------
+[0eb814b95a64] [MonkeySync.syncPdf] [] Adding file name Notebook-2.pdf id Notebook-2.pdf status created - remote path /Folder-1/Notebook-2.pdf
+
+
+Boox auto export PDF - new file
+
+------------------------------
+monkeyFileEvent.filePath: /storage/emulated/0/note/test3/Folder-1/Notebook-3.pdf
+monkeyFileEvent.fileName: Notebook-3.pdf
+monkeyFileEvent.rootFolderPath: /storage/emulated/0/note/test3
+currentRemoteFolderPath: /storage/emulated/0/note/test3
+basePath: /Folder-1
+filename: Notebook-3.pdf
+virtualPath: /Folder-1/Notebook-3.pdf
+msId: msa78d29d465b75783c42599fada477919f2322684df8c5f1b862ea97e82b2c0d3
+targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c938aa6733d007a753947bbf6293ef475e32797cfd7f1e2d7c1264/msa78d29d465b75783c42599fada477919f2322684df8c5f1b862ea97e82b2c0d3
+------------------------------
+2026-06-04 11:55:14.063  INFO 24893 --- [nio-8080-exec-2] fr.monkeynotes.mn.service.UtilsService   : [c7a669ac2f5a] [MonkeySync.syncPdf] [] Adding file name Notebook-3.pdf id Notebook-3.pdf status created - remote path /Folder-1/Notebook-3.pdf
+
+
+same file update
+------------------------------
+monkeyFileEvent.filePath: /storage/emulated/0/note/test3/Folder-1/Notebook-3.pdf
+monkeyFileEvent.fileName: Notebook-3.pdf
+monkeyFileEvent.rootFolderPath: /storage/emulated/0/note/test3
+currentRemoteFolderPath: /storage/emulated/0/note/test3
+basePath: /Folder-1
+filename: Notebook-3.pdf
+virtualPath: /Folder-1/Notebook-3.pdf
+msId: msa78d29d465b75783c42599fada477919f2322684df8c5f1b862ea97e82b2c0d3
+targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c938aa6733d007a753947bbf6293ef475e32797cfd7f1e2d7c1264/msa78d29d465b75783c42599fada477919f2322684df8c5f1b862ea97e82b2c0d3
+------------------------------
+[acd35d525b6b] [MonkeySync.syncPdf] [] Adding file name Notebook-3.pdf id Notebook-3.pdf status created - remote path /Folder-1/Notebook-3.pdf
+
+update existing - originally manual export
+
+------------------------------
+monkeyFileEvent.filePath: /storage/emulated/0/note/test3/Folder-1/Notebook-2.pdf
+monkeyFileEvent.fileName: Notebook-2.pdf
+monkeyFileEvent.rootFolderPath: /storage/emulated/0/note/test3
+currentRemoteFolderPath: /storage/emulated/0/note/test3
+basePath: /Folder-1
+filename: Notebook-2.pdf
+virtualPath: /Folder-1/Notebook-2.pdf
+msId: ms288c629820a9a9644adf5d8b5c1e989e493165a8fbe67be0e3a229e7b6c9b580
+targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c938aa6733d007a753947bbf6293ef475e32797cfd7f1e2d7c1264/ms288c629820a9a9644adf5d8b5c1e989e493165a8fbe67be0e3a229e7b6c9b580
+------------------------------
+[4db083a3322c] [MonkeySync.syncPdf] [] Adding file name Notebook-2.pdf id Notebook-2.pdf status created - remote path /Folder-1/Notebook-2.pdf
+```

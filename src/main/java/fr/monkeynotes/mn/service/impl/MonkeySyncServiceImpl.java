@@ -60,19 +60,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
     public static final String ROOT_FOLDER = "/";
 
     @Override
-    public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent) {
-        Base64.Decoder decoder = Base64.getDecoder();
-        byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
-
-        return monkeySyncUpdate2(monkeyFileEvent, bytes);
-    }
-
-    @Override
-    public SyncEventResponse monkeySyncUpdate2(MonkeyFileEvent monkeyFileEvent, byte[] fileContent) {
-
-        //Base64.Decoder decoder = Base64.getDecoder();
-        //byte[] bytes = decoder.decode(monkeyFileEvent.getContent());
-
+    public SyncEventResponse monkeySyncUpdate(MonkeyFileEvent monkeyFileEvent, byte[] fileContent) {
         byte[] hash = null;
         String md5;
         try {
@@ -113,6 +101,18 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
 
         Path downloadDir = utilsService.downloadDir(monkeyFolderId );
         Path targetFilePath = Paths.get(downloadDir.toString(), msId);
+
+        System.out.println("------------------------------");
+        System.out.println("monkeyFileEvent.filePath: " + monkeyFileEvent.getFilePath());
+        System.out.println("monkeyFileEvent.fileName: " + monkeyFileEvent.getFileName());
+        System.out.println("monkeyFileEvent.rootFolderPath: " + monkeyFileEvent.getRootFolderPath());
+        System.out.println("currentRemoteFolderPath: " + currentRemoteFolderPath);
+        System.out.println("basePath: " + basePath);
+        System.out.println("filename: " + filename);
+        System.out.println("virtualPath: " + virtualPath);
+        System.out.println("msId: " + msId);
+        System.out.println("targetFilePath: " + targetFilePath);
+        System.out.println("------------------------------");
 
         try {
             Files.write(targetFilePath, fileContent);

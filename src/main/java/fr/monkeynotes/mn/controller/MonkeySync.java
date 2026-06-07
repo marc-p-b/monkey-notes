@@ -5,7 +5,6 @@ import fr.monkeynotes.mn.data.SyncEventResponse;
 import fr.monkeynotes.mn.data.entity.EntityTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.service.MonkeySyncService;
-import fr.monkeynotes.mn.service.UpdateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,36 +25,14 @@ public class MonkeySync {
     @Autowired
     private MonkeySyncService monkeySyncService;
 
-    @PostMapping(value = "/sync/pdf", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SyncEventResponse> syncPdf(@RequestBody MonkeyFileEvent fileEvent) {
-
-        LOG.info("Received inbound file event name {} type {} folder {} size {}", fileEvent.getFileName(), fileEvent.getEventType(), fileEvent.getFilePath(), fileEvent.getFileSize());
-
-        SyncEventResponse syncEventResponse = monkeySyncService.monkeySyncUpdate(fileEvent);
-
-        SyncEventResponse.SyncEventStatus status = syncEventResponse.getStatus();
-                syncEventResponse.getStatus();
-
-        switch (status) {
-            case refused -> {
-                return new ResponseEntity<>(syncEventResponse, HttpStatus.NOT_ACCEPTABLE);
-            }
-            case accepted -> {
-                return new ResponseEntity<>(syncEventResponse, HttpStatus.OK);
-            }
-
-        }
-        return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @PostMapping(value = "/sync/pdf2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<SyncEventResponse> syncPdf2(
+    @PostMapping(value = "/sync/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<SyncEventResponse> syncPdf(
             @RequestPart("event") MonkeyFileEvent fileEvent,
             @RequestPart("file") MultipartFile file) {
         SyncEventResponse syncEventResponse = null;
 
         try {
-            syncEventResponse = monkeySyncService.monkeySyncUpdate2(fileEvent, file.getBytes());
+            syncEventResponse = monkeySyncService.monkeySyncUpdate(fileEvent, file.getBytes());
         } catch (IOException e) {
             LOG.error("Error while reading file {}", fileEvent.getFilePath(), e);
             return new ResponseEntity<>(syncEventResponse, HttpStatus.INTERNAL_SERVER_ERROR);

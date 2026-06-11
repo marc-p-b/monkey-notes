@@ -1,14 +1,19 @@
 package fr.monkeynotes.mn.service.impl;
 
+import fr.monkeynotes.mn.JwtUtil;
+import fr.monkeynotes.mn.data.AuthResponse;
 import fr.monkeynotes.mn.data.NoAuthContextHolder;
 import fr.monkeynotes.mn.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -16,6 +21,9 @@ import java.util.Optional;
 @Service
 public class AuthServiceImpl implements AuthService {
     private Logger LOG= LoggerFactory.getLogger(AuthServiceImpl.class);
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     public Optional<Authentication> getLoggedAuthentication() {
         SecurityContext sc = SecurityContextHolder.getContext();
@@ -57,5 +65,13 @@ public class AuthServiceImpl implements AuthService {
             return  Optional.of(u.getCredentials().toString());
         }
         return Optional.empty();
+    }
+
+    @Override
+    public AuthResponse refreshToken() {
+        String username = getUsernameFromContext();
+        LOG.info("Token refresh for user: {}", username);
+        UserDetails ud = userDetailsService.loadUserByUsername(username);
+        return new AuthResponse(JwtUtil.generateToken(ud));
     }
 }

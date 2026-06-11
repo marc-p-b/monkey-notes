@@ -46,7 +46,10 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(username);
     }
 
-    //todo jwt/refresh ?
+    @PostMapping(value = "/jwt/refresh", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AuthResponse> refreshToken() {
+        return ResponseEntity.ok(authService.refreshToken());
+    }
 
     @PostMapping(value = "/jwt/login", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {

@@ -1,6 +1,5 @@
 <template>
-  <div v-if="loading">Loading...</div>
-  <ul v-else>
+  <ul class="tree-root">
     <TreeNode
         v-for="node in nodes"
         :key="node.dtoFile.fileId"
@@ -12,13 +11,11 @@
 </template>
 
 <script setup lang="ts">
-import {authFetch} from "@/requests";
+import { authFetch } from "@/requests";
 import TreeNode from "./TreeNode.vue";
-import {ref, onMounted, defineEmits} from "vue";
+import { ref, onMounted, defineEmits } from "vue";
 import { useRouter } from 'vue-router'
 const router = useRouter()
-import { useUiStore } from '@/composables/store.js'
-const store = useUiStore()
 
 interface Node {
   name: string;
@@ -36,10 +33,6 @@ const emit = defineEmits<{
   (e: "loading-status", status: boolean): void;
 }>();
 
-// const endLoading = () => {
-//   emit("loading-end", true);
-// };
-
 const handleFolderClick = async (node: Node) => {
   await fetchFolder(node)
 };
@@ -48,18 +41,13 @@ const handleTranscriptClick = (fileId: string | number) => {
   router.push({ name: 'transcript', params: { fileId } })
 };
 
-async function fetchFolder(node: Node) {
+async function fetchFolder(node: Node | null) {
   emit("loading-status", true);
   try {
-    let url = ""
-    if(node) {
-      url = "transcript/folder/list/" + node.dtoFile.fileId
-    } else {
-      url = "transcript/folder/list"
-    }
+    const url = node ? "transcript/folder/list/" + node.dtoFile.fileId : "transcript/folder/list"
     const response = await authFetch(url);
     if (!response.ok) throw new Error("Network response was not ok");
-    if(node) {
+    if (node) {
       node.children = await response.json();
     } else {
       nodes.value = await response.json()
@@ -68,16 +56,19 @@ async function fetchFolder(node: Node) {
     console.error(err);
     error.value = "Failed to load transcripts.";
   } finally {
-    //store.setLoading(false)
     emit("loading-status", false);
   }
 }
 
 onMounted(() => {
-  fetchFolder("");
+  fetchFolder(null);
 });
-
 </script>
 
-
-
+<style scoped>
+.tree-root {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+</style>

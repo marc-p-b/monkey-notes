@@ -4,7 +4,10 @@
     <div v-if="loading">Loading...</div>
 
     <div v-else>
-      <h1>{{transcript.title}}</h1>
+      <div class="transcript-header">
+        <Button icon="pi pi-arrow-left" text severity="secondary" @click="router.back()" />
+        <h1>{{transcript.title}}</h1>
+      </div>
         <div class="card">
           <Tabs value="0">
             <TabList>
@@ -69,6 +72,17 @@
 </template>
 
 <style scoped>
+
+.transcript-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.transcript-header h1 {
+  margin: 0;
+}
 
 .tags-page li {
   display: inline;         /* ✅ inline display */

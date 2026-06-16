@@ -7,7 +7,11 @@
       <InputText v-model="query" @keydown.enter="search"></InputText>
     </template>
   </Menubar>
-  <RouterView/>
+  <RouterView v-slot="{ Component }">
+    <KeepAlive include="Home">
+      <component :is="Component" />
+    </KeepAlive>
+  </RouterView>
 </template>
 
 <script setup lang="ts">

@@ -24,6 +24,7 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({ name: 'Home' });
 import TreeView from "@/components/TreeView.vue";
 import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests";

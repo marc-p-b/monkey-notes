@@ -31,9 +31,10 @@
       <Button @click.prevent="closeEdit" label="close" />
     </div>
   </div>
-  <a href="#" @click.prevent="updatePage(page)">update</a>
-  <span v-if="page.deltas === 1"> - {{page.deltas}} delta</span>
-  <span v-else-if="page.deltas > 1"> - {{page.deltas}} deltas</span>
+  <div class="page-footer">
+    <Button @click.prevent="updatePage(page)" icon="pi pi-refresh" text severity="secondary" size="small" v-tooltip.top="'Re-transcribe page'" />
+    <Badge v-if="page.deltas > 0" :value="page.deltas + (page.deltas === 1 ? ' delta' : ' deltas')" severity="secondary" />
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -258,7 +259,16 @@ onMounted(() => {
 
 .buttons {
   display: flex;
-  gap: 0.5rem;            /* space between buttons */
+  gap: 0.5rem;
+}
+
+.page-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--p-surface-100);
 }
 
 </style>

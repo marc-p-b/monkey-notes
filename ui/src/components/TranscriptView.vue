@@ -1,124 +1,297 @@
 <template>
 
   <div class="home-wrapper">
-    <div v-if="loading">Loading...</div>
+    <div v-if="loading" class="loading-state">
+      <ProgressSpinner style="width: 2rem; height: 2rem" strokeWidth="6" />
+    </div>
 
     <div v-else>
       <div class="transcript-header">
         <Button icon="pi pi-arrow-left" text severity="secondary" @click="router.back()" />
-        <h1>{{transcript.title}}</h1>
-      </div>
-        <div class="card">
-          <Tabs value="0">
-            <TabList>
-              <Tab value="0">Properties</Tab>
-              <Tab value="1">Tags</Tab>
-              <Tab value="2">TOC</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel value="0">
-                <p class="m-0">
-                  <ul class="tags">
-                    <li>transcripted : {{formatDate(transcript.transcripted_at)}}</li>
-                    <li>documented : {{formatDate(transcript.documented_at)}}</li>
-                    <li>discovered : {{formatDate(transcript.discovered_at)}}</li>
-                    <li>pages : {{transcript.pages.length}}</li>
-                    <li>version : {{transcript.version}}</li>
-                  </ul>
-                  <Button @click.prevent="toggleEditModeRequest()" label="edit" :icon="stateEditIcon" :severity="stateEditSeverity"/>
-                  <a href="#" @click.prevent="agent(transcript.fileId)">agent</a> -
-                  <a href="#" @click.prevent="updateTranscript(transcript.fileId)">update</a> -
-                  <a href="#" @click.prevent="downloadFile(transcript.fileId)">get pdf</a>
-                </p>
-              </TabPanel>
-              <TabPanel value="1">
-                <p class="m-0">
-                  <ul class="tags">
-                    <li v-for="(tags, name) in transcript.tagsMap">
-                      {{name}}
-                      <ul class="tags-page">
-                        pages :
-                        <li v-for="tag in tags">
-                          <a :href="'#' + tag.uuid">{{tag.pageNumber+1}}</a>
-                        </li>
-                      </ul>
-                    </li>
-                  </ul>
-                </p>
-              </TabPanel>
-              <TabPanel value="2">
-                <p class="m-0">
-                  <p v-if="transcript.toc.length === 0">No toc</p>
-                  <ul class="toc">
-                    <li v-for="item in transcript.toc"
-                        :style="{ marginLeft: getIndent(item.verb) + 'px' }">
-                      {{item.value}} <a :href="'#' + item.uuid"><i class="pi pi-link"></i></a>
-                    </li>
-                  </ul>
-                </p>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
+        <div class="transcript-header-text">
+          <h1>{{ transcript.title }}</h1>
+          <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; transcribed {{ formatDate(transcript.transcripted_at) }}</span>
         </div>
+      </div>
 
+      <div class="transcript-info">
+        <Tabs value="0">
+          <TabList>
+            <Tab value="0">Properties</Tab>
+            <Tab value="1">Tags</Tab>
+            <Tab value="2">TOC</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="0">
+              <div class="properties-grid">
+                <div class="property-row">
+                  <i class="pi pi-clock property-icon"></i>
+                  <span class="property-label">Transcribed</span>
+                  <span class="property-value">{{ formatDate(transcript.transcripted_at) }}</span>
+                </div>
+                <div class="property-row">
+                  <i class="pi pi-file-edit property-icon"></i>
+                  <span class="property-label">Documented</span>
+                  <span class="property-value">{{ formatDate(transcript.documented_at) }}</span>
+                </div>
+                <div class="property-row">
+                  <i class="pi pi-search property-icon"></i>
+                  <span class="property-label">Discovered</span>
+                  <span class="property-value">{{ formatDate(transcript.discovered_at) }}</span>
+                </div>
+                <div class="property-row">
+                  <i class="pi pi-copy property-icon"></i>
+                  <span class="property-label">Pages</span>
+                  <span class="property-value">{{ transcript.pages.length }}</span>
+                </div>
+                <div class="property-row">
+                  <i class="pi pi-history property-icon"></i>
+                  <span class="property-label">Version</span>
+                  <span class="property-value">{{ transcript.version }}</span>
+                </div>
+              </div>
+              <div class="action-row">
+                <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
+                <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
+                <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
+                <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
+              </div>
+            </TabPanel>
 
-      <div v-for="page in transcript.pages">
-        <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" @requestEdit="handleEditRequest"/>
+            <TabPanel value="1">
+              <div v-if="!transcript.tagsMap || Object.keys(transcript.tagsMap).length === 0" class="empty-state">
+                No tags
+              </div>
+              <div v-else class="tags-grid">
+                <div v-for="(tags, name) in transcript.tagsMap" :key="name" class="tag-group">
+                  <span class="tag-name">{{ name }}</span>
+                  <div class="tag-pages">
+                    <a v-for="tag in tags" :key="tag.uuid" :href="'#' + tag.uuid" class="tag-page-link">
+                      <Tag :value="'p. ' + (tag.pageNumber + 1)" severity="secondary" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </TabPanel>
+
+            <TabPanel value="2">
+              <div v-if="transcript.toc.length === 0" class="empty-state">No table of contents</div>
+              <ul v-else class="toc">
+                <li v-for="item in transcript.toc" :key="item.uuid"
+                    :style="{ paddingLeft: getIndent(item.verb) + 'px' }"
+                    :class="'toc-item toc-' + item.verb">
+                  {{ item.value }}
+                  <a :href="'#' + item.uuid" class="toc-link"><i class="pi pi-link"></i></a>
+                </li>
+              </ul>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </div>
+
+      <div v-for="page in transcript.pages" :key="page.pageNumber" class="page-card">
+        <div class="page-card-header">
+          <span class="page-badge">Page {{ page.pageNumber + 1 }}</span>
+        </div>
+        <div class="page-content">
+          <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" @requestEdit="handleEditRequest" />
+        </div>
       </div>
     </div>
   </div>
-
 
 </template>
 
 <style scoped>
 
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
 .transcript-header {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.transcript-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.transcript-header-text h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.transcript-subtitle {
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+}
+
+.transcript-info {
+  background-color: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+:deep(.p-dark) .transcript-info {
+  background-color: var(--p-surface-900);
+  border-color: var(--p-surface-700);
+}
+
+.properties-grid {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.property-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--p-surface-100);
+}
+
+.property-row:last-child {
+  border-bottom: none;
+}
+
+.property-icon {
+  color: var(--p-primary-500);
+  width: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.property-label {
+  flex: 0 0 7rem;
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+}
+
+.property-value {
+  font-size: 0.875rem;
+}
+
+.action-row {
+  display: flex;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.transcript-header h1 {
-  margin: 0;
+/* Tags */
+.tags-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.tags-page li {
-  display: inline;         /* ✅ inline display */
-  margin-right: 1rem;      /* spacing between items */
+.tag-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.tags {
-  list-style: none; /* ✅ removes dots */
-  padding-left: 0;  /* ✅ removes default left padding */
-  margin: 0;
+.tag-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-width: 7rem;
+  color: var(--p-surface-700);
 }
 
+.tag-pages {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tag-page-link {
+  text-decoration: none;
+}
+
+.empty-state {
+  color: var(--p-surface-400);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* TOC */
 .toc {
-  list-style: none; /* ✅ removes dots */
-  padding-left: 0;  /* ✅ removes default left padding */
-
-}
-
-.toc li {
-  line-height: 1.6;
   list-style: none;
-
+  padding-left: 0;
+  margin: 0;
 }
-.toc-title {
+
+.toc-item {
+  line-height: 1.8;
+  font-size: 0.9rem;
+}
+
+.toc-h2 {
+  font-weight: 600;
+  font-size: 1rem !important;
+}
+
+.toc-h3 {
   font-weight: 500;
 }
-.toc-page {
-  color: #666;
-  font-size: 0.9em;
+
+.toc-link {
+  margin-left: 0.4rem;
+  color: var(--p-surface-400);
+  font-size: 0.8em;
+  text-decoration: none;
 }
+
+.toc-link:hover {
+  color: var(--p-primary-500);
+}
+
+/* Page cards */
+.page-card {
+  background-color: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.page-card-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--p-surface-50);
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.page-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--p-surface-400);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.page-content {
+  padding: 1rem;
+}
+
 </style>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { authFetch } from "@/requests.ts";
-import { defineProps } from 'vue'
 import TranscriptPage from "./TranscriptPage.vue";
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -145,7 +318,7 @@ interface DtoTranscript {
   username: string
   fileId: string
   name: string
-  transcripted_at: string // use string if coming from JSON (ISO date format)
+  transcripted_at: string
   documented_at: string
   discovered_at: string
   pageCount: number
@@ -154,7 +327,7 @@ interface DtoTranscript {
   title: string
   tags: NamedEntity[]
   toc: NamedEntity[]
-  tagMap: Record<string, NamedEntity[]>;
+  tagsMap: Record<string, NamedEntity[]>;
 }
 
 interface NamedEntity {
@@ -168,7 +341,6 @@ interface NamedEntity {
   end: number
 }
 
-// ✅ utility function for consistent date formatting
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -181,10 +353,10 @@ function formatDate(dateStr: string): string {
 function getIndent(verb: string): number {
   switch (verb) {
     case 'h2': return 0
-    case 'h3': return 20
-    case 'h4': return 40
-    case 'h5': return 60
-    case 'h6': return 80
+    case 'h3': return 16
+    case 'h4': return 32
+    case 'h5': return 48
+    case 'h6': return 64
     default: return 0
   }
 }
@@ -210,9 +382,7 @@ async function updateTranscript(fileId) {
   try {
     const response = await authFetch("transcript/update/" + fileId);
     if (!response.ok) throw new Error("Network response was not ok");
-
     console.log(response)
-
   } catch (err: any) {
     console.error(err);
     error.value = "Failed to update transcript.";
@@ -223,17 +393,10 @@ async function updateTranscript(fileId) {
 
 const downloadFile = async (fileId: string) => {
   try {
-
     const response = await authFetch('transcript/pdf/' + props.fileId)
+    if (!response.ok) throw new Error(`Server error: ${response.status}`)
 
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`)
-    }
-
-    // Convert to Blob (binary data)
     const blob = await response.blob()
-
-    // Extract filename from Content-Disposition header (if provided)
     const contentDisposition = response.headers.get('Content-Disposition')
     let fileName = 'downloaded-file'
     if (contentDisposition) {
@@ -241,7 +404,6 @@ const downloadFile = async (fileId: string) => {
       if (match) fileName = match[1]
     }
 
-    // Create a temporary link and trigger download
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -259,19 +421,22 @@ function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })
 }
 
+function syncEditButtonState() {
+  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
+  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "secondary"
+}
+
 function toggleEditModeRequest() {
-  if(store.transcript_edit_mode) {
+  if (store.transcript_edit_mode) {
     store.transcriptViewMode()
     activeEditPageNumber.value = null
   } else {
     store.transcriptEditMode()
   }
-  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
-  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "success"
+  syncEditButtonState()
 }
 
 function handleEditRequest(pageNumber: number, isClosing: boolean) {
-  
   if (isClosing) {
     activeEditPageNumber.value = null
   } else {
@@ -282,8 +447,7 @@ function handleEditRequest(pageNumber: number, isClosing: boolean) {
 onMounted(() => {
   fetchTranscript()
   store.transcriptViewMode()
-  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
-  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "success"
+  syncEditButtonState()
 });
 
 </script>

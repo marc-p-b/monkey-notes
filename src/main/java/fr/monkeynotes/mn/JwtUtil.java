@@ -14,7 +14,8 @@ public class JwtUtil {
 
     //TODO different for each env ?
     private static final String SECRET_KEY = "SD4vhsqkP2WhBrrHm6QWqxEG2W1pagG6"; // minimum 256-bit for HS256
-    private static final long EXPIRATION_TIME = 60000;//86400000; // 1 day in ms
+    //TODO config
+    private static final long EXPIRATION_TIME = 86400000; // 1 day in ms
 
     private static final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     public static final String AUTHORITIES = "authorities";

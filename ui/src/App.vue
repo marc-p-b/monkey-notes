@@ -1,6 +1,6 @@
 
 <template>
-  <Menubar :model="menuItems">
+  <Menubar v-if="store.isConnected" :model="menuItems">
     <template #end>
       <ProgressSpinner v-if="store.loading" style="width: 30px; height: 30px" strokeWidth="8" animationDuration="2s"/>
       <span>Hello, {{username}}</span>
@@ -18,9 +18,9 @@
 import {onMounted, ref} from "vue"
 import {authFetch} from "@/requests";
 import { useRouter } from 'vue-router'
+import { useUiStore } from '@/composables/store.js'
 
 const router = useRouter()
-import { useUiStore } from '@/composables/store.js'
 const store = useUiStore()
 
 

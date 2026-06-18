@@ -226,6 +226,7 @@ const loadPage = async () => {
   text.value = transcript
 }
 
+//use store instead ?
 watch(() => props.activeEditPageNumber, async (newActivePageNumber) => {
   if (newActivePageNumber === props.page.pageNumber && !editMode.value) {
     await downloadImage(props.page)
@@ -235,6 +236,7 @@ watch(() => props.activeEditPageNumber, async (newActivePageNumber) => {
   }
 })
 
+//use store instead ?
 watch(() => props.showImages, async (val) => {
   if (val && !imgSrc.value && !props.page.schema) {
     await downloadImage(props.page)

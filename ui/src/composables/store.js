@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
+import { isTokenValid } from '@/router/index'
 
 export const useUiStore = defineStore('ui', {
     state: () => ({
         loading: false,
         transcript_edit_mode: false,
         search: '',
-        srPages: []
+        srPages: [],
+        isConnected: isTokenValid(localStorage.getItem("token"))
     }),
     actions: {
         setLoading(value) {
@@ -22,6 +24,9 @@ export const useUiStore = defineStore('ui', {
         },
         transcriptViewMode() {
             this.transcript_edit_mode = false
+        },
+        refreshAuth() {
+            this.isConnected = isTokenValid(localStorage.getItem("token"))
         }
     }
 })

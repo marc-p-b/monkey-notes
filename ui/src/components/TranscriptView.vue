@@ -100,6 +100,16 @@
       <div v-for="page in transcript.pages" :key="page.pageNumber" class="page-card">
         <div class="page-card-header">
           <span class="page-badge">Page {{ page.pageNumber + 1 }}</span>
+          <Button
+            v-if="store.transcript_edit_mode"
+            icon="pi pi-pencil"
+            text
+            size="small"
+            :severity="activeEditPageNumber === page.pageNumber ? 'warn' : 'secondary'"
+            @click="handleEditRequest(page.pageNumber, activeEditPageNumber === page.pageNumber)"
+            v-tooltip.top="activeEditPageNumber === page.pageNumber ? 'Close edit' : 'Edit page'"
+            class="page-edit-btn"
+          />
         </div>
         <div class="page-content">
           <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
@@ -285,6 +295,10 @@
   padding: 0.5rem 1rem;
   background-color: var(--p-surface-50);
   border-bottom: 1px solid var(--p-surface-200);
+}
+
+.page-edit-btn {
+  margin-left: auto;
 }
 
 .page-badge {

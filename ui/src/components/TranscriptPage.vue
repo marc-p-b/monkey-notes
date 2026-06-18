@@ -226,8 +226,11 @@ const loadPage = async () => {
   text.value = transcript
 }
 
-watch(() => props.activeEditPageNumber, (newActivePageNumber) => {
-  if (newActivePageNumber !== props.page.pageNumber && editMode.value) {
+watch(() => props.activeEditPageNumber, async (newActivePageNumber) => {
+  if (newActivePageNumber === props.page.pageNumber && !editMode.value) {
+    await downloadImage(props.page)
+    editMode.value = true
+  } else if (newActivePageNumber !== props.page.pageNumber && editMode.value) {
     editMode.value = false
   }
 })
@@ -259,11 +262,15 @@ onMounted(() => {
 }
 
 .left {
-  flex: 1;                /* textarea takes remaining space */
+  flex: 1;
 }
 
 .right {
-  flex: 0 0 auto;         /* image keeps natural width */
+  flex: 1;
+}
+
+.right .preview-img {
+  width: 100%;
 }
 
 .preview-img {

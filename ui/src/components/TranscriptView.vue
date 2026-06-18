@@ -12,6 +12,14 @@
           <h1>{{ transcript.title }}</h1>
           <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; transcribed {{ formatDate(transcript.transcripted_at) }}</span>
         </div>
+        <Button
+          icon="pi pi-image"
+          text
+          :severity="showImages ? 'primary' : 'secondary'"
+          @click="showImages = !showImages"
+          v-tooltip.bottom="showImages ? 'Hide images' : 'Show images'"
+          class="header-image-toggle"
+        />
       </div>
 
       <div class="transcript-info">
@@ -94,7 +102,7 @@
           <span class="page-badge">Page {{ page.pageNumber + 1 }}</span>
         </div>
         <div class="page-content">
-          <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" @requestEdit="handleEditRequest" />
+          <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
         </div>
       </div>
     </div>
@@ -115,6 +123,10 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.header-image-toggle {
+  margin-left: auto;
 }
 
 .transcript-header-text {
@@ -309,6 +321,7 @@ const error = ref<string | null>(null)
 
 const transcript = ref<DtoTranscript>(null)
 const activeEditPageNumber = ref<number | null>(null)
+const showImages = ref(false)
 
 const stateEditIcon = ref<string>()
 const stateEditSeverity = ref<string>()

@@ -220,3 +220,18 @@ targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c93
 ------------------------------
 [4db083a3322c] [MonkeySync.syncPdf] [] Adding file name Notebook-2.pdf id Notebook-2.pdf status created - remote path /Folder-1/Notebook-2.pdf
 ```
+
+## Transcript View
+
+● The changes look correct. Here's a summary of what was done:
+
+TranscriptView.vue:
+- Added showImages = ref(false) state
+- Added an image toggle button (pi pi-image) in the transcript header, pinned to the right via margin-left: auto
+- Passes :showImages="showImages" to each TranscriptPage
+
+TranscriptPage.vue:
+- Added showImages: boolean prop
+- New branch: when showImages is true and not in edit mode, renders a 50/50 flex row — text on the left, page image on the right
+- Watcher on showImages: lazy-loads the image on first toggle (won't re-download if already loaded)
+- Added .view-left, .view-right (both flex: 1) and .view-preview-img (width: 100%) CSS for the 50/50 layout

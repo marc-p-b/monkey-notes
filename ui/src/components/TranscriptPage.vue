@@ -9,6 +9,15 @@
 
   </div>
 
+  <div v-else-if="editMode===false && showImages" class="flex-row view-image-row">
+    <div class="view-left">
+      <p v-html="text" @click.prevent="switchEdit(page)"></p>
+    </div>
+    <div class="view-right">
+      <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img view-preview-img"/>
+      <p v-else class="image-loading">Loading image...</p>
+    </div>
+  </div>
   <p v-else-if="editMode===false" v-html="text" @click.prevent="switchEdit(page)"></p>
   <div v-else class="edit-container">
     <div class="flex-row">
@@ -79,6 +88,7 @@ const imgSrc = ref(null)
 const props = defineProps<{
   page: Page
   activeEditPageNumber: number | null
+  showImages: boolean
 }>()
 
 const emit = defineEmits<{
@@ -216,11 +226,15 @@ const loadPage = async () => {
   text.value = transcript
 }
 
-// Watch for changes in activeEditPageNumber to close this page's edit mode if another page opens
 watch(() => props.activeEditPageNumber, (newActivePageNumber) => {
-  // If another page is now active and this page is in edit mode, close it
   if (newActivePageNumber !== props.page.pageNumber && editMode.value) {
     editMode.value = false
+  }
+})
+
+watch(() => props.showImages, async (val) => {
+  if (val && !imgSrc.value && !props.page.schema) {
+    await downloadImage(props.page)
   }
 })
 
@@ -253,8 +267,30 @@ onMounted(() => {
 }
 
 .preview-img {
-  width: 80%;       /* 40% of flex row or any fixed px */
+  width: 80%;
   height: auto;
+}
+
+.view-image-row {
+  align-items: flex-start;
+}
+
+.view-left {
+  flex: 1;
+}
+
+.view-right {
+  flex: 1;
+}
+
+.view-preview-img {
+  width: 100%;
+}
+
+.image-loading {
+  color: var(--p-surface-400);
+  font-size: 0.875rem;
+  font-style: italic;
 }
 
 .buttons {

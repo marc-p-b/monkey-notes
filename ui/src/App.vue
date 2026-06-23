@@ -36,11 +36,6 @@ const menuItems = ref([
     icon: 'pi pi-home',
     command: () => router.push('/')
   },
-  // {
-  //   label: 'Preferences',
-  //   icon: 'pi pi-cog',
-  //   command: () => router.push('/preferences')
-  // },
   {
     label: 'Named Entities',
     icon: 'pi pi-tag',
@@ -52,7 +47,7 @@ const menuItems = ref([
     command: () => router.push('/processes')
   },
   {
-    label: 'Users',
+    label: 'Admin',
     icon: 'pi pi-users',
     command: () => router.push('/users')
   },

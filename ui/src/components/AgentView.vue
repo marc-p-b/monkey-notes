@@ -1,63 +1,70 @@
 <template>
+  <div class="agent-shell">
 
-  <div id="container">
-
-  <!--    <div v-if="connected">-->
-  <!--      <ul>-->
-  <!--        <li v-for="(msg, index) in streamMsg" :key="index">-->
-  <!--          {{ msg }}-->
-  <!--        </li>-->
-  <!--      </ul>-->
-
-  <!--    </div>-->
-
-    <div v-if="requested">
-      <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="4" fill="transparent" animationDuration="2s" aria-label="Custom ProgressSpinner" />
-      <span>{{agentMessage}}</span>
+    <div class="agent-header">
+      <Button icon="pi pi-arrow-left" text size="small" @click="router.push('/transcript/' + props.fileId)" />
+      <span class="agent-header-title">
+        <i class="pi pi-bolt" /> AI Agent
+      </span>
+      <Button :icon="settingsVisible ? 'pi pi-times' : 'pi pi-cog'" text size="small" @click="settingsVisible = !settingsVisible" />
     </div>
 
-    <div>
-      <ul>
-        <li v-for="message in agentPrepare.messages">
-          {{message.content}}
-        </li>
-      </ul>
+    <div v-if="settingsVisible" class="agent-settings">
+      <div class="settings-row">
+        <label>Model</label>
+        <Select v-model="agentPrepare.model" :options="modelOptions" optionLabel="label" optionValue="value" class="settings-select" />
+      </div>
+      <div class="settings-row">
+        <label>Instructions</label>
+        <Textarea v-model="agentPrepare.instructions" autoResize rows="2" class="settings-textarea" />
+      </div>
+      <div class="settings-row">
+        <label>Reset thread</label>
+        <ToggleButton v-model="agentPrepare.reset" onLabel="Yes" offLabel="No" onIcon="pi pi-refresh" offIcon="pi pi-minus" size="small" />
+      </div>
     </div>
 
-    <form id="formAgent" @submit.prevent="submitForm">
-      <fieldset>
-        <label for="textAreaQuestion">Question</label>
-        <textarea name="question" id="textAreaQuestion" v-model="agentPrepare.question"></textarea>
-      </fieldset>
-      <fieldset>
-        <label for="inputResetId">Reset</label>
-        <input type="checkbox" name="reset" id="inputResetId" v-model="agentPrepare.reset"/>
-      </fieldset>
-      <fieldset>
-        <label for="selectModelId">Model</label>
-        <select name="selectModel" id="selectModelId" v-model="agentPrepare.model">
-          <option value="default">default</option>
-          <option value="gpt-4o">gpt 4o</option>
-          <option value="gpt-4o-mini">gtp 4o mini</option>
-        </select>
-      </fieldset>
-      <fieldset>
-        <label for="textAreaInstructionsId">Instructions</label>
-        <textarea name="instructions" id="textAreaInstructionsId" v-model="agentPrepare.instructions"></textarea>
-      </fieldset>
-      <fieldset role="group">
-        <button>Send</button>
-      </fieldset>
-      <input type="hidden" name="threadId" id="inputThreadId" v-model="agentPrepare.threadId"/>
-      <input type="hidden" name="fileId" id="inputFileId" v-model="agentPrepare.fileId"/>
-    </form>
+    <div class="agent-messages" ref="messagesEl">
+      <div v-if="!agentPrepare.messages || agentPrepare.messages.length === 0" class="agent-empty">
+        <i class="pi pi-comments" style="font-size: 2rem; opacity: 0.3" />
+        <p>Ask anything about this document.</p>
+      </div>
+
+      <div
+        v-for="(msg, i) in agentPrepare.messages"
+        :key="i"
+        :class="['bubble-wrap', msg.messageDir === 'user' ? 'bubble-user' : 'bubble-assistant']"
+      >
+        <div class="bubble">{{ msg.content }}</div>
+        <span class="bubble-time">{{ formatTime(msg.createdAt) }}</span>
+      </div>
+
+      <div v-if="requested" class="bubble-wrap bubble-assistant">
+        <div class="bubble thinking">
+          <span /><span /><span />
+        </div>
+      </div>
+    </div>
+
+    <div class="agent-input-bar">
+      <Textarea
+        v-model="agentPrepare.question"
+        autoResize
+        rows="1"
+        placeholder="Ask something about this document…"
+        class="agent-input"
+        @keydown.enter.exact.prevent="submitForm"
+      />
+      <Button icon="pi pi-send" @click="submitForm" :disabled="requested || !agentPrepare.question?.trim()" />
+    </div>
+
   </div>
-
 </template>
 
 <script lang="ts" setup>
-import {ref, onMounted} from "vue";
-import { authFetch } from "@/requests.ts";
+import { ref, onMounted, nextTick } from "vue"
+import { useRouter } from 'vue-router'
+import { authFetch } from "@/requests.ts"
 
 interface DtoAgentMessage {
   messageDir: string
@@ -70,125 +77,287 @@ interface DtoAgentPrepare {
   instructions: string
   createdAt: string
   exists: boolean
+  threadId?: string
+  fileId?: string
   messages: DtoAgentMessage[]
-  //completed by this form
   question: string
   reset: boolean
 }
 
 const props = defineProps<{ fileId: string }>()
-const agentPrepare = <DtoAgentPrepare[]>ref([])
+const router = useRouter()
+
+const agentPrepare = ref<DtoAgentPrepare>({
+  model: 'default',
+  instructions: '',
+  createdAt: '',
+  exists: false,
+  messages: [],
+  question: '',
+  reset: false,
+})
+
 const loading = ref(true)
 const error = ref<string | null>(null)
-
-//const streamMsg = ref<string[]>([])
 const agentMessage = ref<string>()
-const connected = ref(false)
 const requested = ref(false)
+const settingsVisible = ref(false)
+const messagesEl = ref<HTMLElement | null>(null)
 let eventSource: EventSource | null = null
 
+const modelOptions = [
+  { label: 'Default', value: 'default' },
+  { label: 'GPT-4o', value: 'gpt-4o' },
+  { label: 'GPT-4o mini', value: 'gpt-4o-mini' },
+]
+
+const formatTime = (iso: string) => {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const scrollToBottom = async () => {
+  await nextTick()
+  if (messagesEl.value) {
+    messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  }
+}
+
 async function prepareAgent() {
-  loading.value = true;
-  error.value = null;
+  loading.value = true
+  error.value = null
   try {
-    const response = await authFetch("agent/prepare/" + props.fileId);
-    if (!response.ok) throw new Error("Network response was not ok");
-    agentPrepare.value = await response.json();
-
-    //console.log(response.json())
-
+    const response = await authFetch("agent/prepare/" + props.fileId)
+    if (!response.ok) throw new Error("Network response was not ok")
+    agentPrepare.value = await response.json()
+    if (!agentPrepare.value.messages) agentPrepare.value.messages = []
+    settingsVisible.value = !agentPrepare.value.exists
+    await scrollToBottom()
   } catch (err: any) {
-    console.error(err);
-    error.value = "Failed to load transcripts.";
+    console.error(err)
+    error.value = "Failed to load agent."
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 const submitForm = async () => {
-  requested.value = true;
+  const question = agentPrepare.value.question?.trim()
+  if (!question || requested.value) return
+
+  agentPrepare.value.messages.push({
+    messageDir: 'user',
+    content: question,
+    createdAt: new Date().toISOString(),
+  })
+  agentPrepare.value.question = ''
+  requested.value = true
   agentMessage.value = "Agent requested"
+  await scrollToBottom()
+
   try {
     const response = await authFetch("agent/ask", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(agentPrepare.value),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
-    }
+    })
+    if (!response.ok) throw new Error(`Server error: ${response.status}`)
 
     const data = await response.json()
-    //TODO conf problem
-    //const streamUrl = "http://localhost:8080/" + data.url
     const streamUrl = window._env_.API_URL + "/" + data.url
-
-    console.log("Stream url " + streamUrl)
-
-
-    if (!streamUrl) throw new Error('No streaming URL returned')
-
-    //limit to 1 stream
     initStream(streamUrl)
-
   } catch (err: any) {
-    error.value = err.message || "Something went wrong.";
-  } finally {
-    loading.value = false;
+    error.value = err.message || "Something went wrong."
+    requested.value = false
   }
 }
 
 const initStream = (url: string) => {
-  console.log("stream from " + url)
-
-  if (eventSource) {
-    eventSource.close()
-  }
+  if (eventSource) eventSource.close()
 
   const token = localStorage.getItem("token")
   eventSource = new EventSource(url + '/' + token)
 
-  eventSource.onopen = () => {
-    //streamMsg.value.push('🔗 Connected to authenticated stream.')
-    connected.value = true
-  }
-
-  eventSource.onmessage = (event) => {
-    const sseMsg = event.data
-      console.log("sse msg " + sseMsg)
-    if(event.data === 'waiting') {
-      //streamMsg.value.push(sseMsg)
-
-    } else {
-      //streamMsg.value.push('done !')
-
-      const t: DtoAgentMessage = {
+  eventSource.onmessage = async (event) => {
+    if (event.data !== 'waiting') {
+      agentPrepare.value.messages.push({
         messageDir: 'assistant',
-        content: sseMsg,
-        createdAt: new Date().toISOString()
-      }
-
-      if (!agentPrepare.value.messages || agentPrepare.value.messages.length === 0) {
-        agentPrepare.value.messages = []
-      }
-
-      agentPrepare.value.messages.push(t)
-      eventSource.close()
+        content: event.data,
+        createdAt: new Date().toISOString(),
+      })
+      requested.value = false
+      eventSource?.close()
+      await scrollToBottom()
     }
   }
 
   eventSource.onerror = (err) => {
     console.error('SSE error:', err)
-    eventSource.close()
+    requested.value = false
+    eventSource?.close()
   }
-
 }
 
 onMounted(() => {
-  prepareAgent();
-});
-
+  prepareAgent()
+})
 </script>
+
+<style scoped>
+.agent-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.agent-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--p-surface-200);
+  gap: 0.5rem;
+}
+
+.agent-header-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.agent-settings {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--p-surface-200);
+  background: var(--p-surface-50);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-row label {
+  width: 100px;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
+}
+
+.settings-select {
+  width: 200px;
+}
+
+.settings-textarea {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.agent-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agent-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--p-text-muted-color);
+}
+
+.bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 72%;
+}
+
+.bubble-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.bubble-assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.bubble {
+  padding: 0.6rem 0.9rem;
+  border-radius: 1.1rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubble-user .bubble {
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color, #fff);
+  border-bottom-right-radius: 0.25rem;
+}
+
+.bubble-assistant .bubble {
+  background: var(--p-surface-100);
+  color: var(--p-text-color);
+  border-bottom-left-radius: 0.25rem;
+}
+
+.bubble-time {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+  margin-top: 0.2rem;
+  padding: 0 0.25rem;
+}
+
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.7rem 1rem;
+}
+
+.thinking span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--p-text-muted-color);
+  animation: bounce 1.2s infinite;
+}
+
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%            { transform: translateY(-6px); opacity: 1; }
+}
+
+.agent-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--p-surface-200);
+}
+
+.agent-input {
+  flex: 1;
+  resize: none;
+  max-height: 140px;
+  overflow-y: auto;
+}
+</style>

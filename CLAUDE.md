@@ -235,3 +235,14 @@ TranscriptPage.vue:
 - New branch: when showImages is true and not in edit mode, renders a 50/50 flex row — text on the left, page image on the right
 - Watcher on showImages: lazy-loads the image on first toggle (won't re-download if already loaded)
 - Added .view-left, .view-right (both flex: 1) and .view-preview-img (width: 100%) CSS for the 50/50 layout
+
+## Updated AgentView
+
+  - Chat layout: fixed header → optional settings panel → scrollable message list → sticky input bar, all within calc(100vh - 56px)
+  - Message bubbles: user messages right-aligned (primary color), assistant messages left-aligned (surface), with timestamps
+  - Optimistic send: user message is pushed to the list immediately, input clears, then the spinner/thinking bubble appears in the assistant slot while SSE is in flight
+  - Thinking indicator: three bouncing dots in an assistant bubble while waiting, disappears when the reply arrives
+  - Settings panel: toggled by the cog icon in the header — auto-opens when no thread exists yet, collapsed when resuming an existing one. Contains model, instructions, and reset toggle
+  - Back button: arrow in header navigates back to the transcript
+  - Empty state: friendly placeholder when no messages yet
+  - Enter to send: Ctrl+Enter / bare Enter submits (autoResize textarea grows for multi-line)

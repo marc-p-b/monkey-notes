@@ -83,8 +83,10 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { noAuthFetch } from "@/requests.ts";
 import { onBeforeUnmount } from 'vue'
+import { useUiStore } from '@/composables/store.js'
 
 const router = useRouter();
+const store = useUiStore();
 
 const username = ref("");
 const password = ref("");
@@ -113,6 +115,7 @@ async function handleLogin() {
     const data = await response.json();
     const token = data.token; // adjust to match backend
     localStorage.setItem("token", token);
+    store.refreshAuth();
 
     // if (localStorage.getItem("requestedPath")) {
     //   //await delay(2000); //TODO add a delay here

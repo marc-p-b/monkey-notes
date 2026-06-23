@@ -8,35 +8,18 @@
       <Fieldset legend="Accounts">
         <div class="actions">
           <Button @click.prevent="logout" label="Logout from Monkey Notes"/>
-          <div v-if="googleConnectRequired">
-            <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
-            <a :href="googleAuthUrl">Google Drive auth</a>
-          </div>
-          <div v-else>
-            <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
-          </div>
-          <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts"/>
+
         </div>
 
       </Fieldset>
     </form>
 
     <form>
-      <Fieldset legend="Export data" class="data-fieldset">
-        <div class="actions">
-          <Button label="Download all data" @click="downloadExport" />
-        </div>
-      </Fieldset>
-
-      <Fieldset legend="Import data" class="data-fieldset">
-        <div class="actions">
-          <FileUpload mode="basic" @select="handleFileSelect($event)" customUpload auto severity="secondary"  />
-        </div>
-      </Fieldset>
-
-      <Fieldset legend="Wipe all data" class="data-fieldset">
-        <div class="actions">
-          <Button label="Wipe all data" severity="danger" @click="wipe" />
+      <Fieldset legend="Data Management">
+        <div class="inline-actions">
+          <Button label="Export" icon="pi pi-download" @click="downloadExport" />
+          <FileUpload mode="basic" chooseLabel="Import" chooseIcon="pi pi-upload" @select="handleFileSelect($event)" customUpload auto severity="secondary" />
+          <Button label="Wipe all data" icon="pi pi-trash" severity="danger" @click="wipe" />
         </div>
       </Fieldset>
     </form>
@@ -59,6 +42,14 @@
             placeholder="google drive id"
             class="w-full"
         />
+        <div v-if="googleConnectRequired">
+          <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
+          <a :href="googleAuthUrl">Google Drive auth</a>
+        </div>
+        <div v-else>
+          <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
+        </div>
+        <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts"/>
       </Fieldset>
 
       <Fieldset legend="Crop image to content">
@@ -336,11 +327,11 @@ onMounted(() => {
   width: 100%;
 }
 
-.actions {
+.inline-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 </style>

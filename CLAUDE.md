@@ -246,3 +246,12 @@ TranscriptPage.vue:
   - Back button: arrow in header navigates back to the transcript
   - Empty state: friendly placeholder when no messages yet
   - Enter to send: Ctrl+Enter / bare Enter submits (autoResize textarea grows for multi-line)
+
+
+## UserView
+
+● Good. I have a clear picture. The current UsersView has no layout, a shared newPassword bug across users, and invalid JSON in changePassword. I'll refactor it to:
+- DataTable for user list
+- Dialog for "Add User" and "Change Password" (fixing the shared state bug)
+- Fix the JSON.stringify bug in changePassword
+- Consistent .main-wrapper style matching Preferences

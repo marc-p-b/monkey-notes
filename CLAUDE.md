@@ -255,3 +255,15 @@ TranscriptPage.vue:
 - Dialog for "Add User" and "Change Password" (fixing the shared state bug)
 - Fix the JSON.stringify bug in changePassword
 - Consistent .main-wrapper style matching Preferences
+
+## User password
+
+Backend — POST /user/me/password in AuthController:
+- No @PreAuthorize — any authenticated user can call it
+- Gets the current username from security context via authService.getUsernameFromContext()
+- Reuses the existing userService.setUserPassowrd() method
+
+Preferences.vue:
+- "Change Password" button added alongside Logout in the Accounts fieldset
+- Same Dialog/Password/loading pattern as UsersView
+- On success the dialog closes and the password field clears; errors surface through the existing error dialog

@@ -77,6 +77,7 @@ public class AuthController {
         return ResponseEntity.ok("ok");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/user/{user}/remove")
     public ResponseEntity<String> removeUser(@PathVariable String user) {
 
@@ -84,6 +85,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body("User " + user + " removed");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/user/{user}/password")
     public ResponseEntity<String> setPassword(@PathVariable String user, @RequestBody String json) {
         DocumentContext ctx = JsonPath.parse(json);
@@ -92,6 +94,18 @@ public class AuthController {
         userService.setUserPassowrd(user, password);
 
         return ResponseEntity.status(HttpStatus.OK).body("Password set");
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/user/me/password")
+    public ResponseEntity<String> changeOwnPassword(@RequestBody String json) {
+        String username = authService.getUsernameFromContext();
+        DocumentContext ctx = JsonPath.parse(json);
+        String password = ctx.read("$.password");
+
+        userService.setUserPassowrd(username, password);
+
+        return ResponseEntity.status(HttpStatus.OK).body("Password updated");
     }
 
     @PreAuthorize("hasRole('ADMIN')")

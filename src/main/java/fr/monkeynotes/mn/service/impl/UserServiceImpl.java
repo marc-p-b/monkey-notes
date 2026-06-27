@@ -117,6 +117,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public void setUserPassowrd(String username, String password) {
+
+
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(username);
         if(optionalEntityUser.isPresent() == false) {
             throw new UsernameNotFoundException("Unknown user "+ username);

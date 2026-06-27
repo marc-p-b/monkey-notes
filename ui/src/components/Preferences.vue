@@ -6,13 +6,25 @@
     <h3>Hello, {{prefs.username}}</h3>
     <form>
       <Fieldset legend="Accounts">
-        <div class="actions">
+        <div class="inline-actions">
           <Button @click.prevent="logout" label="Logout from Monkey Notes"/>
-
+          <Button icon="pi pi-key" label="Change Password" severity="secondary" @click.prevent="showPasswordDialog = true" />
         </div>
-
       </Fieldset>
     </form>
+
+    <Dialog v-model:visible="showPasswordDialog" modal header="Change Password" :style="{ width: '420px' }">
+      <div class="dialog-form">
+        <div class="field">
+          <label>New password</label>
+          <Password v-model="newPassword" toggleMask :feedback="true" class="w-full" inputClass="w-full" />
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <Button label="Cancel" text @click="showPasswordDialog = false" />
+        <Button label="Save" icon="pi pi-check" :loading="changingPassword" @click="changePassword" />
+      </div>
+    </Dialog>
 
     <form>
       <Fieldset legend="Data Management">
@@ -167,6 +179,10 @@ const googleAuthUrl = ref<string | null>(null)
 const message = ref(<string>"")
 const errorDialogVisibility = ref(false)
 
+const showPasswordDialog = ref(false)
+const newPassword = ref('')
+const changingPassword = ref(false)
+
 
 const handleFileSelect = (event) => {
   const file = event.files[0]
@@ -311,6 +327,25 @@ function wipe() {
 }
 
 
+async function changePassword() {
+  changingPassword.value = true
+  try {
+    const response = await authFetch("user/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword.value }),
+    })
+    if (!response.ok) throw new Error(`Server error: ${response.status}`)
+    showPasswordDialog.value = false
+    newPassword.value = ''
+  } catch (err: any) {
+    message.value = err.message || 'Failed to change password.'
+    errorDialogVisibility.value = true
+  } finally {
+    changingPassword.value = false
+  }
+}
+
 onMounted(() => {
   fetchGoogleAuth();
   fetchPreferences();
@@ -332,6 +367,32 @@ onMounted(() => {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color, #6b7280);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 </style>

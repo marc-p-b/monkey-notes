@@ -8,6 +8,7 @@ import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.DriveService;
 import fr.monkeynotes.mn.service.UserService;
+import fr.monkeynotes.mn.service.impl.AuthServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,9 +42,9 @@ public class AuthController {
     }
 
     @GetMapping(value = "/user/whoami", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> whoami() {
-        String username = authService.getUsernameFromContext();
-        return ResponseEntity.status(HttpStatus.OK).body(username);
+    public ResponseEntity<AuthServiceImpl.UserData> whoami() {
+        AuthServiceImpl.UserData userData = authService.getUserDataFromContext();
+        return ResponseEntity.status(HttpStatus.OK).body(userData);
     }
 
     @PostMapping(value = "/jwt/refresh", produces = MediaType.APPLICATION_JSON_VALUE)

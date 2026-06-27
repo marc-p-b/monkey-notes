@@ -37,6 +37,38 @@ public class AuthServiceImpl implements AuthService {
         return Optional.empty();
     }
 
+    public record UserData(
+            String username,
+            boolean admin
+    ){}
+
+    @Override
+    public UserData getUserDataFromContext() {
+        // return either Connected / Authenticated user session username
+        // or username set in noauth context (when notifying changes from drive in a multiuser setup)
+
+        //TODO no applicable ?
+
+//        if(NoAuthContextHolder.getContext() != null) {
+//            return NoAuthContextHolder.getContext().getUsername();
+//        }
+
+        Optional<Authentication> optionalAuthentication = getLoggedAuthentication();
+        if(optionalAuthentication.isEmpty()) {
+            return null;
+        }
+
+        //TODO cannot cast !
+        UsernamePasswordAuthenticationToken u = (UsernamePasswordAuthenticationToken) optionalAuthentication.get();
+
+        boolean isAdmin = u.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        UserData userData = new UserData(u.getPrincipal().toString(), isAdmin);
+
+        return userData;
+    }
+
     @Override
     public String getUsernameFromContext() {
         // return either Connected / Authenticated user session username

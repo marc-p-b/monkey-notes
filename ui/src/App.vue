@@ -7,7 +7,7 @@
         <InputText v-model="query" @keydown.enter="search" placeholder="Search..." class="header-search"/>
         <div class="user-chip" @click="toggleUserMenu">
           <i class="pi pi-user"/>
-          <span>{{ username }}</span>
+          <span>{{ userData?.username }}</span>
           <i class="pi pi-angle-down"/>
         </div>
         <Menu ref="userMenu" :model="userMenuItems" popup/>
@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from "vue"
+import {computed, onMounted, ref} from "vue"
 import {authFetch} from "@/requests";
 import { useRouter } from 'vue-router'
 import { useUiStore } from '@/composables/store.js'
@@ -30,7 +30,7 @@ import { useUiStore } from '@/composables/store.js'
 const router = useRouter()
 const store = useUiStore()
 
-const menuItems = ref([
+const menuItems = computed(() => [
   {
     label: 'Home',
     icon: 'pi pi-home',
@@ -49,12 +49,18 @@ const menuItems = ref([
   {
     label: 'Admin',
     icon: 'pi pi-users',
+    visible: userData.value?.admin === true,
     command: () => router.push('/users')
-  },
+  }
 ])
 
+interface UserData {
+  username: string
+  admin: boolean
+}
+
 const query = ref<string>()
-const username = ref<string>()
+const userData = ref<UserData>()
 const userMenu = ref()
 
 const userMenuItems = ref([
@@ -86,7 +92,9 @@ async function fetchCurrentUser() {
   try {
     const response = await authFetch("user/whoami");
     if (!response.ok) throw new Error("Network response was not ok");
-    username.value = await response.text();
+
+    userData.value = await response.json();
+
   } catch (err: any) {
     console.error(err);
   }

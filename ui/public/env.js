@@ -1,3 +1,3 @@
 window._env_ = {
-    API_URL: 'http://ohdbcfzqnn.a.pinggy.link/',
+    API_URL: 'http://ohdbcfzqnn.a.pinggy.link',
 };

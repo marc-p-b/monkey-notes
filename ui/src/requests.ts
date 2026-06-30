@@ -1,5 +1,7 @@
 export async function noAuthFetch(path, options = {}) {
-    const url = window._env_.API_URL + path
+
+    //TODO check url to remove multiple /
+    const url = window._env_.API_URL + '/' + path
     const headers = {
         ...(options.headers || {}),
         "Content-Type": "application/json",
@@ -11,7 +13,7 @@ export async function noAuthFetch(path, options = {}) {
 }
 
 export async function authFetch(path, options = {}) {
-    const url = window._env_.API_URL + path
+    const url = window._env_.API_URL + '/' +  path
     const token = localStorage.getItem("token");
     const headers = {
         ...(options.headers || {}),

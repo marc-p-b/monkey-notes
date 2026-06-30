@@ -54,7 +54,9 @@ public class AgentController {
                 .setInstructions(newAssistantInstructions);
 
         DtoAgent dtoAgent = agentService.getOrCreateAssistant(agentPrepare.getFileId(), dtoOptions);
-        agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getQuestion());
+        //agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getQuestion());
+        //getlast() safe ?
+        agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getMessages().getLast().getContent());
         String runId = agentService.createRun(dtoAgent);
         String streamLink = "agent/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
 

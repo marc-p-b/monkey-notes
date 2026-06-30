@@ -351,6 +351,9 @@ public class AgentServiceImpl implements AgentService {
         LOG.info("Requesting run status for {}", runId);
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
         DocumentContext context = JsonPath.parse(response.getBody());
+
+        //TODO if failed, stop polling ! also check the last response to give the reason to the user
+
         String status = context.read("$.status");
         LOG.info("Run status is {}", status);
         return status.equals("completed");

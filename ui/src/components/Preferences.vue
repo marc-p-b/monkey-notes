@@ -1,17 +1,24 @@
 <template xmlns="http://www.w3.org/1999/html">
 
   <div class="main-wrapper">
-    <h2>Preferences</h2>
 
-    <h3>Hello, {{prefs.username}}</h3>
-    <form>
-      <Fieldset legend="Accounts">
-        <div class="inline-actions">
-          <Button @click.prevent="logout" label="Logout from Monkey Notes"/>
-          <Button icon="pi pi-key" label="Change Password" severity="secondary" @click.prevent="showPasswordDialog = true" />
+    <div class="page-header">
+      <h2>Preferences</h2>
+      <span class="page-subtitle">Signed in as {{ prefs.username }}</span>
+    </div>
+
+    <div class="page-card">
+      <div class="page-card-header">
+        <i class="pi pi-user section-icon"></i>
+        <span class="section-title">Account</span>
+      </div>
+      <div class="page-content">
+        <div class="action-row">
+          <Button @click.prevent="logout" label="Logout from Monkey Notes" size="small" outlined severity="secondary" />
+          <Button icon="pi pi-key" label="Change Password" size="small" outlined severity="secondary" @click.prevent="showPasswordDialog = true" />
         </div>
-      </Fieldset>
-    </form>
+      </div>
+    </div>
 
     <Dialog v-model:visible="showPasswordDialog" modal header="Change Password" :style="{ width: '420px' }">
       <div class="dialog-form">
@@ -26,95 +33,152 @@
       </div>
     </Dialog>
 
-    <form>
-      <Fieldset legend="Data Management">
-        <div class="inline-actions">
-          <Button label="Export" icon="pi pi-download" @click="downloadExport" />
-          <FileUpload mode="basic" chooseLabel="Import" chooseIcon="pi pi-upload" @select="handleFileSelect($event)" customUpload auto severity="secondary" />
-          <Button label="Wipe all data" icon="pi pi-trash" severity="danger" @click="wipe" />
-        </div>
-      </Fieldset>
-    </form>
-
     <form @submit.prevent="submitForm">
 
-      <Fieldset legend="Sync Option">
-        <SelectButton
-            v-model="prefs.syncOption"
-            :options="syncOptions"
-            optionLabel="label"
-            optionValue="value"
-        />
-      </Fieldset>
-
-
-      <Fieldset v-if="prefs.syncOption === 'gdrive'" legend="Google Drive Input Folder ID">
-        <InputText
-            v-model="prefs.inputFolderId"
-            placeholder="google drive id"
-            class="w-full"
-        />
-        <div v-if="googleConnectRequired">
-          <p>Google drive is disconnect. Please proceed to authentication using the following link</p>
-          <a :href="googleAuthUrl">Google Drive auth</a>
+      <div class="page-card">
+        <div class="page-card-header">
+          <i class="pi pi-sync section-icon"></i>
+          <span class="section-title">Sync</span>
         </div>
-        <div v-else>
-          <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive"/>
+        <div class="page-content">
+          <div class="field-row">
+            <span class="field-label">Sync option</span>
+            <div class="field-control">
+              <SelectButton
+                  v-model="prefs.syncOption"
+                  :options="syncOptions"
+                  optionLabel="label"
+                  optionValue="value"
+              />
+            </div>
+          </div>
+
+          <div v-if="prefs.syncOption === 'gdrive'" class="field-row">
+            <span class="field-label">Google Drive folder ID</span>
+            <div class="field-control">
+              <InputText
+                  v-model="prefs.inputFolderId"
+                  placeholder="google drive id"
+                  class="w-full"
+              />
+              <div v-if="googleConnectRequired" class="gdrive-connect">
+                <p>Google drive is disconnected. Please proceed to authentication using the following link</p>
+                <a :href="googleAuthUrl">Google Drive auth</a>
+              </div>
+              <div v-else class="action-row">
+                <Button @click.prevent="googleDisconnect" label="Disconnect from Google Drive" size="small" outlined severity="secondary" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="prefs.syncOption === 'gdrive'" class="action-row">
+            <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts" size="small" outlined severity="secondary" />
+          </div>
         </div>
-        <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts"/>
-      </Fieldset>
+      </div>
 
-      <Fieldset legend="Crop image to content">
-        <ToggleButton
-            v-model="prefs.cropImage"
-            onLabel="Yes"
-            offLabel="No"
-            onIcon="pi pi-check"
-            offIcon="pi pi-times"
-        />
-      </Fieldset>
+      <div class="page-card">
+        <div class="page-card-header">
+          <i class="pi pi-camera section-icon"></i>
+          <span class="section-title">OCR</span>
+        </div>
+        <div class="page-content">
+          <div class="field-row">
+            <span class="field-label">Crop image to content</span>
+            <div class="field-control">
+              <ToggleButton
+                  v-model="prefs.cropImage"
+                  onLabel="Yes"
+                  offLabel="No"
+                  onIcon="pi pi-check"
+                  offIcon="pi pi-times"
+              />
+            </div>
+          </div>
 
-      <Fieldset legend="OCR model">
-        <Select v-model="prefs.selectedOcrModel" :options="prefs.ocrModels" placeholder="Select a model" class="w-full" />
-      </Fieldset>
+          <div class="field-row">
+            <span class="field-label">Model</span>
+            <div class="field-control">
+              <Select v-model="prefs.selectedOcrModel" :options="prefs.ocrModels" placeholder="Select a model" class="w-full" />
+            </div>
+          </div>
 
-      <Fieldset legend="OCR Prompt">
-        <InputText v-model="prefs.ocrPrompt" class="w-full" :placeholder="prefs.defaultOcrPrompt"/>
-      </Fieldset>
+          <div class="field-row">
+            <span class="field-label">Prompt</span>
+            <div class="field-control">
+              <InputText v-model="prefs.ocrPrompt" class="w-full" :placeholder="prefs.defaultOcrPrompt"/>
+            </div>
+          </div>
 
-      <Fieldset legend="OCR Read Timeout">
-        <InputText
-            v-model="prefs.qwenReadTimeout"
-            :placeholder="prefs.dftQwenReadTimeout"
-            class="w-full"
-        />
-      </Fieldset>
+          <div class="field-row">
+            <span class="field-label">Read timeout</span>
+            <div class="field-control">
+              <InputText
+                  v-model="prefs.qwenReadTimeout"
+                  :placeholder="prefs.dftQwenReadTimeout"
+                  class="w-full"
+              />
+            </div>
+          </div>
 
-      <Fieldset legend="OCR Connect Timeout">
-        <InputText
-            v-model="prefs.qwenConnectTimeout"
-            :placeholder="prefs.dftQwenConnectTimeout"
-            class="w-full"
-        />
-      </Fieldset>
+          <div class="field-row">
+            <span class="field-label">Connect timeout</span>
+            <div class="field-control">
+              <InputText
+                  v-model="prefs.qwenConnectTimeout"
+                  :placeholder="prefs.dftQwenConnectTimeout"
+                  class="w-full"
+              />
+            </div>
+          </div>
 
-      <Fieldset legend="OCR Max Tokens">
-        <InputText
-            v-model="prefs.ocrMaxTokens"
-            :placeholder="prefs.dftQwenMaxTokens"
-            class="w-full"
-        />
-      </Fieldset>
+          <div class="field-row">
+            <span class="field-label">Max tokens</span>
+            <div class="field-control">
+              <InputText
+                  v-model="prefs.ocrMaxTokens"
+                  :placeholder="prefs.dftQwenMaxTokens"
+                  class="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <Fieldset legend="Agent Instruction">
-        <InputText v-model="prefs.agentInstructions" :placeholder="prefs.dftAgentInstructions" class="w-full" />
-      </Fieldset>
+      <div class="page-card">
+        <div class="page-card-header">
+          <i class="pi pi-bolt section-icon"></i>
+          <span class="section-title">Agent</span>
+        </div>
+        <div class="page-content">
+          <div class="field-row">
+            <span class="field-label">Instructions</span>
+            <div class="field-control">
+              <InputText v-model="prefs.agentInstructions" :placeholder="prefs.dftAgentInstructions" class="w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <Fieldset>
-        <Button label="Save" type="submit" class="mr-2" />
-        <Button label="Reset" type="button" @click="reset" class="p-button-secondary" />
-      </Fieldset>
+      <div class="save-row">
+        <Button label="Reset" type="button" severity="secondary" outlined @click="reset" />
+        <Button label="Save" type="submit" icon="pi pi-check" />
+      </div>
     </form>
+
+    <div class="page-card">
+      <div class="page-card-header">
+        <i class="pi pi-database section-icon"></i>
+        <span class="section-title">Data Management</span>
+      </div>
+      <div class="page-content">
+        <div class="action-row">
+          <Button label="Export" icon="pi pi-download" size="small" outlined severity="secondary" @click="downloadExport" />
+          <FileUpload mode="basic" chooseLabel="Import" chooseIcon="pi pi-upload" @select="handleFileSelect($event)" customUpload auto severity="secondary" />
+          <Button label="Wipe all data" icon="pi pi-trash" size="small" outlined severity="danger" @click="wipe" />
+        </div>
+      </div>
+    </div>
 
     <ConfirmDialog />
 
@@ -395,4 +459,94 @@ onMounted(() => {
   margin-top: 0.75rem;
 }
 
+</style>
+
+<style scoped>
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+}
+
+.page-card {
+  background-color: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.page-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--p-surface-50);
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.section-icon {
+  color: var(--p-primary-500);
+  font-size: 0.875rem;
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.page-content {
+  padding: 1rem;
+}
+
+.action-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.field-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--p-surface-100);
+}
+
+.field-row:last-child {
+  border-bottom: none;
+}
+
+.field-label {
+  flex: 0 0 11rem;
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+  padding-top: 0.4rem;
+}
+
+.field-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.gdrive-connect {
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+}
+
+.save-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+}
 </style>

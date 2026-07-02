@@ -269,3 +269,14 @@ Preferences.vue:
 - "Change Password" button added alongside Logout in the Accounts fieldset
 - Same Dialog/Password/loading pattern as UsersView
 - On success the dialog closes and the password field clears; errors surface through the existing error dialog
+
+## ProcessView, Preferences
+
+- Container/header — .main-wrapper + .page-header (h2 + a pi-refresh icon button on the right), same as UsersView.vue.
+- Each process as a card — reuse TranscriptView's .page-card/.page-card-header look: bordered, rounded, surface-50 header strip.
+  - Icon per process kind (AsyncProcessName: flushChanges/flushMonkeySyncs → pi-sync, updateFolder → pi-folder, forcePageUpdate/forceTranscriptUpdate → pi-file-edit) with a human-readable label instead of raw enum text.
+  - A PrimeVue Tag for status, color-coded from DtoProcess.Status (running → info, completed → success, failed/error → danger), replacing the current plain-text branching.
+  - Metadata row (username via pi-user, duration via pi-clock) styled like TranscriptView's .property-row icon+label+value pattern.
+  - Cancel button: icon-only pi-times, text + severity="danger", pinned right via margin-left: auto like .page-edit-btn — only shown when status === running.
+- Cancel confirmation — route through useConfirm() / <ConfirmDialog>, the same pattern already used in Preferences.vue for the destructive "wipe data" action, instead of firing on a bare click.
+- Live updates — poll process/list every few seconds while any process is running, stop polling once none are; keep the ProgressSpinner only for the initial load so refreshes don't blank the page.

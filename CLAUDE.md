@@ -280,3 +280,13 @@ Preferences.vue:
   - Cancel button: icon-only pi-times, text + severity="danger", pinned right via margin-left: auto like .page-edit-btn — only shown when status === running.
 - Cancel confirmation — route through useConfirm() / <ConfirmDialog>, the same pattern already used in Preferences.vue for the destructive "wipe data" action, instead of firing on a bare click.
 - Live updates — poll process/list every few seconds while any process is running, stop polling once none are; keep the ProgressSpinner only for the initial load so refreshes don't blank the page.
+
+I'll apply the same card-based, consistent design language to Preferences.vue. Note: its bottom <style> block is unscoped and defines .main-wrapper, .dialog-form, .field, .dialog-footer globally — other views like UsersView.vue depend on those, so I'll keep that block intact and add new scoped styles alongside it
+
+
+## NamedEntities 
+
+- Same page-header / page-card shell as the other views, with a ProgressSpinner loading state and italic empty-state messaging.
+- Replaced the deprecated TabView/TabPanel markup with the same Tabs/TabList/Tab/TabPanels/TabPanel API already used in TranscriptView.vue, one tab per verb (Tags/People/Emails) with an icon and a count Tag badge.
+- Replaced the raw nested <ul> markup with the same tag-grid pattern as TranscriptView.vue's Tags tab (entity-group/entity-refs, values as bold labels, occurrences as Tag chips).
+- Fixed the broken navigation: the old code used a raw <a href="transcript/${fileId}"> (a literal relative link, not a real route); occurrences now use router.push({ name: 'transcript', params: { fileId } }) like Home.vue does, and each chip shows the filename + page number instead of just the filename.

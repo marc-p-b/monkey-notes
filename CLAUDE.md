@@ -221,6 +221,8 @@ targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c93
 [4db083a3322c] [MonkeySync.syncPdf] [] Adding file name Notebook-2.pdf id Notebook-2.pdf status created - remote path /Folder-1/Notebook-2.pdf
 ```
 
+# Claude devs
+
 ## Transcript View
 
 ● The changes look correct. Here's a summary of what was done:

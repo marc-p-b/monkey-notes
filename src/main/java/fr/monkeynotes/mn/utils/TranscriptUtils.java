@@ -16,8 +16,10 @@ import java.util.regex.Pattern;
 
 public class TranscriptUtils {
     private static final Set<NamedEntityVerb> NON_HASH_HEADERS = Set.of(
-            NamedEntityVerb.h_2, NamedEntityVerb.h_3, NamedEntityVerb.h_4, NamedEntityVerb.h_5, NamedEntityVerb.h_6
-            );
+        NamedEntityVerb.h_2, NamedEntityVerb.h_3, NamedEntityVerb.h_4, NamedEntityVerb.h_5, NamedEntityVerb.h_6);
+
+    private static final Set<NamedEntityVerb> NO_SPACE = Set.of(
+            NamedEntityVerb.tag, NamedEntityVerb.email, NamedEntityVerb.link);
 
     public record TranscriptTitle(String title, Optional<OffsetDateTime> documentTitleDate) {}
 
@@ -103,6 +105,8 @@ public class TranscriptUtils {
                         verb = NamedEntityVerb.h6;
                         break;
                 }
+            } else if(NO_SPACE.contains(verb)) {
+                value.replaceAll("\\s+", "");
             }
 
             if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {

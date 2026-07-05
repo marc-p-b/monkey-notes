@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,48 +19,47 @@ public class TranscriptUtils {
             NamedEntityVerb.h_2, NamedEntityVerb.h_3, NamedEntityVerb.h_4, NamedEntityVerb.h_5, NamedEntityVerb.h_6
             );
 
-    public record TranscriptTitle(String title, OffsetDateTime documentTitleDate) {}
+    public record TranscriptTitle(String title, Optional<OffsetDateTime> documentTitleDate) {}
 
     public static TranscriptTitle identifyTitleDates(File2Process f2p) {
         // extract date from title (manually created)
         Pattern titleDatePattern = Pattern.compile("(\\d{6})\\s*-\\s*(.*)\\.pdf");
         Matcher m1 = titleDatePattern.matcher(f2p.getFileName());
 
-        //OffsetDateTime documentTitleDate = null;
+        if (m1.find()) { //look for a date in doc name
+            try {
+                //TODO Date must be neutral (GMT) and then adapted to user according its setting
+                LocalDate ld = LocalDate.parse(m1.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
+                ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
+                return new TranscriptTitle(m1.group(2),
+                        Optional.of(zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime()));
+            } catch (DateTimeParseException e) {
+                //  todo
+                //LOG.warn("Could not parse date in file title {}", m1.group(1), e);
+            }
 
-        try {
-            if (m1.find()) { //look for a date in doc name
+        } else if (f2p.getParentFolderName() != null) { //look for a date in parent folder name
+            Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
+
+            if (m2.find()) {
                 try {
-                    //TODO Date must be neutral (GMT) and then adapted to user according its setting
-                    LocalDate ld = LocalDate.parse(m1.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
+                    LocalDate ld = LocalDate.parse(m2.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
                     ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
-                    return new TranscriptTitle(m1.group(2), zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime());
+                    return new TranscriptTitle(m1.group(2),
+                            Optional.of(zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime()));
                 } catch (DateTimeParseException e) {
                     //  todo
-                    //LOG.warn("Could not parse date in file title {}", m1.group(1), e);
-                }
-
-            } else if (f2p.getParentFolderName() != null) { //look for a date in parent folder name
-                Matcher m2 = titleDatePattern.matcher(f2p.getParentFolderName());
-
-                if (m2.find()) {
-                    try {
-                        LocalDate ld = LocalDate.parse(m2.group(1), DateTimeFormatter.ofPattern("yyMMdd"));
-                        ZonedDateTime zdt = ld.atStartOfDay(ZoneId.of("GMT+1"));
-                        //documentTitleDate = zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime();
-                        return new TranscriptTitle(m1.group(2), zdt.withZoneSameInstant(ZoneId.of("GMT+1")).toOffsetDateTime());
-                    } catch (DateTimeParseException e) {
-                        //  todo
-                        //LOG.warn("Could not parse date in parent title {}", m1.group(1), e);
-                    }
+                    //LOG.warn("Could not parse date in parent title {}", m1.group(1), e);
                 }
             }
-        } catch (Exception e) {
-            //todo why ??
-            //LOG.error("Could not identify date in file {}", f2p.getFileId(), e);
+        } else {
+            Pattern titlePattern = Pattern.compile("(.*)\\.pdf");
+            Matcher m3 = titlePattern.matcher(f2p.getFileName());
+            if (m3.find()) {
+                return new TranscriptTitle(m3.group(1), Optional.empty());
+            }
         }
-        //return documentTitleDate;
-        return null;
+        return new TranscriptTitle(f2p.getFileName(), Optional.empty());
     }
 
     public static List<DtoNamedEntity> identifyNamedIdentities(String text) {

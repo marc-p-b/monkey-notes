@@ -267,7 +267,7 @@ public class UpdateServiceImpl implements UpdateService {
             entityTranscript
                     .setName(f2p.getFileName())
                     .setTranscripted_at(OffsetDateTime.now())
-                    .setDocumented_at(transcriptTitle.documentTitleDate())
+                    .setDocumented_at(transcriptTitle.documentTitleDate().orElse(OffsetDateTime.now()))
                     .setTitle(transcriptTitle.title())
                     .setPageCount(transcriptTotalPageCount);
             repositoryTranscript.save(entityTranscript);

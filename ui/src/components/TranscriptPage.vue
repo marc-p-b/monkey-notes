@@ -198,23 +198,23 @@ const loadPage = async () => {
     } else if (ne.verb == 'h6') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='" + ne.uuid + "'>" + ne.value + "</h6>")
     } else if (ne.verb == 'tag') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-tag'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-tag'></i> " + ne.value + "</span>")
     } else if (ne.verb == 'person') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-user'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-user'></i>" + ne.value + "</span>")
     } else if (ne.verb == 'email') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-envelope'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-envelope'>" + ne.value + "</i></span>")
     } else if (ne.verb == 'link') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-link'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-link'></i> " + ne.value + "</span>")
     } else if (ne.verb == 'dateUS' || ne.verb == 'dateEU' || ne.verb == 'dateISO') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-calendar'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-calendar'></i> " + ne.value + "</span>")
     } else if (ne.verb == 'checked') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' checked /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
     } else if (ne.verb == 'unchecked') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
     } else if (ne.verb == 'diagram') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-tag'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram : " + ne.value + " </span>")
     } else if (ne.verb == 'diagramNextPage') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'>" + ne.value + " <i class='pi pi-tag'></i></span>")
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram next page : " + ne.value + "</span>")
     } else {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|")
     }

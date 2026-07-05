@@ -601,7 +601,7 @@ public class UpdateServiceImpl implements UpdateService {
         LOG.info("Processing : Force page update for {} page {}", fileId, pageNumber);
         CompletionResponse completionResponse = qwenService.analyzeImage(fileId, imageURL);
 
-        //TODO update process
+        //TODO update process (processService)
 
         if (completionResponse.isCompleted()) {
             Optional<EntityTranscriptPage> optTranscriptPage = repositoryTranscriptPage.findById(
@@ -632,6 +632,9 @@ public class UpdateServiceImpl implements UpdateService {
                 entityTranscript.get().bumpVersion();
                 repositoryTranscript.save(entityTranscript.get());
             }
+
+            namedEntitiesService.saveNamedEntitiesFromContent(fileId, pageNumber, entityTranscriptPage.getTranscript());
+
         } else {
             //todo throw ?
             LOG.error("Could not force page update for {} page {}", fileId, pageNumber);
@@ -674,7 +677,7 @@ public class UpdateServiceImpl implements UpdateService {
     @MonitoringAsync
     private void asyncForceTranscriptUpdate(String fileId) {
 
-        //TODO update process
+        //TODO update process (processService)
 
 
         Optional<EntityFile> optFile = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));

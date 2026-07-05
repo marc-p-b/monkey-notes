@@ -12,9 +12,9 @@ public class EntityFile {
     private IdFile idFile;
 
     private String parentFolderId;
-    @Column(length = 1024)
+
     private String name;
-    @Column(length = 32)
+
     private String md5;
     private OffsetDateTime discovered_at;
     @Enumerated(EnumType.STRING)
@@ -45,6 +45,7 @@ public class EntityFile {
         return this;
     }
 
+    @Column(length = 1024)
     public String getName() {
         return name;
     }
@@ -54,6 +55,7 @@ public class EntityFile {
         return this;
     }
 
+    @Column(length = 32)
     public String getMd5() {
         return md5;
     }

@@ -45,8 +45,6 @@ public class TranscriptController {
     private EditService editService;
 
     @Autowired
-    private DriveChangeManagerService driveChMgmtService;
-    @Autowired
     private NamedEntitiesService namedEntitiesService;
 
     @GetMapping("/transcript/{fileId}")
@@ -113,6 +111,7 @@ public class TranscriptController {
     @PostMapping("/transcript/edit/{fileId}/{pageNumber}")
     public ResponseEntity<String> formEditTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber, @RequestBody String content) {
         editService.edit(fileId, pageNumber, content);
+        //TODO move to editService
         namedEntitiesService.saveNamedEntitiesFromContent(fileId, pageNumber, content);
         return ResponseEntity.ok().body("OK");
     }

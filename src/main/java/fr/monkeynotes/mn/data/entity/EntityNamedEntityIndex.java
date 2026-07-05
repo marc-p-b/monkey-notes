@@ -11,7 +11,6 @@ public class EntityNamedEntityIndex {
     private IdNamedEntityIndex idNamedEntityIndex;
 
     private OffsetDateTime createdAt;
-    //private OffsetDateTime updatedAt;
 
     public EntityNamedEntityIndex() {
     }
@@ -34,12 +33,4 @@ public class EntityNamedEntityIndex {
         return this;
     }
 
-//    public OffsetDateTime getUpdatedAt() {
-//        return updatedAt;
-//    }
-//
-//    public EntityNamedEntityIndex setUpdatedAt(OffsetDateTime updatedAt) {
-//        this.updatedAt = updatedAt;
-//        return this;
-//    }
 }

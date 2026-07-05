@@ -8,7 +8,6 @@ import jakarta.persistence.Entity;
 public class EntityPreferences {
     private EntityPreferencesId configId;
     // TODO : optimise (prompts coult be long but not other configs)
-    @Column(length = 2048)
     private String value;
 
     public EntityPreferences() {
@@ -29,6 +28,7 @@ public class EntityPreferences {
         return this;
     }
 
+    @Column(length = 5000)
     public String getValue() {
         return value;
     }

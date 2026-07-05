@@ -33,6 +33,11 @@ public enum NamedEntityVerb {
     h4("###", false),
     h5("####", false),
     h6("#####", false),
+    h_2("1", false),
+    h_3("2", false),
+    h_4("3", false),
+    h_5("4", false),
+    h_6("5", false),
     unknown("", false),
     refSchema2_DEL("", false),
     noTranscript_DEL("", false);

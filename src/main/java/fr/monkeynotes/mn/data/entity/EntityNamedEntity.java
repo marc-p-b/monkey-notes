@@ -13,6 +13,7 @@ public class EntityNamedEntity {
 
     @Enumerated(EnumType.STRING)
     private NamedEntityVerb verb;
+
     private String value;
     private int startIndex;
     private int endIndex;

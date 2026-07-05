@@ -263,7 +263,7 @@ public class UpdateServiceImpl implements UpdateService {
         //TODO retrieve f2p is not very elegant
         if(!listCompletionResponse.isEmpty()) {
             File2Process f2p = listCompletionResponse.get(0).getFile2Process();
-            TranscriptUtils.TranscriptTitle transcriptTitle = TranscriptUtils.identifyDates(f2p);
+            TranscriptUtils.TranscriptTitle transcriptTitle = TranscriptUtils.identifyTitleDates(f2p);
             entityTranscript
                     .setName(f2p.getFileName())
                     .setTranscripted_at(OffsetDateTime.now())

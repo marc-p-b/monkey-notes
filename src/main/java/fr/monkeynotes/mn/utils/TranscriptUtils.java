@@ -9,13 +9,18 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TranscriptUtils {
+    private static final Set<NamedEntityVerb> NON_HASH_HEADERS = Set.of(
+            NamedEntityVerb.h_2, NamedEntityVerb.h_3, NamedEntityVerb.h_4, NamedEntityVerb.h_5, NamedEntityVerb.h_6
+            );
+
     public record TranscriptTitle(String title, OffsetDateTime documentTitleDate) {}
 
-    public static TranscriptTitle identifyDates(File2Process f2p) {
+    public static TranscriptTitle identifyTitleDates(File2Process f2p) {
         // extract date from title (manually created)
         Pattern titleDatePattern = Pattern.compile("(\\d{6})\\s*-\\s*(.*)\\.pdf");
         Matcher m1 = titleDatePattern.matcher(f2p.getFileName());
@@ -63,7 +68,7 @@ public class TranscriptUtils {
         }
 
         Pattern p = Pattern.compile(
-                "(?<open>[<(\\[])\\s*(?<verb>(?:DG|DGN|T|DT|DE|DU|P|@|L|V|X))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
+                "(?<open>[<(\\[])\\s*(?<verb>(?:DG|DGN|T|DT|DE|DU|P|@|L|V|X|[1-6]))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
                 Pattern.CASE_INSENSITIVE
         );
 
@@ -79,6 +84,26 @@ public class TranscriptUtils {
             }
 
             Pattern patternDate = Pattern.compile("\\d\\d/\\d\\d/\\d\\d");
+
+            if(NON_HASH_HEADERS.contains(verb)) {
+                switch (verb) {
+                    case h_2:
+                        verb = NamedEntityVerb.h2;
+                        break;
+                    case h_3:
+                        verb = NamedEntityVerb.h3;
+                        break;
+                    case h_4:
+                        verb = NamedEntityVerb.h4;
+                        break;
+                    case h_5:
+                        verb = NamedEntityVerb.h5;
+                        break;
+                    case h_6:
+                        verb = NamedEntityVerb.h6;
+                        break;
+                }
+            }
 
             if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {
                 if (verb.equals(NamedEntityVerb.dateISO)) {

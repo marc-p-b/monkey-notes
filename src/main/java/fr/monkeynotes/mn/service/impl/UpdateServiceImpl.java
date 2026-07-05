@@ -286,6 +286,12 @@ public class UpdateServiceImpl implements UpdateService {
         for(Image2Process image2Process : modifiedOrNewImages) {
             CompletionResponse completionResponse = mapPageNumber2Completion.get(image2Process.getPageNumber());
 
+            // --------------------------------------
+            // Clean text
+            // --------------------------------------
+            //TODO put an option on this
+            String content = completionResponse.getTranscript().replaceAll("[ \\t]+", " ");
+
             IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, completionResponse.getPageNumber());
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);
 
@@ -303,7 +309,7 @@ public class UpdateServiceImpl implements UpdateService {
             if (completionResponse.isCompleted()) {
                 //TODO process transcript text
                 entityTranscriptPage
-                    .setTranscript(completionResponse.getTranscript())
+                    .setTranscript(content)
                     .setAiModel(completionResponse.getAiModel())
                     .setTranscriptTook(completionResponse.getTranscriptTook())
                     .setTokensPrompt(completionResponse.getTokensPrompt())

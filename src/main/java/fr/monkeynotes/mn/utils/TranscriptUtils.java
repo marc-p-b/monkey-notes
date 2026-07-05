@@ -106,7 +106,7 @@ public class TranscriptUtils {
                         break;
                 }
             } else if(NO_SPACE.contains(verb)) {
-                value.replaceAll("\\s+", "");
+                value = value.replaceAll("\\s+", "");
             }
 
             if(value != null && !value.isEmpty() && patternDate.matcher(value).matches()) {

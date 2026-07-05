@@ -31,7 +31,7 @@ public class DtoTranscript {
         dto.username = transcript.getIdFile().getUsername();
         dto.fileId = transcript.getIdFile().getFileId();
         dto.name = transcript.getName();
-        dto.title = transcript.getName();
+        dto.title = (transcript.getTitle() == null || transcript.getTitle().isEmpty()) ? transcript.getName() : transcript.getTitle();
         dto.transcripted_at = transcript.getTranscripted_at();
         dto.documented_at = transcript.getDocumented_at();
         dto.pageCount = transcript.getPageCount();
@@ -47,7 +47,7 @@ public class DtoTranscript {
         dto.username = transcript.getIdFile().getUsername();
         dto.fileId = transcript.getIdFile().getFileId();
         dto.name = transcript.getName();
-        dto.title = transcript.getName();
+        dto.title = (transcript.getTitle() == null || transcript.getTitle().isEmpty()) ? transcript.getName() : transcript.getTitle();
         dto.transcripted_at = transcript.getTranscripted_at();
         dto.documented_at = transcript.getDocumented_at();
         dto.pageCount = transcript.getPageCount();

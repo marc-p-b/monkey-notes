@@ -8,7 +8,7 @@
           <li v-for="transcript in transcripts" :key="transcript.fileId">
             <a href="#" @click.prevent="clickedTranscript(transcript.transcript.fileId)" class="recent-link">
               <i class="pi pi-file-edit"></i>
-              <span>{{ transcript.transcript.name }}</span>
+              <span>{{ transcript.transcript.title }}</span>
             </a>
           </li>
         </ul>

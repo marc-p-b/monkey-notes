@@ -9,8 +9,13 @@ import java.time.OffsetDateTime;
 public class EntityTranscript {
     @EmbeddedId
     private IdFile idFile;
+    //document complete name
     private String name;
+    //document name without date
+    private String title;
+    //document processing date
     private OffsetDateTime transcripted_at;
+    //document date from title
     private OffsetDateTime documented_at;
     private int pageCount;
     private int version;
@@ -38,6 +43,15 @@ public class EntityTranscript {
 
     public EntityTranscript setName(String name) {
         this.name = name;
+        return this;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public EntityTranscript setTitle(String title) {
+        this.title = title;
         return this;
     }
 

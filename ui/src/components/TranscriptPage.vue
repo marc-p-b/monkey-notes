@@ -43,6 +43,14 @@
   <div class="page-footer">
     <Button @click.prevent="updatePage(page)" icon="pi pi-refresh" text severity="secondary" size="small" v-tooltip.top="'Re-transcribe page'" />
     <Badge v-if="page.deltas > 0" :value="page.deltas + (page.deltas === 1 ? ' delta' : ' deltas')" severity="secondary" />
+    <div class="footer-stats">
+      <span v-if="showStats" class="stats-info">
+        <span class="stat-model">{{ page.aiModel }}</span>
+        <span class="stat-tokens" v-tooltip.top="'Prompt tokens'"><i class="pi pi-arrow-up"></i> {{ page.tokensPrompt }}</span>
+        <span class="stat-tokens" v-tooltip.top="'Response tokens'"><i class="pi pi-arrow-down"></i> {{ page.tokensResponse }}</span>
+      </span>
+      <Button @click.prevent="showStats = !showStats" icon="pi pi-info-circle" text severity="secondary" size="small" v-tooltip.top="'Show OCR stats'" />
+    </div>
   </div>
 </template>
 
@@ -100,6 +108,7 @@ const textEdit = ref()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const editMode = ref(false)
+const showStats = ref(false)
 let transcript = props.page.transcript;
 textEdit.value = transcript
 
@@ -314,6 +323,31 @@ onMounted(() => {
   margin-top: 0.75rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--p-surface-100);
+}
+
+.footer-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.stats-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--p-surface-400);
+}
+
+.stat-model {
+  font-style: italic;
+}
+
+.stat-tokens {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 </style>

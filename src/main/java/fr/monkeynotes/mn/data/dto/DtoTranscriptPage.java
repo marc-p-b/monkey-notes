@@ -24,8 +24,8 @@ public class DtoTranscriptPage {
     private int cols;
     private int rows;
     private int deltas;
-    private boolean schema;
-    private String schemaTitle;
+    private boolean diagram;
+    private String diagramTitle;
 
 
     public static DtoTranscriptPage fromEntity(EntityTranscriptPage page) {
@@ -188,17 +188,17 @@ public class DtoTranscriptPage {
         return this;
     }
 
-    public boolean isSchema() {
-        return schema;
+    public boolean isDiagram() {
+        return diagram;
     }
 
-    public String getSchemaTitle() {
-        return schemaTitle;
+    public String getDiagramTitle() {
+        return diagramTitle;
     }
 
-    public DtoTranscriptPage setSchemaTitle(Optional<String> schemaTitle) {
-        this.schema = schemaTitle.isPresent();
-        this.schemaTitle = schemaTitle.orElse(null);
+    public DtoTranscriptPage setDiagramTitle(Optional<String> diagramTitle) {
+        this.diagram = diagramTitle.isPresent();
+        this.diagramTitle = diagramTitle.orElse(null);
         return this;
     }
 }

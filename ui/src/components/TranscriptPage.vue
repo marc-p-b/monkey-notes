@@ -2,7 +2,7 @@
   <span :id="'pageNumber' + page.pageNumber" />
 
 
-  <div v-if="page.schema">
+  <div v-if="page.diagram">
 
     <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img"/>
     <p v-else>Loading source image...</p>
@@ -88,13 +88,15 @@ interface Page {
   cols: number
   rows: number
   deltas: number
-  schema: boolean
-  schemaTitle: string
+  diagram: boolean
+  diagramTitle: string
 }
 
 const imgSrc = ref(null)
+const diagramImgSrc = ref(null)
 const props = defineProps<{
   page: Page
+  nextPage: Page | null
   activeEditPageNumber: number | null
   showImages: boolean
 }>()
@@ -157,6 +159,18 @@ async function downloadImage(page) {
   imgSrc.value = URL.createObjectURL(blob)
 }
 
+async function downloadNextPageImage() {
+  if (!props.nextPage) return
+  const path = "image/" + props.nextPage.username + "/" + props.nextPage.fileId + "/" + props.nextPage.pageNumber
+  const res = await authFetch(path)
+  const blob = await res.blob()
+
+  if (diagramImgSrc.value) {
+    URL.revokeObjectURL(diagramImgSrc.value)
+  }
+  diagramImgSrc.value = URL.createObjectURL(blob)
+}
+
 const save = async () => {
   const fileId = props.page.fileId
   const pageNumber = props.page.pageNumber
@@ -187,11 +201,16 @@ const save = async () => {
 const loadPage = async () => {
   let lFix = 0;
 
-  if(props.page.schema) {
+  if(props.page.diagram) {
     //console.log("schema " + props.page.schemaTitle)
     downloadImage(props.page)
   } else {
     //console.log("no schema")
+  }
+
+  const hasDiagramNextPage = props.page.listNamedEntities.some(ne => ne.verb == 'diagramNextPage')
+  if (hasDiagramNextPage) {
+    await downloadNextPageImage()
   }
 
   props.page.listNamedEntities.forEach(ne => {
@@ -223,7 +242,10 @@ const loadPage = async () => {
     } else if (ne.verb == 'diagram') {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram : " + ne.value + " </span>")
     } else if (ne.verb == 'diagramNextPage') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram next page : " + ne.value + "</span>")
+      const inlineImg = diagramImgSrc.value
+          ? "<br/><img src='" + diagramImgSrc.value + "' class='preview-img diagram-inline-img' alt='diagram' />"
+          : ""
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram next page : " + ne.value + "</span>" + inlineImg)
     } else {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|")
     }
@@ -247,7 +269,7 @@ watch(() => props.activeEditPageNumber, async (newActivePageNumber) => {
 
 //use store instead ?
 watch(() => props.showImages, async (val) => {
-  if (val && !imgSrc.value && !props.page.schema) {
+  if (val && !imgSrc.value && !props.page.diagram) {
     await downloadImage(props.page)
   }
 })
@@ -287,6 +309,12 @@ onMounted(() => {
 .preview-img {
   width: 80%;
   height: auto;
+}
+
+.diagram-inline-img {
+  display: block;
+  width: 60%;
+  margin-top: 0.5rem;
 }
 
 .view-image-row {

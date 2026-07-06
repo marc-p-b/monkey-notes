@@ -260,10 +260,10 @@ public class ViewServiceImpl implements ViewService {
                         .filter(ne->ne.getVerb().equals(NamedEntityVerb.diagram))
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
-                dtoTranscriptPage.setSchemaTitle(optSchema);
+                dtoTranscriptPage.setDiagramTitle(optSchema);
 
                 //Schema was set from the previous page
-                dtoTranscriptPage.setSchemaTitle(optNextPageSchema);
+                dtoTranscriptPage.setDiagramTitle(optNextPageSchema);
 
                 //schema ref for next page
                 optNextPageSchema = namedEntities.stream()

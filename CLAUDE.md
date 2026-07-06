@@ -290,3 +290,10 @@ I'll apply the same card-based, consistent design language to Preferences.vue. N
 - Replaced the deprecated TabView/TabPanel markup with the same Tabs/TabList/Tab/TabPanels/TabPanel API already used in TranscriptView.vue, one tab per verb (Tags/People/Emails) with an icon and a count Tag badge.
 - Replaced the raw nested <ul> markup with the same tag-grid pattern as TranscriptView.vue's Tags tab (entity-group/entity-refs, values as bold labels, occurrences as Tag chips).
 - Fixed the broken navigation: the old code used a raw <a href="transcript/${fileId}"> (a literal relative link, not a real route); occurrences now use router.push({ name: 'transcript', params: { fileId } }) like Home.vue does, and each chip shows the filename + page number instead of just the filename.
+
+## Inline diagram-next-page image
+
+Backend contract (ViewServiceImpl.buildDtoTranscript): a `diagramNextPage` (DGN) named entity on page N is a purely positional pointer — it always means page N+1 is the actual diagram page (`page.diagram=true`, image at pageNumber+1). No matching by value/title, and the relationship isn't persisted, it's recomputed at DTO-build time from the entity list every request.
+
+- TranscriptView.vue: v-for now tracks `index` and passes `:nextPage="transcript.pages[index + 1] ?? null"` to each TranscriptPage, so a page component can see the next page's `fileId`/`username`/`pageNumber` without a new endpoint.
+- TranscriptPage.vue: new `nextPage` prop, `diagramImgSrc` ref, and `downloadNextPageImage()` (same authFetch-blob-URL pattern as the existing `downloadImage()`, kept separate since it targets a different page's image endpoint). `loadPage()` awaits this fetch before building the entity replacements when the page has a `diagramNextPage` entity, then the `diagramNextPage` branch appends `<br/><img class='diagram-inline-img'>` right after the entity span, so the diagram renders inline below the reference instead of only on its own page card further down.

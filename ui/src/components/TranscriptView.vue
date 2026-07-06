@@ -97,7 +97,7 @@
         </Tabs>
       </div>
 
-      <div v-for="page in transcript.pages" :key="page.pageNumber" class="page-card">
+      <div v-for="(page, index) in transcript.pages" :key="page.pageNumber" class="page-card">
         <div class="page-card-header">
           <span class="page-badge">Page {{ page.pageNumber + 1 }}</span>
           <Button
@@ -112,7 +112,7 @@
           />
         </div>
         <div class="page-content">
-          <TranscriptPage :page="page" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
+          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
         </div>
       </div>
     </div>

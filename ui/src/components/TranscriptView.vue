@@ -409,9 +409,9 @@ async function updateTranscript(fileId) {
   try {
     const response = await authFetch("transcript/update/" + fileId);
     if (!response.ok) throw new Error("Network response was not ok");
-    console.log(response)
+    //console.log(response)
   } catch (err: any) {
-    console.error(err);
+    //console.error(err);
     error.value = "Failed to update transcript.";
   } finally {
     loading.value = false;

@@ -255,23 +255,25 @@ public class ViewServiceImpl implements ViewService {
                         .toList();
                 dtoTranscriptPage.setListNamedEntities(namedEntities);
 
-                //schema for this page
+                //diagram for this page
                 Optional<String> optSchema = namedEntities.stream()
                         .filter(ne->ne.getVerb().equals(NamedEntityVerb.diagram))
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
                 dtoTranscriptPage.setDiagramTitle(optSchema);
 
-                //Schema was set from the previous page
-                dtoTranscriptPage.setDiagramTitle(optNextPageSchema);
+                //diagram set from previous page - only if not define from current page
+                if(!optSchema.isPresent()) {
+                    dtoTranscriptPage.setDiagramTitle(optNextPageSchema);
+                }
 
-                //schema ref for next page
+                //diagram ref for next page
                 optNextPageSchema = namedEntities.stream()
-                        .filter(ne->{
-                            return (ne.getVerb().equals(NamedEntityVerb.diagramNextPage) || ne.getVerb().equals(NamedEntityVerb.refSchema2_DEL));
-                        })
-                        .map(DtoNamedEntity::getValue)
-                        .findFirst();
+                    .filter(ne->{
+                        return (ne.getVerb().equals(NamedEntityVerb.diagramNextPage) || ne.getVerb().equals(NamedEntityVerb.refSchema2_DEL));
+                    })
+                    .map(DtoNamedEntity::getValue)
+                    .findFirst();
 
                 dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
 

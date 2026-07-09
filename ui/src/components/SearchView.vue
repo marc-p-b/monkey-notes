@@ -32,7 +32,14 @@
           />
         </div>
         <div class="page-content">
-          <Tag v-if="hasTitleMatch(results[title])" value="Title match" severity="info" class="title-match-tag" />
+          <a
+            v-if="hasTitleMatch(results[title])"
+            href="#"
+            @click.prevent="clickedTranscript(results[title][0].id, results[title], titleMatchPage(results[title]))"
+            class="title-match-link"
+          >
+            <Tag value="Title match" severity="info" class="title-match-tag" />
+          </a>
           <div v-if="contentPages(results[title]).length" class="page-refs">
             <a
               v-for="p in contentPages(results[title])"
@@ -77,6 +84,10 @@ const groupKeys = computed(() => Object.keys(results.value))
 
 function hasTitleMatch(items: DtoSearchResult[]): boolean {
   return items.some(i => i.srType === 'title')
+}
+
+function titleMatchPage(items: DtoSearchResult[]): number {
+  return items.find(i => i.srType === 'title')?.pageNumber ?? 0
 }
 
 function contentPages(items: DtoSearchResult[]): number[] {
@@ -204,6 +215,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+}
+
+.title-match-link {
+  align-self: flex-start;
+  text-decoration: none;
 }
 
 .title-match-tag {

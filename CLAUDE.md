@@ -297,3 +297,19 @@ Backend contract (ViewServiceImpl.buildDtoTranscript): a `diagramNextPage` (DGN)
 
 - TranscriptView.vue: v-for now tracks `index` and passes `:nextPage="transcript.pages[index + 1] ?? null"` to each TranscriptPage, so a page component can see the next page's `fileId`/`username`/`pageNumber` without a new endpoint.
 - TranscriptPage.vue: new `nextPage` prop, `diagramImgSrc` ref, and `downloadNextPageImage()` (same authFetch-blob-URL pattern as the existing `downloadImage()`, kept separate since it targets a different page's image endpoint). `loadPage()` awaits this fetch before building the entity replacements when the page has a `diagramNextPage` entity, then the `diagramNextPage` branch appends `<br/><img class='diagram-inline-img'>` right after the entity span, so the diagram renders inline below the reference instead of only on its own page card further down.
+
+## Per-page edit/image icons + global bulk image toggle
+
+- TranscriptView.vue: each page-card-header now has a `.page-header-actions` group, right-aligned, with a per-page `pi-image` toggle (`pageShowImages: Record<number, boolean>`) next to the existing `pi-pencil` edit button (still gated on `store.transcript_edit_mode`).
+- Removed the old header-level global `showImages` toggle. Replaced with a "Show Images"/"Hide Images" button in the action-row next to Edit/Lock — `toggleAllImages()` force-sets every page's `pageShowImages` entry to the same open/closed state, overriding individual per-page toggles (bulk action, not a merge).
+
+## Scroll-to-page navigation from Named Entities / Search results
+
+- NamedEntitiesView.vue and SearchView.vue: clicking an entity reference or a search result page tag now navigates via `router.push({ name: 'transcript', params: { fileId }, hash: '#pageNumber' + pageNumber })` instead of just opening the file. Reuses the anchor `<span :id="'pageNumber' + page.pageNumber" />` already rendered at the top of every `TranscriptPage.vue`.
+- SearchView.vue's "Title match" tag and per-page `p. N` tags now each link to their specific page (previously all links jumped to `pages[0]`); `titleMatchPage()` reads the title-type result's `pageNumber`.
+- TranscriptView.vue can't just `scrollIntoView` once on mount: pages with a full diagram image fetch it async and unawaited, which grows page height and pushes the scroll target out of view after a naive one-shot scroll (confirmed by the bug only reproducing when *not* single-stepping in the debugger — the extra time let images settle first). Fixed properly (not with a timeout/rAF-polling hack) by making it deterministic: `TranscriptPage.vue` now awaits its own image download in `loadPage()` and emits `pageReady` from `onMounted` (wrapped in try/finally so a failed fetch still emits); `TranscriptView.vue` counts `expectedReadyPages` (rendered pages, i.e. `pageDiagram !== inline`) and only calls `scrollToHashAnchor()` once every page has reported ready.
+
+## Search reset bug
+
+- Root cause: the header search box (App.vue) always did `router.push({ name: 'search' })` on every search, but Vue Router 4 treats navigating to the same route (no param/query change) as a no-op — so re-searching while already on `/search` never remounted `SearchView.vue`, which only fetched once in `onMounted` with no watcher on `store.search`.
+- Fix: added `watch(() => store.search, () => request())` in SearchView.vue so the fetch reruns on any search-term change regardless of navigation. Also fixed `App.vue` passing the raw `query` ref into `store.setSearch()` instead of `query.value` (worked before only because Pinia auto-unwraps refs assigned into state).

@@ -38,7 +38,7 @@
               v-for="p in contentPages(results[title])"
               :key="p"
               href="#"
-              @click.prevent="clickedTranscript(results[title][0].id, results[title])"
+              @click.prevent="clickedTranscript(results[title][0].id, results[title], p)"
               class="page-ref-link"
             >
               <Tag :value="`p. ${p + 1}`" severity="secondary" />
@@ -113,10 +113,11 @@ const request = async() => {
   }
 }
 
-function clickedTranscript(fileId: string, items: DtoSearchResult[]) {
+function clickedTranscript(fileId: string, items: DtoSearchResult[], targetPage?: number) {
   const pages = items.filter(i => i.srType === 'content').map(i => i.pageNumber)
   store.setSRPages(pages)
-  router.push({ name: 'transcriptSearchResult', params: { fileId, pageNumber: pages[0] ?? 0 } })
+  const pageNumber = targetPage ?? pages[0] ?? 0
+  router.push({ name: 'transcriptSearchResult', params: { fileId }, hash: '#pageNumber' + pageNumber })
 }
 
 onMounted(() => {

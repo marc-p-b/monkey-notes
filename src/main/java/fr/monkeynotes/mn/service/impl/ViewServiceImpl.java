@@ -242,7 +242,7 @@ public class ViewServiceImpl implements ViewService {
 
         List<DtoTranscriptPage> listDtoTranscriptPages = new ArrayList<>();
 
-        Optional<String> optNextPageSchema = Optional.empty();
+        Optional<String> optNextPageDiagramTitle = Optional.empty();
         for(int n = 0; n < t.getPageCount(); n++) {
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
                     IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), t.getIdFile().getFileId(), n));
@@ -256,19 +256,25 @@ public class ViewServiceImpl implements ViewService {
                 dtoTranscriptPage.setListNamedEntities(namedEntities);
 
                 //diagram for this page
-                Optional<String> optSchema = namedEntities.stream()
+                Optional<String> optDiagramTitle = namedEntities.stream()
                         .filter(ne->ne.getVerb().equals(NamedEntityVerb.diagram))
                         .map(DtoNamedEntity::getValue)
                         .findFirst();
-                dtoTranscriptPage.setDiagramTitle(optSchema);
 
-                //diagram set from previous page - only if not define from current page
-                if(!optSchema.isPresent()) {
-                    dtoTranscriptPage.setDiagramTitle(optNextPageSchema);
+                if(optDiagramTitle.isPresent()) {
+                    dtoTranscriptPage.setDiagramTitle(optDiagramTitle.get());
+                    dtoTranscriptPage.setPageDiagram(DtoTranscriptPage.PageDiagram.full);
+                }
+                else if (optNextPageDiagramTitle.isPresent()) {
+                    dtoTranscriptPage.setDiagramTitle(optNextPageDiagramTitle.get());
+                    dtoTranscriptPage.setPageDiagram(DtoTranscriptPage.PageDiagram.inline);
+                } else {
+                  //no diagram in this transcript
+                    dtoTranscriptPage.setPageDiagram(DtoTranscriptPage.PageDiagram.none);
                 }
 
                 //diagram ref for next page
-                optNextPageSchema = namedEntities.stream()
+                optNextPageDiagramTitle = namedEntities.stream()
                     .filter(ne->{
                         return (ne.getVerb().equals(NamedEntityVerb.diagramNextPage) || ne.getVerb().equals(NamedEntityVerb.refSchema2_DEL));
                     })

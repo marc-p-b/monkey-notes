@@ -5,9 +5,15 @@ import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
+
 
 public class DtoTranscriptPage {
+
+    public enum PageDiagram {
+        none,
+        full,
+        inline
+    }
 
     private String fileId;
     private String username;
@@ -24,7 +30,8 @@ public class DtoTranscriptPage {
     private int cols;
     private int rows;
     private int deltas;
-    private boolean diagram;
+    private PageDiagram pageDiagram;
+    //private boolean pageDiagram;
     private String diagramTitle;
 
 
@@ -188,17 +195,21 @@ public class DtoTranscriptPage {
         return this;
     }
 
-    public boolean isDiagram() {
-        return diagram;
+    public PageDiagram getPageDiagram() {
+        return pageDiagram;
+    }
+
+    public DtoTranscriptPage setPageDiagram(PageDiagram pageDiagram) {
+        this.pageDiagram = pageDiagram;
+        return this;
     }
 
     public String getDiagramTitle() {
         return diagramTitle;
     }
 
-    public DtoTranscriptPage setDiagramTitle(Optional<String> diagramTitle) {
-        this.diagram = diagramTitle.isPresent();
-        this.diagramTitle = diagramTitle.orElse(null);
+    public DtoTranscriptPage setDiagramTitle(String diagramTitle) {
+        this.diagramTitle = diagramTitle;
         return this;
     }
 }

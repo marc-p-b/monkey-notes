@@ -2,7 +2,7 @@
   <span :id="'pageNumber' + page.pageNumber" />
 
 
-  <div v-if="page.diagram">
+  <div v-if="page.pageDiagram == PageDiagram.full">
 
     <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img"/>
     <p v-else>Loading source image...</p>
@@ -72,6 +72,13 @@ interface NamedEntity {
   end: number
 }
 
+enum PageDiagram {
+  none = 'none',
+  full = 'full',
+  inline = 'inline'
+}
+
+
 interface Page {
   fileId: string
   username: string
@@ -88,7 +95,7 @@ interface Page {
   cols: number
   rows: number
   deltas: number
-  diagram: boolean
+  pageDiagram: PageDiagram
   diagramTitle: string
 }
 
@@ -199,17 +206,15 @@ const save = async () => {
 const loadPage = async () => {
   let lFix = 0;
 
-  if(props.page.diagram) {
-    //console.log("schema " + props.page.schemaTitle)
+  if(props.page.pageDiagram == PageDiagram.full) {
     downloadImage(props.page)
   } else {
-    //console.log("no schema")
+    const hasDiagramNextPage = props.page.listNamedEntities.some(ne => ne.verb == 'diagramNextPage')
+    if (hasDiagramNextPage) {
+      await downloadNextPageImage()
+    }
   }
 
-  const hasDiagramNextPage = props.page.listNamedEntities.some(ne => ne.verb == 'diagramNextPage')
-  if (hasDiagramNextPage) {
-    await downloadNextPageImage()
-  }
 
   props.page.listNamedEntities.forEach(ne => {
     let repl = "";
@@ -243,7 +248,7 @@ const loadPage = async () => {
       const inlineImg = diagramImgSrc.value
           ? "<br/><img src='" + diagramImgSrc.value + "' class='preview-img diagram-inline-img' alt='diagram' />"
           : ""
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram next page : " + ne.value + "</span>" + inlineImg)
+      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram : " + ne.value + "</span>" + inlineImg)
     } else {
       repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|")
     }

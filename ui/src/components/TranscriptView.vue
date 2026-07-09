@@ -99,7 +99,9 @@
 
       <div v-for="(page, index) in transcript.pages" :key="page.pageNumber" class="page-card">
         <div class="page-card-header">
-          <span class="page-badge">Page {{ page.pageNumber + 1 }}</span>
+          <span v-if="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }} - Diagram : {{ page.diagramTitle }}</span>
+          <span v-else-if="page.pageDiagram == PageDiagram.inline" class="page-badge">(Page {{ page.pageNumber + 1 }} Diagram : {{ page.diagramTitle }})</span>
+          <span v-else="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }}</span>
           <Button
             v-if="store.transcript_edit_mode"
             icon="pi pi-pencil"
@@ -111,7 +113,7 @@
             class="page-edit-btn"
           />
         </div>
-        <div class="page-content">
+        <div v-if="page.pageDiagram != PageDiagram.inline" class="page-content">
           <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
         </div>
       </div>
@@ -340,6 +342,11 @@ const showImages = ref(false)
 const stateEditIcon = ref<string>()
 const stateEditSeverity = ref<string>()
 
+enum PageDiagram {
+  none = 'none',
+  full = 'full',
+  inline = 'inline'
+}
 
 interface DtoTranscript {
   username: string

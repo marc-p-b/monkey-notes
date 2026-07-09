@@ -116,7 +116,7 @@
           </div>
         </div>
         <div v-if="page.pageDiagram != PageDiagram.inline" class="page-content">
-          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="!!pageShowImages[page.pageNumber]" @requestEdit="handleEditRequest" />
+          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="!!pageShowImages[page.pageNumber]" @requestEdit="handleEditRequest" @pageReady="handlePageReady" />
         </div>
       </div>
     </div>
@@ -299,26 +299,30 @@ function handleEditRequest(pageNumber: number, isClosing: boolean) {
   }
 }
 
+let expectedReadyPages = 0
+const pagesReadyCount = ref(0)
+
 async function scrollToHashAnchor() {
   if (!route.hash) return
-  const id = route.hash.slice(1)
   await nextTick()
+  document.getElementById(route.hash.slice(1))?.scrollIntoView({ block: 'start' })
+}
 
-  // page images (diagrams) above the target load async and can shift its
-  // position after the first scroll, so keep re-applying it briefly
-  const deadline = performance.now() + 1000
-  const tick = () => {
-    document.getElementById(id)?.scrollIntoView({ block: 'start' })
-    if (performance.now() < deadline) requestAnimationFrame(tick)
+function handlePageReady() {
+  pagesReadyCount.value++
+  if (pagesReadyCount.value >= expectedReadyPages) {
+    scrollToHashAnchor()
   }
-  tick()
 }
 
 onMounted(async () => {
   await fetchTranscript()
   store.transcriptViewMode()
   syncEditButtonState()
-  scrollToHashAnchor()
+  expectedReadyPages = transcript.value.pages.filter(p => p.pageDiagram !== PageDiagram.inline).length
+  if (expectedReadyPages === 0) {
+    scrollToHashAnchor()
+  }
 });
 
 </script>

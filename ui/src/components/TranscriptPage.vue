@@ -110,6 +110,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   requestEdit: [pageNumber: number, isClosing: boolean]
+  pageReady: []
 }>()
 
 const text = ref()
@@ -207,7 +208,7 @@ const loadPage = async () => {
   let lFix = 0;
 
   if(props.page.pageDiagram == PageDiagram.full) {
-    downloadImage(props.page)
+    await downloadImage(props.page)
   } else {
     const hasDiagramNextPage = props.page.listNamedEntities.some(ne => ne.verb == 'diagramNextPage')
     if (hasDiagramNextPage) {
@@ -277,8 +278,12 @@ watch(() => props.showImages, async (val) => {
   }
 })
 
-onMounted(() => {
-  loadPage()
+onMounted(async () => {
+  try {
+    await loadPage()
+  } finally {
+    emit('pageReady')
+  }
 });
 
 </script>

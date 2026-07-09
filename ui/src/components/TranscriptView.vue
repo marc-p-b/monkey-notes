@@ -12,14 +12,6 @@
           <h1>{{ transcript.title }}</h1>
           <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; transcribed {{ formatDate(transcript.transcripted_at) }}</span>
         </div>
-        <Button
-          icon="pi pi-image"
-          text
-          :severity="showImages ? 'primary' : 'secondary'"
-          @click="showImages = !showImages"
-          v-tooltip.bottom="showImages ? 'Hide images' : 'Show images'"
-          class="header-image-toggle"
-        />
       </div>
 
       <div class="transcript-info">
@@ -60,6 +52,7 @@
               </div>
               <div class="action-row">
                 <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
+                <Button @click.prevent="toggleAllImages()" :label="allImagesShown ? 'Hide Images' : 'Show Images'" icon="pi pi-image" :severity="allImagesShown ? 'primary' : 'secondary'" size="small" outlined />
                 <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
                 <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
                 <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
@@ -102,19 +95,28 @@
           <span v-if="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }} - Diagram : {{ page.diagramTitle }}</span>
           <span v-else-if="page.pageDiagram == PageDiagram.inline" class="page-badge">(Page {{ page.pageNumber + 1 }} Diagram : {{ page.diagramTitle }})</span>
           <span v-else="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }}</span>
-          <Button
-            v-if="store.transcript_edit_mode"
-            icon="pi pi-pencil"
-            text
-            size="small"
-            :severity="activeEditPageNumber === page.pageNumber ? 'warn' : 'secondary'"
-            @click="handleEditRequest(page.pageNumber, activeEditPageNumber === page.pageNumber)"
-            v-tooltip.top="activeEditPageNumber === page.pageNumber ? 'Close edit' : 'Edit page'"
-            class="page-edit-btn"
-          />
+          <div class="page-header-actions">
+            <Button
+              icon="pi pi-image"
+              text
+              size="small"
+              :severity="pageShowImages[page.pageNumber] ? 'primary' : 'secondary'"
+              @click="togglePageImage(page.pageNumber)"
+              v-tooltip.top="pageShowImages[page.pageNumber] ? 'Hide image' : 'Show image'"
+            />
+            <Button
+              v-if="store.transcript_edit_mode"
+              icon="pi pi-pencil"
+              text
+              size="small"
+              :severity="activeEditPageNumber === page.pageNumber ? 'warn' : 'secondary'"
+              @click="handleEditRequest(page.pageNumber, activeEditPageNumber === page.pageNumber)"
+              v-tooltip.top="activeEditPageNumber === page.pageNumber ? 'Close edit' : 'Edit page'"
+            />
+          </div>
         </div>
         <div v-if="page.pageDiagram != PageDiagram.inline" class="page-content">
-          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="showImages" @requestEdit="handleEditRequest" />
+          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="!!pageShowImages[page.pageNumber]" @requestEdit="handleEditRequest" />
         </div>
       </div>
     </div>
@@ -135,10 +137,6 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
-}
-
-.header-image-toggle {
-  margin-left: auto;
 }
 
 .transcript-header-text {
@@ -299,7 +297,10 @@
   border-bottom: 1px solid var(--p-surface-200);
 }
 
-.page-edit-btn {
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   margin-left: auto;
 }
 
@@ -337,7 +338,8 @@ const error = ref<string | null>(null)
 
 const transcript = ref<DtoTranscript>(null)
 const activeEditPageNumber = ref<number | null>(null)
-const showImages = ref(false)
+const pageShowImages = ref<Record<number, boolean>>({})
+const allImagesShown = ref(false)
 
 const stateEditIcon = ref<string>()
 const stateEditSeverity = ref<string>()
@@ -468,6 +470,17 @@ function toggleEditModeRequest() {
     store.transcriptEditMode()
   }
   syncEditButtonState()
+}
+
+function togglePageImage(pageNumber: number) {
+  pageShowImages.value[pageNumber] = !pageShowImages.value[pageNumber]
+}
+
+function toggleAllImages() {
+  allImagesShown.value = !allImagesShown.value
+  transcript.value.pages.forEach(page => {
+    pageShowImages.value[page.pageNumber] = allImagesShown.value
+  })
 }
 
 function handleEditRequest(pageNumber: number, isClosing: boolean) {

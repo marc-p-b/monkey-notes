@@ -84,7 +84,7 @@ const toggleUserMenu = (event: Event) => {
 }
 
 const search = () => {
-  store.setSearch(query)
+  store.setSearch(query.value)
   router.push({ name: 'search' })
 }
 

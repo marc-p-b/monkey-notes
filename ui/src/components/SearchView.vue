@@ -52,7 +52,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { authFetch } from "@/requests";
 import { useUiStore } from '@/composables/store.js'
 const store = useUiStore()
@@ -119,6 +119,10 @@ function clickedTranscript(fileId: string, items: DtoSearchResult[], targetPage?
   const pageNumber = targetPage ?? pages[0] ?? 0
   router.push({ name: 'transcriptSearchResult', params: { fileId }, hash: '#pageNumber' + pageNumber })
 }
+
+watch(() => store.search, () => {
+  request()
+});
 
 onMounted(() => {
   request()

@@ -20,10 +20,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -45,16 +42,25 @@ public class NamedEntityController {
     @Autowired
     private RepositoryFile repositoryFile;
 
+    //TODO put in service
     @GetMapping("/ne/verbs")
     public ResponseEntity<Map<NamedEntityVerb, Map<String, List<DtoNamedEntity>>>> getVerbs() {
 
         Map<NamedEntityVerb, Map<String, List<DtoNamedEntity>>> map = new HashMap<>();
         for(NamedEntityVerb verb : NamedEntityVerb.values()) {
             //todo only indexable verbs should be indexed ! (check filter before insertion)
-            if(verb.isIndexable()) {
-                List<DtoNamedEntity> listNe = repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb).stream()
-                        .map(ne -> DtoNamedEntity.fromEntity(ne))
-                        .toList();
+            //diagram and diagramNextPage are treated in the same list
+            if(verb.isIndexable() && !verb.equals(NamedEntityVerb.diagramNextPage)) {
+                List<DtoNamedEntity> listNe = new ArrayList<>();
+                listNe.addAll(repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), verb).stream()
+                    .map(ne -> DtoNamedEntity.fromEntity(ne))
+                    .toList());
+                if(verb.equals(NamedEntityVerb.diagram)) {
+                    listNe.addAll(repositoryNamedEntity.findByVerb(authService.getUsernameFromContext(), NamedEntityVerb.diagramNextPage).stream()
+                            .map(ne -> DtoNamedEntity.fromEntity(ne))
+                            .map(ne -> ne.setVerb(NamedEntityVerb.diagram))
+                            .toList());
+                }
                 Map<String, List<DtoNamedEntity>> map2 = listNe.stream()
                         .map(ne->{
                             IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), ne.getFileId());

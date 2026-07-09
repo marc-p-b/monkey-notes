@@ -124,6 +124,205 @@
 
 </template>
 
+
+<script lang="ts" setup>
+import { ref, onMounted, nextTick } from "vue";
+import { authFetch } from "@/requests.ts";
+import TranscriptPage from "./TranscriptPage.vue";
+import { useRouter, useRoute } from 'vue-router'
+const router = useRouter()
+const route = useRoute()
+
+import { useUiStore } from '@/composables/store.js'
+const store = useUiStore()
+
+const props = defineProps<{
+  fileId: string
+  pageNumber: number
+}>()
+
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+const transcript = ref<DtoTranscript>(null)
+const activeEditPageNumber = ref<number | null>(null)
+const pageShowImages = ref<Record<number, boolean>>({})
+const allImagesShown = ref(false)
+
+const stateEditIcon = ref<string>()
+const stateEditSeverity = ref<string>()
+
+enum PageDiagram {
+  none = 'none',
+  full = 'full',
+  inline = 'inline'
+}
+
+interface DtoTranscript {
+  username: string
+  fileId: string
+  name: string
+  transcripted_at: string
+  documented_at: string
+  discovered_at: string
+  pageCount: number
+  version: number
+  pages: Page[]
+  title: string
+  tags: NamedEntity[]
+  toc: NamedEntity[]
+  tagsMap: Record<string, NamedEntity[]>;
+}
+
+interface NamedEntity {
+  uuid: string
+  verb: string
+  value: string
+  fileId: string
+  fileName: string
+  pageNumber: number
+  start: number
+  end: number
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date)
+}
+
+function getIndent(verb: string): number {
+  switch (verb) {
+    case 'h2': return 0
+    case 'h3': return 16
+    case 'h4': return 32
+    case 'h5': return 48
+    case 'h6': return 64
+    default: return 0
+  }
+}
+
+async function fetchTranscript() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("transcript/" + props.fileId);
+    if (!response.ok) throw new Error("Network response was not ok");
+    transcript.value = await response.json();
+  } catch (err: any) {
+    console.error(err);
+    error.value = "Failed to load transcripts.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function updateTranscript(fileId) {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await authFetch("transcript/update/" + fileId);
+    if (!response.ok) throw new Error("Network response was not ok");
+    //console.log(response)
+  } catch (err: any) {
+    //console.error(err);
+    error.value = "Failed to update transcript.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+const downloadFile = async (fileId: string) => {
+  try {
+    const response = await authFetch('transcript/pdf/' + props.fileId)
+    if (!response.ok) throw new Error(`Server error: ${response.status}`)
+
+    const blob = await response.blob()
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let fileName = 'downloaded-file'
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/)
+      if (match) fileName = match[1]
+    }
+
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Download failed:', err)
+  }
+}
+
+function agent(fileId) {
+  router.push({ name: 'agent', params: { fileId } })
+}
+
+function syncEditButtonState() {
+  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
+  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "secondary"
+}
+
+function toggleEditModeRequest() {
+  if (store.transcript_edit_mode) {
+    store.transcriptViewMode()
+    activeEditPageNumber.value = null
+  } else {
+    store.transcriptEditMode()
+  }
+  syncEditButtonState()
+}
+
+function togglePageImage(pageNumber: number) {
+  pageShowImages.value[pageNumber] = !pageShowImages.value[pageNumber]
+}
+
+function toggleAllImages() {
+  allImagesShown.value = !allImagesShown.value
+  transcript.value.pages.forEach(page => {
+    pageShowImages.value[page.pageNumber] = allImagesShown.value
+  })
+}
+
+function handleEditRequest(pageNumber: number, isClosing: boolean) {
+  if (isClosing) {
+    activeEditPageNumber.value = null
+  } else {
+    activeEditPageNumber.value = pageNumber
+  }
+}
+
+async function scrollToHashAnchor() {
+  if (!route.hash) return
+  const id = route.hash.slice(1)
+  await nextTick()
+
+  // page images (diagrams) above the target load async and can shift its
+  // position after the first scroll, so keep re-applying it briefly
+  const deadline = performance.now() + 1000
+  const tick = () => {
+    document.getElementById(id)?.scrollIntoView({ block: 'start' })
+    if (performance.now() < deadline) requestAnimationFrame(tick)
+  }
+  tick()
+}
+
+onMounted(async () => {
+  await fetchTranscript()
+  store.transcriptViewMode()
+  syncEditButtonState()
+  scrollToHashAnchor()
+});
+
+</script>
+
 <style scoped>
 
 .loading-state {
@@ -317,184 +516,3 @@
 }
 
 </style>
-
-<script lang="ts" setup>
-import { ref, onMounted } from "vue";
-import { authFetch } from "@/requests.ts";
-import TranscriptPage from "./TranscriptPage.vue";
-import { useRouter } from 'vue-router'
-const router = useRouter()
-
-import { useUiStore } from '@/composables/store.js'
-const store = useUiStore()
-
-const props = defineProps<{
-  fileId: string
-  pageNumber: number
-}>()
-
-const loading = ref(true)
-const error = ref<string | null>(null)
-
-const transcript = ref<DtoTranscript>(null)
-const activeEditPageNumber = ref<number | null>(null)
-const pageShowImages = ref<Record<number, boolean>>({})
-const allImagesShown = ref(false)
-
-const stateEditIcon = ref<string>()
-const stateEditSeverity = ref<string>()
-
-enum PageDiagram {
-  none = 'none',
-  full = 'full',
-  inline = 'inline'
-}
-
-interface DtoTranscript {
-  username: string
-  fileId: string
-  name: string
-  transcripted_at: string
-  documented_at: string
-  discovered_at: string
-  pageCount: number
-  version: number
-  pages: Page[]
-  title: string
-  tags: NamedEntity[]
-  toc: NamedEntity[]
-  tagsMap: Record<string, NamedEntity[]>;
-}
-
-interface NamedEntity {
-  uuid: string
-  verb: string
-  value: string
-  fileId: string
-  fileName: string
-  pageNumber: number
-  start: number
-  end: number
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(date)
-}
-
-function getIndent(verb: string): number {
-  switch (verb) {
-    case 'h2': return 0
-    case 'h3': return 16
-    case 'h4': return 32
-    case 'h5': return 48
-    case 'h6': return 64
-    default: return 0
-  }
-}
-
-async function fetchTranscript() {
-  loading.value = true;
-  error.value = null;
-  try {
-    const response = await authFetch("transcript/" + props.fileId);
-    if (!response.ok) throw new Error("Network response was not ok");
-    transcript.value = await response.json();
-  } catch (err: any) {
-    console.error(err);
-    error.value = "Failed to load transcripts.";
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function updateTranscript(fileId) {
-  loading.value = true;
-  error.value = null;
-  try {
-    const response = await authFetch("transcript/update/" + fileId);
-    if (!response.ok) throw new Error("Network response was not ok");
-    //console.log(response)
-  } catch (err: any) {
-    //console.error(err);
-    error.value = "Failed to update transcript.";
-  } finally {
-    loading.value = false;
-  }
-}
-
-const downloadFile = async (fileId: string) => {
-  try {
-    const response = await authFetch('transcript/pdf/' + props.fileId)
-    if (!response.ok) throw new Error(`Server error: ${response.status}`)
-
-    const blob = await response.blob()
-    const contentDisposition = response.headers.get('Content-Disposition')
-    let fileName = 'downloaded-file'
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename="(.+)"/)
-      if (match) fileName = match[1]
-    }
-
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = fileName
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
-  } catch (err) {
-    console.error('Download failed:', err)
-  }
-}
-
-function agent(fileId) {
-  router.push({ name: 'agent', params: { fileId } })
-}
-
-function syncEditButtonState() {
-  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
-  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "secondary"
-}
-
-function toggleEditModeRequest() {
-  if (store.transcript_edit_mode) {
-    store.transcriptViewMode()
-    activeEditPageNumber.value = null
-  } else {
-    store.transcriptEditMode()
-  }
-  syncEditButtonState()
-}
-
-function togglePageImage(pageNumber: number) {
-  pageShowImages.value[pageNumber] = !pageShowImages.value[pageNumber]
-}
-
-function toggleAllImages() {
-  allImagesShown.value = !allImagesShown.value
-  transcript.value.pages.forEach(page => {
-    pageShowImages.value[page.pageNumber] = allImagesShown.value
-  })
-}
-
-function handleEditRequest(pageNumber: number, isClosing: boolean) {
-  if (isClosing) {
-    activeEditPageNumber.value = null
-  } else {
-    activeEditPageNumber.value = pageNumber
-  }
-}
-
-onMounted(() => {
-  fetchTranscript()
-  store.transcriptViewMode()
-  syncEditButtonState()
-});
-
-</script>

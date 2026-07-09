@@ -34,7 +34,7 @@
                     v-for="dto in dtos"
                     :key="dto.uuid"
                     href="#"
-                    @click.prevent="goToTranscript(dto.fileId)"
+                    @click.prevent="goToTranscript(dto.fileId, dto.pageNumber)"
                     class="entity-ref-link"
                   >
                     <Tag severity="secondary">
@@ -101,8 +101,8 @@ function verbIcon(verb: string): string {
   return VERB_ICONS[verb] || 'pi-bookmark'
 }
 
-function goToTranscript(fileId: string) {
-  router.push({ name: 'transcript', params: { fileId } })
+function goToTranscript(fileId: string, pageNumber: number) {
+  router.push({ name: 'transcript', params: { fileId }, hash: '#pageNumber' + pageNumber })
 }
 
 async function fetchVerbs() {

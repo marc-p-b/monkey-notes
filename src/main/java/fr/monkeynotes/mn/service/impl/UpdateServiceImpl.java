@@ -154,7 +154,7 @@ public class UpdateServiceImpl implements UpdateService {
             }
 
             // todo : replace this quick fix of listimage is empty
-            if (listImages.isEmpty()) {
+            if (listImages == null || listImages.isEmpty()) {
                 LOG.error("No images to process");
             } else {
                 // --------------------------------------

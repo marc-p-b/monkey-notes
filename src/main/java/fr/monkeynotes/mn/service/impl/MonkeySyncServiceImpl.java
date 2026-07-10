@@ -170,6 +170,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
     @Override
     public void runListAsyncProcessForUser(List<File2Process> files2Process, String username) {
         NoAuthContextHolder.setContext(new NoAuthContext(username));
+        //TODO crash here to protect
         updateService.runListAsyncProcess(files2Process);
     }
 

@@ -185,6 +185,7 @@ interface NamedEntity {
   end: number
 }
 
+//TODO common
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)

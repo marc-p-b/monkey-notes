@@ -3,8 +3,11 @@ package fr.monkeynotes.mn.service.impl;
 import fr.monkeynotes.mn.data.dto.DtoSearchResult;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
+import fr.monkeynotes.mn.data.entity.EntityTranscript;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
+import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.EditService;
 import fr.monkeynotes.mn.service.SearchService;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -28,12 +31,13 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class SearchServiceImpl implements SearchService {
-    //public static final String TYPE_TITLE = "title";
-    //public static final String TYPE_CONTENT = "content";
+    public static final String TYPE_TITLE = "title";
+    public static final String TYPE_CONTENT = "content";
     public static final String FIELD_TYPE = "type";
     public static final String FIELD_ID = "id";
     public static final String FIELD_TITLE = "title";
@@ -85,7 +89,7 @@ public class SearchServiceImpl implements SearchService {
                     .forEach(dtoTranscript -> {
                         LOG.info("indexing transcript {}", dtoTranscript.getName());
                         Document tDoc = new Document();
-                        //tDoc.add(new StringField(FIELD_TYPE, TYPE_TITLE, Field.Store.YES));
+                        tDoc.add(new StringField(FIELD_TYPE, TYPE_TITLE, Field.Store.YES));
                         tDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
                         tDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getTitle(), Field.Store.YES));
                         tDoc.add(new TextField(FIELD_NAME, dtoTranscript.getName(), Field.Store.YES));
@@ -99,7 +103,7 @@ public class SearchServiceImpl implements SearchService {
                             .map(e -> DtoTranscriptPage.fromEntity(e))
                             .forEach(dtoTranscriptPage -> {
                                 Document cDoc = new Document();
-                                //cDoc.add(new StringField(FIELD_TYPE, TYPE_CONTENT, Field.Store.YES));
+                                cDoc.add(new StringField(FIELD_TYPE, TYPE_CONTENT, Field.Store.YES));
                                 cDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
                                 cDoc.add(new TextField(FIELD_NAME, dtoTranscript.getName(), Field.Store.YES));
                                 cDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getTitle(), Field.Store.YES));
@@ -121,41 +125,58 @@ public class SearchServiceImpl implements SearchService {
         }
     }
 
+    @Autowired
+    private AuthService authService;
+
     @Override
     public Map<String, List<DtoSearchResult>> search(String queryString) {
-        String []inFields = {FIELD_TITLE, FIELD_CONTENT};
+        String []inFields = {FIELD_TITLE, FIELD_CONTENT, FIELD_NAME};
 
         List<DtoSearchResult> dtoSearchResults = new ArrayList<>();
         try {
             Query query = new MultiFieldQueryParser(inFields, analyzer).parse(queryString);
 
-            IndexReader indexReader = DirectoryReader.open(memoryIndex);
-            IndexSearcher searcher = new IndexSearcher(indexReader);
-            TopDocs topDocs = searcher.search(query, 100);
+            try (IndexReader indexReader = DirectoryReader.open(memoryIndex)) {
+                IndexSearcher searcher = new IndexSearcher(indexReader);
+                TopDocs topDocs = searcher.search(query, 100);
 
-            StoredFields storedFields = searcher.storedFields();
-            for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
-                Document doc = storedFields.document(scoreDoc.doc);
-                DtoSearchResult dtoSearchResult = new DtoSearchResult()
-                        .setId(doc.get(FIELD_ID))
-                        .setTitle(doc.get(FIELD_TITLE));
+                StoredFields storedFields = searcher.storedFields();
+                for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+                    Document doc = storedFields.document(scoreDoc.doc);
+                    DtoSearchResult dtoSearchResult = new DtoSearchResult()
+                            .setId(doc.get(FIELD_ID))
+                            .setTitle(doc.get(FIELD_TITLE));
 
-                switch (doc.get(FIELD_TYPE)) {
-                    case TYPE_TITLE:
-                        dtoSearchResult.setSrType(DtoSearchResult.SRType.title);
-                        break;
-                    case TYPE_CONTENT:
-                        dtoSearchResult
-                                .setSrType(DtoSearchResult.SRType.content)
-                                .setPageNumber(Integer.valueOf(doc.get(FIELD_PAGE_NUMBER)));
-                        break;
+                    switch (doc.get(FIELD_TYPE)) {
+                        case TYPE_TITLE:
+                            dtoSearchResult.setSrType(DtoSearchResult.SRType.title);
+                            break;
+                        case TYPE_CONTENT:
+                            dtoSearchResult
+                                    .setSrType(DtoSearchResult.SRType.content)
+                                    .setPageNumber(Integer.valueOf(doc.get(FIELD_PAGE_NUMBER)));
+                            break;
+                    }
+
+                    dtoSearchResults.add(dtoSearchResult);
                 }
-
-                dtoSearchResults.add(dtoSearchResult);
             }
 
+            String username = authService.getUsernameFromContext();
+
+            Set<IdFile> setIds = dtoSearchResults.stream()
+                    .map(sr -> IdFile.createIdFile(username, sr.getId()))
+                    .collect(Collectors.toSet());
+
+            //Map<String, EntityTranscript> mapT =
+
+            Map<String, EntityTranscript> mapT = repositoryTranscript.findAllByIdFileIn(setIds).stream()
+                    .collect(Collectors.toMap(t -> t.getIdFile().getFileId(), Function.identity()));
+
             Map<String, List<DtoSearchResult>> mapResults = dtoSearchResults.stream()
-                    .collect(Collectors.groupingBy(DtoSearchResult::getTitle));
+                    .map(e -> e.setDocumented_at(mapT.get(e.getId()).getDocumented_at()))
+                    .collect(Collectors.groupingBy(DtoSearchResult::getId));
+
             return mapResults;
 
         } catch (ParseException e) {

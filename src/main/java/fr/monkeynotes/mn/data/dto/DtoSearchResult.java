@@ -1,5 +1,6 @@
 package fr.monkeynotes.mn.data.dto;
 
+import java.time.OffsetDateTime;
 import java.util.Objects;
 
 public class DtoSearchResult {
@@ -12,6 +13,7 @@ public class DtoSearchResult {
     private String id;
     private SRType srType;
     private String title;
+    private OffsetDateTime documented_at;
     private int pageNumber;
 
     public String getId() {
@@ -48,6 +50,15 @@ public class DtoSearchResult {
 
     public SRType getSrType() {
         return srType;
+    }
+
+    public OffsetDateTime getDocumented_at() {
+        return documented_at;
+    }
+
+    public DtoSearchResult setDocumented_at(OffsetDateTime documented_at) {
+        this.documented_at = documented_at;
+        return this;
     }
 
     @Override

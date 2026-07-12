@@ -16,36 +16,40 @@
     </div>
 
     <div v-else class="result-list">
-      <div v-for="title in groupKeys" :key="title" class="page-card">
+
+      <div v-for="docId in groupKeys" :key="docId" class="page-card">
         <div class="page-card-header">
           <i class="pi pi-file-edit section-icon"></i>
-          <span class="result-title">{{ title }}</span>
-          <Tag :value="matchLabel(results[title])" severity="secondary" class="result-count" />
+          <div class="result-title-block">
+            <span class="result-title">{{ docTitle(results[docId]) }}</span> -
+            <span v-if="docDate(results[docId])" class="result-date">{{ formatDate(docDate(results[docId])) }}</span>
+          </div>
+          <Tag :value="matchLabel(results[docId])" severity="secondary" class="result-count" />
           <Button
             icon="pi pi-arrow-right"
             text
             size="small"
             severity="secondary"
-            @click="clickedTranscript(results[title][0].id, results[title])"
+            @click="clickedTranscript(docId, results[docId])"
             v-tooltip.top="'Open transcript'"
             class="result-open-btn"
           />
         </div>
         <div class="page-content">
           <a
-            v-if="hasTitleMatch(results[title])"
+            v-if="hasTitleMatch(results[docId])"
             href="#"
-            @click.prevent="clickedTranscript(results[title][0].id, results[title], titleMatchPage(results[title]))"
+            @click.prevent="clickedTranscript(docId, results[docId], titleMatchPage(results[docId]))"
             class="title-match-link"
           >
             <Tag value="Title match" severity="info" class="title-match-tag" />
           </a>
-          <div v-if="contentPages(results[title]).length" class="page-refs">
+          <div v-if="contentPages(results[docId]).length" class="page-refs">
             <a
-              v-for="p in contentPages(results[title])"
+              v-for="p in contentPages(results[docId])"
               :key="p"
               href="#"
-              @click.prevent="clickedTranscript(results[title][0].id, results[title], p)"
+              @click.prevent="clickedTranscript(docId, results[docId], p)"
               class="page-ref-link"
             >
               <Tag :value="`p. ${p + 1}`" severity="secondary" />
@@ -75,12 +79,21 @@ interface DtoSearchResult {
   title: string
   srType: 'title' | 'content'
   pageNumber: number
+  documented_at: string
 }
 
 type SearchResult = Record<string, DtoSearchResult[]>
 const results = ref<SearchResult>({});
 
 const groupKeys = computed(() => Object.keys(results.value))
+
+function docTitle(items: DtoSearchResult[]): string {
+  return items.find(i => i.srType === 'title')?.title ?? items[0]?.title ?? ''
+}
+
+function docDate(items: DtoSearchResult[]): string {
+  return items.find(i => i.srType === 'title')?.documented_at ?? items[0]?.documented_at ?? ''
+}
 
 function hasTitleMatch(items: DtoSearchResult[]): boolean {
   return items.some(i => i.srType === 'title')
@@ -97,6 +110,15 @@ function contentPages(items: DtoSearchResult[]): number[] {
 
 function matchLabel(items: DtoSearchResult[]): string {
   return `${items.length} match${items.length > 1 ? 'es' : ''}`
+}
+
+//TODO common
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium'
+  }).format(date)
 }
 
 const request = async() => {

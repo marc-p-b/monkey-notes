@@ -309,6 +309,11 @@ Backend contract (ViewServiceImpl.buildDtoTranscript): a `diagramNextPage` (DGN)
 - SearchView.vue's "Title match" tag and per-page `p. N` tags now each link to their specific page (previously all links jumped to `pages[0]`); `titleMatchPage()` reads the title-type result's `pageNumber`.
 - TranscriptView.vue can't just `scrollIntoView` once on mount: pages with a full diagram image fetch it async and unawaited, which grows page height and pushes the scroll target out of view after a naive one-shot scroll (confirmed by the bug only reproducing when *not* single-stepping in the debugger — the extra time let images settle first). Fixed properly (not with a timeout/rAF-polling hack) by making it deterministic: `TranscriptPage.vue` now awaits its own image download in `loadPage()` and emits `pageReady` from `onMounted` (wrapped in try/finally so a failed fetch still emits); `TranscriptView.vue` counts `expectedReadyPages` (rendered pages, i.e. `pageDiagram !== inline`) and only calls `scrollToHashAnchor()` once every page has reported ready.
 
+## Update Search Index button
+
+- Preferences.vue: added an "Update Search Index" button to the Data Management card's action row, next to Export/Import/Wipe. Calls `GET search/init` (`SearchController.init()` → `SearchService.initLucene()`) to force-rebuild the Lucene index on demand.
+- Follows the existing `updateAllTranscripts()`/`googleDisconnect()` pattern: a dedicated `rebuildingIndex` loading ref drives the button spinner, failures surface through the shared `message`/`errorDialogVisibility` error dialog.
+
 ## Search reset bug
 
 - Root cause: the header search box (App.vue) always did `router.push({ name: 'search' })` on every search, but Vue Router 4 treats navigating to the same route (no param/query change) as a no-op — so re-searching while already on `/search` never remounted `SearchView.vue`, which only fetched once in `onMounted` with no watcher on `store.search`.

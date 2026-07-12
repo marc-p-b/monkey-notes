@@ -32,11 +32,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class SearchServiceImpl implements SearchService {
-    public static final String TYPE_TITLE = "title";
-    public static final String TYPE_CONTENT = "content";
+    //public static final String TYPE_TITLE = "title";
+    //public static final String TYPE_CONTENT = "content";
     public static final String FIELD_TYPE = "type";
     public static final String FIELD_ID = "id";
     public static final String FIELD_TITLE = "title";
+    public static final String FIELD_NAME = "name";
     public static final String FIELD_PAGE_NUMBER = "pageNumber";
     public static final String FIELD_CONTENT = "content";
     private Logger LOG = LoggerFactory.getLogger(SearchService.class);
@@ -84,9 +85,10 @@ public class SearchServiceImpl implements SearchService {
                     .forEach(dtoTranscript -> {
                         LOG.info("indexing transcript {}", dtoTranscript.getName());
                         Document tDoc = new Document();
-                        tDoc.add(new StringField(FIELD_TYPE, TYPE_TITLE, Field.Store.YES));
+                        //tDoc.add(new StringField(FIELD_TYPE, TYPE_TITLE, Field.Store.YES));
                         tDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
-                        tDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getName(), Field.Store.YES));
+                        tDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getTitle(), Field.Store.YES));
+                        tDoc.add(new TextField(FIELD_NAME, dtoTranscript.getName(), Field.Store.YES));
 
                         try {
                             writter.addDocument(tDoc);
@@ -97,9 +99,10 @@ public class SearchServiceImpl implements SearchService {
                             .map(e -> DtoTranscriptPage.fromEntity(e))
                             .forEach(dtoTranscriptPage -> {
                                 Document cDoc = new Document();
-                                cDoc.add(new StringField(FIELD_TYPE, TYPE_CONTENT, Field.Store.YES));
+                                //cDoc.add(new StringField(FIELD_TYPE, TYPE_CONTENT, Field.Store.YES));
                                 cDoc.add(new StringField(FIELD_ID, dtoTranscript.getFileId(), Field.Store.YES));
-                                cDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getName(), Field.Store.YES));
+                                cDoc.add(new TextField(FIELD_NAME, dtoTranscript.getName(), Field.Store.YES));
+                                cDoc.add(new TextField(FIELD_TITLE, dtoTranscript.getTitle(), Field.Store.YES));
                                 cDoc.add(new IntField(FIELD_PAGE_NUMBER, dtoTranscriptPage.getPageNumber(), Field.Store.YES));
                                 dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
                                 FieldType type = new FieldType(TextField.TYPE_STORED);
@@ -112,12 +115,8 @@ public class SearchServiceImpl implements SearchService {
                                 }
                             });
                     });
-
             writter.close();
-
-
         } catch (IOException e) {
-
             throw new RuntimeException(e);
         }
     }
@@ -145,11 +144,11 @@ public class SearchServiceImpl implements SearchService {
                     case TYPE_TITLE:
                         dtoSearchResult.setSrType(DtoSearchResult.SRType.title);
                         break;
-                        case TYPE_CONTENT:
-                            dtoSearchResult
-                                    .setSrType(DtoSearchResult.SRType.content)
-                                    .setPageNumber(Integer.valueOf(doc.get(FIELD_PAGE_NUMBER)));
-                            break;
+                    case TYPE_CONTENT:
+                        dtoSearchResult
+                                .setSrType(DtoSearchResult.SRType.content)
+                                .setPageNumber(Integer.valueOf(doc.get(FIELD_PAGE_NUMBER)));
+                        break;
                 }
 
                 dtoSearchResults.add(dtoSearchResult);

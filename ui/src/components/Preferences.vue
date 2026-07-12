@@ -175,6 +175,7 @@
         <div class="action-row">
           <Button label="Export" icon="pi pi-download" size="small" outlined severity="secondary" @click="downloadExport" />
           <FileUpload mode="basic" chooseLabel="Import" chooseIcon="pi pi-upload" @select="handleFileSelect($event)" customUpload auto severity="secondary" />
+          <Button label="Update Search Index" icon="pi pi-refresh" size="small" outlined severity="secondary" :loading="rebuildingIndex" @click="rebuildSearchIndex" />
           <Button label="Wipe all data" icon="pi pi-trash" size="small" outlined severity="danger" @click="wipe" />
         </div>
       </div>
@@ -357,6 +358,21 @@ async function fetchGoogleAuth() {
     error.value = "Failed to load google auth status.";
   } finally {
     loading.value = false;
+  }
+}
+
+const rebuildingIndex = ref(false)
+
+async function rebuildSearchIndex() {
+  rebuildingIndex.value = true
+  try {
+    const response = await authFetch("search/init")
+    if (!response.ok) throw new Error(`Server error: ${response.status}`)
+  } catch (err: any) {
+    message.value = err.message || "Failed to update search index."
+    errorDialogVisibility.value = true
+  } finally {
+    rebuildingIndex.value = false
   }
 }
 

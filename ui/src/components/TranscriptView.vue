@@ -10,7 +10,7 @@
         <Button icon="pi pi-arrow-left" text severity="secondary" @click="router.back()" />
         <div class="transcript-header-text">
           <h1>{{ transcript.title }}</h1>
-          <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; transcribed {{ formatDate(transcript.transcripted_at) }}</span>
+          <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; created {{ formatDate(transcript.documented_at) }}</span>
         </div>
       </div>
 

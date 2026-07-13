@@ -3,8 +3,18 @@
   <div class="main-wrapper">
 
     <div class="page-header">
-      <h2>Preferences</h2>
-      <span class="page-subtitle">Signed in as {{ prefs.username }}</span>
+      <div>
+        <h2>Preferences</h2>
+        <span class="page-subtitle">Signed in as {{ prefs.username }}</span>
+      </div>
+      <Button
+          :label="showAdvanced ? 'Hide advanced' : 'Show advanced'"
+          :icon="showAdvanced ? 'pi pi-eye-slash' : 'pi pi-eye'"
+          text
+          size="small"
+          severity="secondary"
+          @click="showAdvanced = !showAdvanced"
+      />
     </div>
 
     <div class="page-card">
@@ -53,7 +63,7 @@
             </div>
           </div>
 
-          <div v-if="prefs.syncOption === 'gdrive'" class="field-row">
+          <div v-if="showAdvanced && prefs.syncOption === 'gdrive'" class="field-row">
             <span class="field-label">Google Drive folder ID</span>
             <div class="field-control">
               <InputText
@@ -71,7 +81,7 @@
             </div>
           </div>
 
-          <div v-if="prefs.syncOption === 'monkey'" class="field-row">
+          <div v-if="showAdvanced && prefs.syncOption === 'monkey'" class="field-row">
             <span class="field-label">Google Drive folder ID</span>
             <div class="field-control">
               <InputText
@@ -94,7 +104,7 @@
           <span class="section-title">OCR</span>
         </div>
         <div class="page-content">
-          <div class="field-row">
+          <div v-if="showAdvanced" class="field-row">
             <span class="field-label">Crop image to content</span>
             <div class="field-control">
               <ToggleButton
@@ -121,7 +131,7 @@
             </div>
           </div>
 
-          <div class="field-row">
+          <div v-if="showAdvanced" class="field-row">
             <span class="field-label">Read timeout</span>
             <div class="field-control">
               <InputText
@@ -132,7 +142,7 @@
             </div>
           </div>
 
-          <div class="field-row">
+          <div v-if="showAdvanced" class="field-row">
             <span class="field-label">Connect timeout</span>
             <div class="field-control">
               <InputText
@@ -143,7 +153,7 @@
             </div>
           </div>
 
-          <div class="field-row">
+          <div v-if="showAdvanced" class="field-row">
             <span class="field-label">Max tokens</span>
             <div class="field-control">
               <InputText
@@ -260,6 +270,7 @@ export interface Prefs {
 const prefs = ref<Prefs[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const showAdvanced = ref(false)
 
 const googleConnectRequired = ref(false)
 const googleAuthUrl = ref<string | null>(null)
@@ -502,6 +513,9 @@ onMounted(() => {
 
 <style scoped>
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 1.5rem;
 }
 

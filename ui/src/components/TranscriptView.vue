@@ -12,6 +12,13 @@
           <h1>{{ transcript.title }}</h1>
           <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; created {{ formatDate(transcript.documented_at) }}</span>
         </div>
+        <div class="action-row">
+          <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
+          <Button @click.prevent="toggleAllImages()" :label="allImagesShown ? 'Hide Images' : 'Show Images'" icon="pi pi-image" :severity="allImagesShown ? 'primary' : 'secondary'" size="small" outlined />
+          <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
+          <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
+          <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
+        </div>
       </div>
 
       <div class="transcript-info">
@@ -49,13 +56,6 @@
                   <span class="property-label">Version</span>
                   <span class="property-value">{{ transcript.version }}</span>
                 </div>
-              </div>
-              <div class="action-row">
-                <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
-                <Button @click.prevent="toggleAllImages()" :label="allImagesShown ? 'Hide Images' : 'Show Images'" icon="pi pi-image" :severity="allImagesShown ? 'primary' : 'secondary'" size="small" outlined />
-                <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
-                <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
-                <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
               </div>
             </TabPanel>
 
@@ -407,6 +407,12 @@ onMounted(async () => {
 
 .property-value {
   font-size: 0.875rem;
+}
+
+.transcript-header .action-row {
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .action-row {

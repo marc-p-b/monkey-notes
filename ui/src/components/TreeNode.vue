@@ -2,6 +2,7 @@
   <li class="tree-item">
     <template v-if="node.folder">
       <div class="tree-row folder-row" @click="toggleFolder">
+        <Checkbox v-if="selectMode" v-model="checked" binary @click.stop />
         <i :class="['pi', expanded ? 'pi-chevron-down' : 'pi-chevron-right', 'chevron']"></i>
         <i class="pi pi-folder folder-icon"></i>
         <span class="node-name">{{ node.name }}</span>
@@ -16,9 +17,12 @@
       </div>
       <ul v-if="expanded && node.children && node.children.length" class="children-list">
         <TreeNode
-            v-for="child in node.children"
+            v-for="child in sortedChildren"
             :key="child.dtoFile.fileId"
             :node="child"
+            :select-mode="selectMode"
+            :order-by="orderBy"
+            :order-dir="orderDir"
             @folder-clicked="emit('folder-clicked', $event)"
             @transcript-clicked="emit('transcript-clicked', $event)"
         />
@@ -27,7 +31,8 @@
 
     <template v-else>
       <div class="tree-row file-row" @click="emit('transcript-clicked', node.dtoFile.fileId)">
-        <span class="chevron-space"></span>
+        <Checkbox v-if="selectMode" v-model="checked" binary @click.stop />
+        <span v-else class="chevron-space"></span>
         <i class="pi pi-file-edit file-icon"></i>
         <span class="node-name">{{ node.name }}</span>
       </div>
@@ -38,23 +43,35 @@
 <script setup lang="ts">
 import TreeNode from "./TreeNode.vue";
 import { authFetch } from "@/requests";
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { sortNodes } from "@/utils/treeSort";
 
 const error = ref<string | null>(null)
 const expanded = ref(false)
+const checked = ref(false)
 
 interface Node {
   name: string;
   folder: boolean;
   dtoFile: {
     fileId: string | number;
+    discovered_at?: string;
   };
   children?: Node[];
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   node: Node;
-}>();
+  selectMode?: boolean;
+  orderBy?: 'name' | 'date';
+  orderDir?: 'asc' | 'desc';
+}>(), {
+  selectMode: false,
+  orderBy: 'name',
+  orderDir: 'asc',
+});
+
+const sortedChildren = computed(() => sortNodes(props.node.children ?? [], props.orderBy, props.orderDir))
 
 const emit = defineEmits<{
   (e: "folder-clicked", node: Node): void;

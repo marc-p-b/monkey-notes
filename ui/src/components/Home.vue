@@ -1,5 +1,33 @@
 <template>
   <div class="home-wrapper">
+
+    <div class="page-header">
+      <div>
+        <h2>Documents</h2>
+        <span class="page-subtitle">{{ totalDocuments }} documents &middot; {{ totalFolders }} folders</span>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <Button
+          :label="selectMode ? 'Exit Select' : 'Select'"
+          :icon="selectMode ? 'pi pi-times' : 'pi pi-check-square'"
+          :severity="selectMode ? 'primary' : 'secondary'"
+          size="small"
+          outlined
+          @click="selectMode = !selectMode"
+      />
+      <Select v-model="orderBy" :options="orderOptions" optionLabel="label" optionValue="value" size="small" />
+      <Button
+          :icon="orderDir === 'asc' ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'"
+          size="small"
+          outlined
+          severity="secondary"
+          @click="orderDir = orderDir === 'asc' ? 'desc' : 'asc'"
+          v-tooltip.top="orderDir === 'asc' ? 'Ascending' : 'Descending'"
+      />
+    </div>
+
     <div class="home-layout">
 
       <div class="recent-panel">
@@ -15,8 +43,7 @@
       </div>
 
       <div class="tree-panel">
-        <div class="panel-header">Documents</div>
-        <TreeView @loading-status="loadingStatus" />
+        <TreeView @loading-status="loadingStatus" :select-mode="selectMode" :order-by="orderBy" :order-dir="orderDir" />
       </div>
 
     </div>
@@ -39,6 +66,18 @@ interface DtoTranscript {
 }
 
 const transcripts = ref<DtoTranscript[]>([])
+
+// dummy placeholders until a real counts endpoint exists
+const totalDocuments = ref(128)
+const totalFolders = ref(24)
+
+const selectMode = ref(false)
+const orderBy = ref<'name' | 'date'>('name')
+const orderDir = ref<'asc' | 'desc'>('asc')
+const orderOptions = [
+  { label: 'Name', value: 'name' },
+  { label: 'Date', value: 'date' },
+]
 
 let recentLoading: boolean = false
 let foldersLoading: boolean = false
@@ -79,12 +118,39 @@ onMounted(() => {
 .home-wrapper {
   height: calc(100vh - 60px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0 1rem;
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--p-surface-500);
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
 }
 
 .home-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .recent-panel {

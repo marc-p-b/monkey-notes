@@ -223,6 +223,8 @@ targetFilePath: /home/marc/.monkeynotes/user_data/marc/downloads/ms304df708f2c93
 
 # Claude devs
 
+Convention: after finishing a non-trivial task (feature, bugfix, refactor) in this repo, append an entry below — a `##` header naming it, then bullet points per file/component covering what changed and, most importantly, *why* (especially for non-obvious root causes). Don't just restate the diff; capture the reasoning a future reader would otherwise have to rediscover. Keep entries concise, and append under the last existing entry rather than rewriting the section.
+
 ## Transcript View
 
 ● The changes look correct. Here's a summary of what was done:
@@ -325,3 +327,19 @@ Backend contract (ViewServiceImpl.buildDtoTranscript): a `diagramNextPage` (DGN)
 - Fixed by restoring the two `FIELD_TYPE` field-adds, plus wrapped the `IndexReader` in try-with-resources in `search()` (it was never closed before — leaked a reader per query), and added `FIELD_NAME` to the searched fields so the original filename is searchable too, not just the parsed title.
 - Also changed result grouping from `Collectors.groupingBy(DtoSearchResult::getTitle)` to `getId()` — grouping by title merged results from different transcripts that happened to share a title into one card, using the first item's id for navigation (wrong doc). Grouping by id (unique per transcript) fixes that.
 - SearchView.vue updated to match: iterates `results` by `docId` instead of by title text; added `docTitle()` helper to read the display title from the item list (prefers the `srType === 'title'` entry, falls back to the first item) since the map key is now an id, not display text.
+
+## Preferences: prompt textareas, config-driven model dropdowns, advanced toggle
+
+- `ocrPrompt` switched from `InputText` to `Textarea` (`autoResize`, 3 rows) — the OCR prompt can run to a full sentence (see `app.defaults.qwen.prompt` in the yaml), a single line was cramped.
+- Model selection now follows the `Prefs` + `AIModel` data model backing it: `DtoPreferences.AIModel` is a `record(name, label)`, and `ocrModels`/`agentModels` are `Set<AIModel>` built by `PreferencesServiceImpl.aiModelsFromConfig()` parsing the yaml's `value=Label(value)` comma-separated format (`app.defaults.qwen.models.available` / `app.openai.models.available`). The OCR Model `<Select>` and the new Agent Model `<Select>` (Agent card, backed by `selectedAgentModel`) both bind `optionLabel="label" optionValue="name"` to match — previously the OCR select passed a plain string array with no option binding, so it rendered raw config tokens instead of clean labels.
+- Added a "Show advanced" / "Hide advanced" toggle (eye icon, top-right of the page header) gating `inputFolderId` (both sync-option variants), `cropImage`, `qwenConnectTimeout`, `qwenReadTimeout`, and `qwenMaxTokens` behind `v-if="showAdvanced"` — these are rarely-touched fields that were cluttering the default view.
+
+## TranscriptView: actions embedded in header
+
+- The action-row (Edit/Lock, Show/Hide Images, Agent, Update, PDF) used to live inside the "Properties" `TabPanel`, so it disappeared whenever the Tags or TOC tab was selected. Moved it out of the `Tabs` block entirely and embedded it directly in `.transcript-header` (next to the back button and title), right-aligned via `margin-left: auto` on `.transcript-header .action-row`, so the actions are always visible regardless of which tab is active.
+
+## Home: header with stats + select/sort actions
+
+- Added a page header to `Home.vue`: a title/stat line (`{{ totalDocuments }} documents · {{ totalFolders }} folders` — dummy placeholder refs, no counts endpoint exists yet) plus a left-aligned action row (unlike TranscriptView's right-aligned one) with the same small/outlined button styling: a "Select"/"Exit Select" mode toggle, an order-by `<Select>` (Name/Date), and an asc/desc icon toggle.
+- `selectMode`/`orderBy`/`orderDir` are passed as props into `TreeView.vue` and threaded recursively into `TreeNode.vue` (each folder's children need the same props to keep sorting/checkboxes consistent at every depth). Sorting is done via a new shared `sortNodes()` util (`ui/src/utils/treeSort.ts`) — by `name` (localeCompare) or by `dtoFile.discovered_at` (works for both files and folders since `DtoFile` carries `discovered_at` regardless of type) — applied as a `computed` at each tree level rather than mutating `nodes`/`children` in place.
+- When `selectMode` is on, each `TreeNode` row renders a `Checkbox` (binary, `@click.stop` so it doesn't trigger the row's expand/navigate handler). No bulk-action wiring yet (nothing selected is tracked centrally) — only the checkbox UI was requested so far.

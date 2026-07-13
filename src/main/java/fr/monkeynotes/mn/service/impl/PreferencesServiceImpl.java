@@ -88,8 +88,8 @@ public class PreferencesServiceImpl implements PreferencesService {
         return dtoPreferences;
     }
 
-    @NotNull
-    private Set<DtoPreferences.AIModel> aiModelsFromConfig(String listConfig) {
+    @Override
+    public Set<DtoPreferences.AIModel> aiModelsFromConfig(String listConfig) {
         return Arrays.stream(listConfig.split(","))
                 .map(String::trim)
                 .map(m -> {
@@ -184,6 +184,7 @@ public class PreferencesServiceImpl implements PreferencesService {
         return dtoprefs;
     }
 
+    @Override
     public String getPreference(PreferenceKey configKey) throws ServiceException {
         if(isParametersSet() == false) {
             throw new ServiceException("Preferences not set");
@@ -194,6 +195,15 @@ public class PreferencesServiceImpl implements PreferencesService {
             throw new ServiceException(configKey + " not set");
         }
         return optValue.get().getValue();
+    }
+
+    @Override
+    public Optional<String> getPreferenceOpt(PreferenceKey configKey) {
+        try{
+            return Optional.of(getPreference(configKey));
+        } catch (ServiceException e) {
+            return Optional.empty();
+        }
     }
 
     public boolean getPreferenceAsBoolean(PreferenceKey configKey) throws ServiceException {

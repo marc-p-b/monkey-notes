@@ -1,13 +1,18 @@
 package fr.monkeynotes.mn.data.dto.agent;
 
+import fr.monkeynotes.mn.data.dto.DtoPreferences;
+
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 
 public class DtoAgentPrepare {
         private String model;
         private boolean exists;
         private String instructions;
         private List<DtoAgentMessage> messages;
+        private Set<DtoPreferences.AIModel> availableAIModels;
+        private String selectedAIModel;
         private OffsetDateTime createdAt;
         //form posted
         private String fileId;
@@ -83,6 +88,24 @@ public class DtoAgentPrepare {
 
     public DtoAgentPrepare setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+        return this;
+    }
+
+    public Set<DtoPreferences.AIModel> getAvailableAIModels() {
+        return availableAIModels;
+    }
+
+    public DtoAgentPrepare setAvailableAIModels(Set<DtoPreferences.AIModel> availableAIModels) {
+        this.availableAIModels = availableAIModels;
+        return this;
+    }
+
+    public String getSelectedAIModel() {
+        return selectedAIModel;
+    }
+
+    public DtoAgentPrepare setSelectedAIModel(String selectedAIModel) {
+        this.selectedAIModel = selectedAIModel;
         return this;
     }
 }

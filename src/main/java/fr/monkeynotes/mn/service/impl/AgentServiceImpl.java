@@ -52,6 +52,15 @@ public class AgentServiceImpl implements AgentService {
     @Value("${app.openai.api}")
     private String openAiApiKey;
 
+//    @Value("${app.openai.models.default}")
+//    private String defaultModel;
+
+    @Value("${app.openai.models.instructions}")
+    private String instructionsDefault;
+
+    @Value("${app.openai.models.available}")
+    private String agentAvailableModels;
+
     @Autowired
     private ViewService viewService;
 
@@ -66,9 +75,6 @@ public class AgentServiceImpl implements AgentService {
 
     @Autowired
     private PreferencesService preferencesService;
-
-    @Value("${app.openai.models.instructions}")
-    private String dftOpenaiAssistantInstructions;
 
     //TODO make this multiuser
     private SseEmitter emitter;
@@ -91,6 +97,12 @@ public class AgentServiceImpl implements AgentService {
 
     @Override
     public DtoAgentPrepare prepareAssistant(String fileId) {
+        String agentInstruction = instructionsDefault;
+        try {
+            instructionsDefault = preferencesService.getPreference(PreferenceKey.agentInstructions);
+        } catch (ServiceException e) {
+            LOG.error("failed to retrieve preferences", e);
+        }
 
         Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
         if(optAgent.isPresent()) {
@@ -109,15 +121,12 @@ public class AgentServiceImpl implements AgentService {
             agentPrepare.setFileId(fileId);
             return agentPrepare;
         } else {
-            String instructions = dftOpenaiAssistantInstructions;
-            try {
-                instructions = preferencesService.getPreference(PreferenceKey.agentInstructions);
-            } catch (ServiceException e) {
-                LOG.error("Failed to get default instructions, get default value", e.getMessage());
-            }
+
             return new DtoAgentPrepare()
                 .setFileId(fileId)
-                .setInstructions(instructions);
+                .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
+                .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
+                .setInstructions(agentInstruction);
         }
     }
 
@@ -129,7 +138,7 @@ public class AgentServiceImpl implements AgentService {
         Optional<EntityFile> f = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
         if(f.isPresent() == false) {
-            //error
+            //TODO error
             return null;
         }
 

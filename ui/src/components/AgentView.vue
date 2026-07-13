@@ -72,9 +72,15 @@ interface DtoAgentMessage {
   createdAt: string
 }
 
+interface AIModel{
+  name: string
+  label: string
+}
+
 interface DtoAgentPrepare {
   model: string
   instructions: string
+  availableAIModels: AIModel[]
   createdAt: string
   exists: boolean
   threadId?: string
@@ -87,15 +93,7 @@ interface DtoAgentPrepare {
 const props = defineProps<{ fileId: string }>()
 const router = useRouter()
 
-const agentPrepare = ref<DtoAgentPrepare>({
-  model: 'default',
-  instructions: '',
-  createdAt: '',
-  exists: false,
-  messages: [],
-  question: '',
-  reset: false,
-})
+const agentPrepare = ref<DtoAgentPrepare>;
 
 const loading = ref(true)
 const error = ref<string | null>(null)

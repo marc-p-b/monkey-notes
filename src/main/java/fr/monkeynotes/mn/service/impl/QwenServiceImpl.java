@@ -135,7 +135,6 @@ public class QwenServiceImpl implements QwenService {
 
     @Override
     public CompletionResponse analyzeImage(String fileId, URL imageURL) {
-
         String model2use = null;
         String prompt2use = null;
         try {

@@ -9,6 +9,7 @@ import fr.monkeynotes.mn.data.enums.SyncOption;
 import fr.monkeynotes.mn.data.repository.RepositoryConfig;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.PreferencesService;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ public class PreferencesServiceImpl implements PreferencesService {
     private RepositoryConfig repositoryConfig;
 
     @Value("${app.defaults.qwen.prompt}")
-    private String dftQwenPrompt;
+    private String dftOCRPrompt;
 
     @Value("${app.defaults.qwen.max-tokens}")
     private int dftQwenMaxTokens;
@@ -42,8 +43,14 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Value("${app.defaults.ai.read-timeout}")
     private int dftQwenReadTimeout;
 
-    @Value("${app.openai.assistant.defaults.instructions}")
+    @Value("${app.openai.models.instructions}")
     private String dftAgentInstructions;
+
+    @Value("${app.openai.models.available}")
+    private String listAgentModelAvailable;
+
+    @Value("${app.openai.models.default}")
+    private String dftAgentModel;
 
     @Value("${app.defaults.qwen.models.available}")
     private String listOcrModelAvailable;
@@ -54,7 +61,8 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Override
     public DtoPreferences listPreferences() {
 
-        Set<String> ocrModels = Arrays.stream(listOcrModelAvailable.split(",")).collect(Collectors.toSet());
+        Set<DtoPreferences.AIModel> ocrModels = aiModelsFromConfig(listOcrModelAvailable);
+        Set<DtoPreferences.AIModel> agentModels = aiModelsFromConfig(listAgentModelAvailable);
 
         DtoPreferences dtoPreferences = null;
 
@@ -69,13 +77,26 @@ public class PreferencesServiceImpl implements PreferencesService {
         }
 
         dtoPreferences
-                .setDefaultOcrPrompt(dftQwenPrompt)
+                .setAgentModels(agentModels)
+                .setOcrModels(ocrModels)
+                .setDefaultOcrPrompt(dftOCRPrompt)
                 .setDftQwenMaxTokens(dftQwenMaxTokens)
                 .setDftQwenConnectTimeout(dftQwenConnectTimeout)
                 .setDftQwenReadTimeout(dftQwenReadTimeout)
                 .setDftAgentInstructions(dftAgentInstructions);
 
         return dtoPreferences;
+    }
+
+    @NotNull
+    private Set<DtoPreferences.AIModel> aiModelsFromConfig(String listConfig) {
+        return Arrays.stream(listConfig.split(","))
+                .map(String::trim)
+                .map(m -> {
+                    String[] mv = m.split("=");
+                    return new DtoPreferences.AIModel(mv[0], mv[1]);
+                })
+                .collect(Collectors.toSet());
     }
 
     private DtoPreferences fromMap(Map<String, String> map) {
@@ -115,6 +136,9 @@ public class PreferencesServiceImpl implements PreferencesService {
                     case agentInstructions:
                         dtoConfigs.setAgentInstructions(entry.getValue());
                         break;
+                    case selectedAgentModel:
+                        dtoConfigs.setSelectedAgentModel(entry.getValue());
+                        break;
                 }
             } catch (IllegalArgumentException e) {
                 LOGGER.error("Unknown config key {}", entry.getKey());
@@ -134,18 +158,23 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     private DtoPreferences initPreferences(String username) {
-        Set<String> ocrModels = Arrays.stream(listOcrModelAvailable.split(",")).collect(Collectors.toSet());
+        Set<DtoPreferences.AIModel> ocrModels = aiModelsFromConfig(listOcrModelAvailable);
+        Set<DtoPreferences.AIModel> agentModels = aiModelsFromConfig(listAgentModelAvailable);
 
         DtoPreferences dtoprefs = new DtoPreferences()
-                .setOcrPrompt(dftQwenPrompt)
-                .setAgentInstructions(dftAgentInstructions)
                 .setInputFolderId("")
                 .setSyncOption(SyncOption.none)
                 .setQwenConnectTimeout(dftQwenConnectTimeout)
                 .setQwenReadTimeout(dftQwenReadTimeout)
                 .setOcrMaxTokens(dftQwenMaxTokens)
+
                 .setSelectedOcrModel(dftOCRModel)
+                .setOcrPrompt(dftOCRPrompt)
                 .setOcrModels(ocrModels)
+
+                .setAgentModels(agentModels)
+                .setAgentInstructions(dftAgentInstructions)
+                .setSelectedAgentModel(dftAgentModel)
                 .setCropImage(true)
                 .setInitialized(false);
 

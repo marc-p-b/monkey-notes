@@ -67,7 +67,7 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private PreferencesService preferencesService;
 
-    @Value("${app.openai.assistant.defaults.instructions}")
+    @Value("${app.openai.models.instructions}")
     private String dftOpenaiAssistantInstructions;
 
     //TODO make this multiuser

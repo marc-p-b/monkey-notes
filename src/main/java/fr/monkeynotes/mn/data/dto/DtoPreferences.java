@@ -17,19 +17,24 @@ public class DtoPreferences {
     private String inputFolderId;
     private boolean cropImage;
 
-    private String ocrPrompt;
-    private String defaultOcrPrompt;
     private int qwenConnectTimeout;
     private int dftQwenConnectTimeout;
     private int ocrMaxTokens;
     private int dftQwenMaxTokens;
     private int qwenReadTimeout;
     private int dftQwenReadTimeout;
-    private Set<String> ocrModels;
+
+    private Set<AIModel> ocrModels;
+    private String ocrPrompt;
+    private String defaultOcrPrompt;
     private String selectedOcrModel;
 
+    private Set<AIModel> agentModels;
     private String agentInstructions;
+    private String selectedAgentModel;
     private String dftAgentInstructions;
+
+    public record AIModel(String name, String label){}
 
     public List<EntityPreferences> toEntities(String username) {
         List<EntityPreferences> list = Arrays.asList(
@@ -41,11 +46,13 @@ public class DtoPreferences {
 
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.ocrPrompt), ocrPrompt),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.selectedOcrModel), selectedOcrModel),
+
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.selectedAgentModel), selectedAgentModel),
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.agentInstructions), agentInstructions),
+
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.qwenConnectTimeout), Integer.toString(qwenConnectTimeout)),
                 new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.qwenReadTimeout), Integer.toString(qwenReadTimeout)),
-                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.qwenMaxTokens), Integer.toString(ocrMaxTokens)),
-
-                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.agentInstructions), agentInstructions)
+                new EntityPreferences(new EntityPreferencesId(username, PreferenceKey.qwenMaxTokens), Integer.toString(ocrMaxTokens))
         );
         return list;
     }
@@ -154,12 +161,21 @@ public class DtoPreferences {
         return this;
     }
 
-    public Set<String> getOcrModels() {
+    public Set<AIModel> getOcrModels() {
         return ocrModels;
     }
 
-    public DtoPreferences setOcrModels(Set<String> ocrModels) {
+    public DtoPreferences setOcrModels(Set<AIModel> ocrModels) {
         this.ocrModels = ocrModels;
+        return this;
+    }
+
+    public Set<AIModel> getAgentModels() {
+        return agentModels;
+    }
+
+    public DtoPreferences setAgentModels(Set<AIModel> agentModels) {
+        this.agentModels = agentModels;
         return this;
     }
 
@@ -187,6 +203,16 @@ public class DtoPreferences {
 
     public DtoPreferences setDftAgentInstructions(String dftAgentInstructions) {
         this.dftAgentInstructions = dftAgentInstructions;
+        return this;
+    }
+
+
+    public String getSelectedAgentModel() {
+        return selectedAgentModel;
+    }
+
+    public DtoPreferences setSelectedAgentModel(String selectedAgentModel) {
+        this.selectedAgentModel = selectedAgentModel;
         return this;
     }
 

@@ -99,14 +99,14 @@
           <div class="field-row">
             <span class="field-label">Model</span>
             <div class="field-control">
-              <Select v-model="prefs.selectedOcrModel" :options="prefs.ocrModels" placeholder="Select a model" class="w-full" />
+              <Select v-model="prefs.selectedOcrModel" :options="prefs.ocrModels" optionLabel="label" optionValue="name" placeholder="Select a model" class="w-full" />
             </div>
           </div>
 
           <div class="field-row">
             <span class="field-label">Prompt</span>
             <div class="field-control">
-              <InputText v-model="prefs.ocrPrompt" class="w-full" :placeholder="prefs.defaultOcrPrompt"/>
+              <Textarea v-model="prefs.ocrPrompt" autoResize rows="3" class="w-full" :placeholder="prefs.defaultOcrPrompt"/>
             </div>
           </div>
 
@@ -151,6 +151,13 @@
           <span class="section-title">Agent</span>
         </div>
         <div class="page-content">
+          <div class="field-row">
+            <span class="field-label">Model</span>
+            <div class="field-control">
+              <Select v-model="prefs.selectedAgentModel" :options="prefs.agentModels" optionLabel="label" optionValue="name" placeholder="Select a model" class="w-full" />
+            </div>
+          </div>
+
           <div class="field-row">
             <span class="field-label">Instructions</span>
             <div class="field-control">
@@ -208,30 +215,35 @@ const syncOptions = [
   { label: "Monkey Notes Companion App Sync", value: "monkey" }
 ];
 
-
+interface AIModel{
+  name: string
+  label: string
+}
 
 export interface Prefs {
   set: boolean
-  ocrPrompt?: string
-  agentInstructions?: string
-  model?: string
   inputFolderId?: string
+  username: string
+
+  ocrModels: AIModel[]
+  selectedOcrModel: string
+  ocrPrompt?: string
+  defaultOcrPrompt: string
+
+  agentModels: AIModel[]
+  selectedAgentModel?: string
+  agentInstructions?: string
+  dftAgentInstructions: string
+
   qwenConnectTimeout: number
   qwenReadTimeout: number
   ocrMaxTokens: number
-  username: string
-  ocrModels: string[]
-  selectedOcrModel: string
-  cropImage: boolean
-
-  defaultOcrPrompt: string
   dftQwenMaxTokens: number
   dftQwenConnectTimeout: number
   dftQwenReadTimeout: number
-  dftAgentInstructions: string
 
+  cropImage: boolean
   syncOption: string
-
 }
 
 const prefs = ref<Prefs[]>([])

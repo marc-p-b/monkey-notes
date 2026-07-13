@@ -9,8 +9,6 @@ public enum PreferenceKey {
 
     remoteRootFolderPath,
 
-    ocrPrompt,
-    selectedOcrModel,
     qwenConnectTimeout,
     qwenReadTimeout,
     qwenMaxTokens,
@@ -18,7 +16,11 @@ public enum PreferenceKey {
     dftQwenConnectTimeout,
     dftQwenReadTimeout,
 
+    ocrPrompt,
+    selectedOcrModel,
+
     agentInstructions,
+    selectedAgentModel,
     dftAssistantInstructions;
 
 }

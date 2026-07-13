@@ -24,10 +24,10 @@ public class AgentController {
     @Autowired
     private AgentService agentService;
 
-    @Value("${app.openai.assistant.defaults.model}")
+    @Value("${app.openai.models.default}")
     private String defaultModelName;
 
-    @Value("${app.openai.assistant.defaults.instructions}")
+    @Value("${app.openai.models.instructions}")
     private String defaultInstructions;
 
     @GetMapping("/agent/prepare/{fileId}")

@@ -71,6 +71,17 @@
             </div>
           </div>
 
+          <div v-if="prefs.syncOption === 'monkey'" class="field-row">
+            <span class="field-label">Google Drive folder ID</span>
+            <div class="field-control">
+              <InputText
+                  v-model="prefs.inputFolderId"
+                  placeholder="root folder id"
+                  class="w-full"
+              />
+            </div>
+          </div>
+
           <div v-if="prefs.syncOption === 'gdrive'" class="action-row">
             <Button @click.prevent="updateAllTranscripts" label="Update all folders and transcripts" size="small" outlined severity="secondary" />
           </div>

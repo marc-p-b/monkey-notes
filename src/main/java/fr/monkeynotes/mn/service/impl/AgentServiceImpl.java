@@ -8,11 +8,14 @@ import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
 import fr.monkeynotes.mn.data.dto.agent.*;
 import fr.monkeynotes.mn.data.entity.EntityAgent;
+import fr.monkeynotes.mn.data.entity.EntityAgentMessage;
 import fr.monkeynotes.mn.data.entity.EntityFile;
+import fr.monkeynotes.mn.data.entity.IdAgentMessage;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.FileType;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.repository.RepositoryAgent;
+import fr.monkeynotes.mn.data.repository.RepositoryAgentMessage;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.service.AgentService;
 import fr.monkeynotes.mn.service.AuthService;
@@ -36,9 +39,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,9 +53,6 @@ public class AgentServiceImpl implements AgentService {
     @Value("${app.openai.api}")
     private String openAiApiKey;
 
-//    @Value("${app.openai.models.default}")
-//    private String defaultModel;
-
     @Value("${app.openai.models.instructions}")
     private String instructionsDefault;
 
@@ -66,6 +64,9 @@ public class AgentServiceImpl implements AgentService {
 
     @Autowired
     private RepositoryAgent repositoryAgent;
+
+    @Autowired
+    private RepositoryAgentMessage repositoryAgentMessage;
 
     @Autowired
     private AuthService authService;
@@ -82,79 +83,78 @@ public class AgentServiceImpl implements AgentService {
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
-    public DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options) {
-        if(options.isForceNew() == true) {
-            return this.newAssistant(fileId, options);
+    public EntityAgent getOrCreateAgent(String fileId, DtoAssistantOptions options) {
+        if (options.isForceNew()) {
+            return this.newAgent(fileId, options);
         } else {
             Optional<EntityAgent> agent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-            if(agent.isPresent()) {
-                return DtoAgent.of(agent.get());
-            } else {
-                return this.newAssistant(fileId, options);
-            }
+            return agent.orElseGet(() -> this.newAgent(fileId, options));
         }
     }
 
     @Override
     public DtoAgentPrepare prepareAssistant(String fileId) {
-        String agentInstruction = instructionsDefault;
-        try {
-            instructionsDefault = preferencesService.getPreference(PreferenceKey.agentInstructions);
-        } catch (ServiceException e) {
-            LOG.error("failed to retrieve preferences", e);
-        }
+        String username = authService.getUsernameFromContext();
+        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(username, fileId));
 
-        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-        if(optAgent.isPresent()) {
-            DtoAgentPrepare agentPrepare = this.getAssistant(optAgent.get().getAssistantId());
-            List<DtoAgentMessage> listMessages = this.getThreadMessages(optAgent.get().getThreadId());
+        if (optAgent.isPresent()) {
+            EntityAgent agent = optAgent.get();
 
-            listMessages.add(new DtoAgentMessage()
-                    .setCreatedAt(agentPrepare.getCreatedAt())
-                    .setMessageDir(MessageDir.system)
-                    .setContent(agentPrepare.getInstructions()));
-
-            agentPrepare.setMessages(listMessages.stream()
-                    .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
-                    .toList());
-            LOG.info("");
-            agentPrepare.setFileId(fileId);
-            agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
-            return agentPrepare;
-        } else {
+            List<DtoAgentMessage> messages = repositoryAgentMessage
+                    .findByIdAgentMessage_UsernameAndIdAgentMessage_FileIdOrderByIdAgentMessage_Sequence(username, fileId)
+                    .stream()
+                    .map(m -> new DtoAgentMessage()
+                            .setMessageDir(m.getMessageDir())
+                            .setContent(m.getContent())
+                            .setCreatedAt(m.getCreatedAt()))
+                    .toList();
 
             return new DtoAgentPrepare()
-                .setFileId(fileId)
-                .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
-                .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
-                .setInstructions(agentInstruction);
+                    .setFileId(fileId)
+                    .setExists(true)
+                    .setModel(agent.getModel())
+                    .setInstructions(agent.getInstructions())
+                    .setCreatedAt(agent.getCreatedAt())
+                    .setMessages(messages)
+                    .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
+        } else {
+            String agentInstruction = instructionsDefault;
+            try {
+                agentInstruction = preferencesService.getPreference(PreferenceKey.agentInstructions);
+            } catch (ServiceException e) {
+                LOG.error("failed to retrieve preferences", e);
+            }
+
+            return new DtoAgentPrepare()
+                    .setFileId(fileId)
+                    .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
+                    .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
+                    .setInstructions(agentInstruction);
         }
     }
 
     @Override
-    public DtoAgent newAssistant(String fileId, DtoAssistantOptions options) {
+    public EntityAgent newAgent(String fileId, DtoAssistantOptions options) {
         LOG.info("New agent based on fileId {}", fileId);
 
         //TODO create a service to do this kind of operations
         Optional<EntityFile> f = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
 
-        if(f.isPresent() == false) {
+        if (f.isEmpty()) {
             //TODO error
             return null;
         }
 
-        JSONObject jsonObject = null;
-        if(f.get().getType().equals(FileType.folder)) {
+        JSONObject jsonObject;
+        if (f.get().getType().equals(FileType.folder)) {
             List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
                     .stream()
-                    .map(t -> {
-                        return new JSONObject()
-                                .put("title", t.getTitle())
-                                .put("date", t.getDocumented_at())
-                                .put("pages", t.getPages().stream()
-                                        .map(DtoTranscriptPage::getTranscript)
-                                        .toList());
-                    })
+                    .map(t -> new JSONObject()
+                            .put("title", t.getTitle())
+                            .put("date", t.getDocumented_at())
+                            .put("pages", t.getPages().stream()
+                                    .map(DtoTranscriptPage::getTranscript)
+                                    .toList()))
                     .toList();
             jsonObject = new JSONObject()
                     .put("documents", jsonList);
@@ -170,21 +170,18 @@ public class AgentServiceImpl implements AgentService {
         }
 
         String knowledgeFileId = uploadKnowledgeFile(jsonObject.toString());
-        String vectorId = createKnowledgeVector(knowledgeFileId);
-
-        //add title
-        String name = "knowledge fileId " + fileId;
-        String assistantId = createAssistant(name, options.getInstructions(), options.getModel(), vectorId);
-        String threadId = createThread();
-        LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
+        String vectorStoreId = createKnowledgeVector(knowledgeFileId);
 
         EntityAgent entityAgent = new EntityAgent()
-                .setAssistantId(assistantId)
-                .setThreadId(threadId)
-                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId))
+                .setVectorStoreId(vectorStoreId)
+                .setModel(options.getModel())
+                .setInstructions(options.getInstructions())
+                .setCreatedAt(OffsetDateTime.now());
 
         repositoryAgent.save(entityAgent);
-        return DtoAgent.of(entityAgent);
+        LOG.info("Created agent for fileId {} with vector store {}", fileId, vectorStoreId);
+        return entityAgent;
     }
 
     private String uploadKnowledgeFile(String knowledge) {
@@ -206,7 +203,7 @@ public class AgentServiceImpl implements AgentService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         RestTemplate restTemplate = new RestTemplate();
-        String uploadUrl = "https://api.openai.com/v1/files"; // Replace with actual URL
+        String uploadUrl = "https://api.openai.com/v1/files";
 
         ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, requestEntity, String.class);
         DocumentContext context = JsonPath.parse(response.getBody());
@@ -226,200 +223,97 @@ public class AgentServiceImpl implements AgentService {
         return vectorId;
     }
 
-    private String createAssistant(String name, String instructions, String model, String knowledgeVectorId) {
-        JSONObject jsonObject = new JSONObject()
-                .put("name", name)
-                .put("instructions", instructions)
-                .put("model", model)
-                .put("tools",
-                        new JSONArray().put(new JSONObject().put("type", "file_search")))
-                .put("tool_resources",
-                        new JSONObject().put("file_search",
-                                new JSONObject().put("vector_store_ids", new JSONArray().put(knowledgeVectorId))));
+    private void saveMessage(IdFile idFile, MessageDir dir, String content) {
+        int nextSequence = repositoryAgentMessage
+                .findByIdAgentMessage_UsernameAndIdAgentMessage_FileIdOrderByIdAgentMessage_Sequence(idFile.getUsername(), idFile.getFileId())
+                .size();
 
-        String assistantId = openAiPostRequest("/v1/assistants", jsonObject);
-        return assistantId;
+        EntityAgentMessage message = new EntityAgentMessage()
+                .setIdAgentMessage(IdAgentMessage.createIdAgentMessage(idFile.getUsername(), idFile.getFileId(), nextSequence))
+                .setMessageDir(dir)
+                .setContent(content)
+                .setCreatedAt(OffsetDateTime.now());
+
+        repositoryAgentMessage.save(message);
     }
 
-    private DtoAgentPrepare getAssistant(String assistantId) {
-        String path = "/v1/assistants/" + assistantId;
+    @Override
+    public String askAgent(EntityAgent agent, String question) {
+        saveMessage(agent.getIdFile(), MessageDir.user, question);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
-        headers.add("OpenAI-Beta", "assistants=v2");
+        JSONObject fileSearchTool = new JSONObject()
+                .put("type", "file_search")
+                .put("vector_store_ids", new JSONArray().put(agent.getVectorStoreId()));
 
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.openai.com" + path; // Replace with actual URL
+        JSONObject body = new JSONObject()
+                .put("model", agent.getModel())
+                .put("instructions", agent.getInstructions())
+                .put("input", question)
+                .put("background", true)
+                .put("store", true)
+                .put("tools", new JSONArray().put(fileSearchTool));
 
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
-
-        if(response.getStatusCode() == HttpStatus.OK) {
-            DocumentContext context = JsonPath.parse(response.getBody());
-
-            //todo long ?
-            long createAtInt = context.read("$.created_at", Long.class);
-            OffsetDateTime odt = Instant.ofEpochSecond(createAtInt)
-                    .atZone(ZoneId.of("Europe/Paris")).toOffsetDateTime();
-
-            DtoAgentPrepare dtoAgentPrepare = new DtoAgentPrepare()
-                    .setExists(true)
-                    .setModel(context.read("$.model"))
-                    .setInstructions(context.read("$.instructions"))
-                    .setCreatedAt(odt);
-
-            return dtoAgentPrepare;
-        } else {
-            return new DtoAgentPrepare();
-        }
-    }
-
-    private List<DtoAgentMessage> getThreadMessages(String threadId) {
-        String path = "/v1/threads/" + threadId + "/messages";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
-        headers.add("OpenAI-Beta", "assistants=v2");
-
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.openai.com" + path; // Replace with actual URL
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
-
-        List<DtoAgentMessage> listMessages = new ArrayList<>();
-        if(response.getStatusCode() == HttpStatus.OK) {
-
-            //todo better json parsing
-
-            List<String> roles = JsonPath.read(response.getBody(), "$.data[*].role");
-            List<String> contents = JsonPath.read(response.getBody(), "$.data[*].content[0].text.value");
-
-            List<Integer> createdAt = JsonPath.read(response.getBody(), "$.data[*].created_at");
-            for(int i = 0; i < roles.size(); i++) {
-
-                OffsetDateTime odt = Instant.ofEpochSecond(createdAt.get(i))
-                        .atZone(ZoneId.of("Europe/Paris")).toOffsetDateTime();
-
-                DtoAgentMessage dtoAgentMessage = new DtoAgentMessage()
-                        .setMessageDir(MessageDir.valueOf(roles.get(i)))
-                        .setContent(contents.get(i))
-                        .setCreatedAt(odt);
-
-                listMessages.add(dtoAgentMessage);
-
-            }
-
+        if (agent.getLastResponseId() != null) {
+            body.put("previous_response_id", agent.getLastResponseId());
         }
 
+        String responseId = postResponses(body);
+        agent.setLastResponseId(responseId);
+        repositoryAgent.save(agent);
 
-        return listMessages;
+        LOG.info("Created response id {}", responseId);
+        return responseId;
     }
 
-    @Override
-    public String createThread() {
-        String threadId = openAiPostRequest("/v1/threads", new JSONObject());
-        LOG.info("Create thread id {}", threadId);
-        return threadId;
-    }
-
-    @Override
-    public void addMessage(String threadId, String content) {
-        JSONObject jsonObject = new JSONObject()
-                .put("role", "user")
-                .put("content", content);
-
-        openAiPostRequest("/v1/threads/" + threadId + "/messages", jsonObject);
-        LOG.info("Message added to thread id {}", threadId);
-    }
-
-    @Override
-    public String createRun(DtoAgent agent) {
-        JSONObject jsonObject = new JSONObject()
-                .put("assistant_id", agent.getAssistantId());
-
-        String runId = openAiPostRequest("/v1/threads/" + agent.getThreadId() + "/runs", jsonObject);
-        LOG.info("Created run id {}", runId);
-        return runId;
-    }
-
-    public boolean getRunStatus(String threadId, String runId) {
-        String path = "/v1/threads/" + threadId + "/runs/" + runId;
-
+    private String postResponses(JSONObject jsonObject) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(openAiApiKey);
-        headers.add("OpenAI-Beta", "assistants=v2");
 
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.openai.com" + path; // Replace with actual URL
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
-
-        LOG.info("Requesting run status for {}", runId);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
-        DocumentContext context = JsonPath.parse(response.getBody());
-
-        //TODO if failed, stop polling ! also check the last response to give the reason to the user
-
-        String status = context.read("$.status");
-        LOG.info("Run status is {}", status);
-        return status.equals("completed");
-    }
-
-    public String getLastResponse(String threadId) {
-        String path = "/v1/threads/"+threadId+"/messages";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
-        headers.add("OpenAI-Beta", "assistants=v2");
-
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.openai.com" + path; // Replace with actual URL
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
-
-        DocumentContext context = JsonPath.parse(response.getBody());
-        String lastResponse = context.read("$.data[0].content[0].text.value");
-        return lastResponse;
-    }
-
-    private String openAiPostRequest(String path, JSONObject jsonObject) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
-        headers.add("OpenAI-Beta", "assistants=v2");
-
-        //todo can we avoid toString ? (unless we got a conversion issue
-        // Bad Request: "{<EOL>  "error": {<EOL>    "message": "Unknown parameter: 'mapType'.",<EOL>    "type": "invalid_request_error",<EOL>    "param": "mapType",<EOL>    "code": "unknown_parameter"<EOL>  }<EOL>}"
         HttpEntity<String> requestEntity = new HttpEntity<>(jsonObject.toString(), headers);
 
         RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.openai.com" + path; // Replace with actual URL
-
-        ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity("https://api.openai.com/v1/responses", requestEntity, String.class);
         DocumentContext context = JsonPath.parse(response.getBody());
-        String id = context.read("$.id");
-        return id;
+        return context.read("$.id");
     }
 
-    public SseEmitter threadRunPolling(String threadId, String runId) {
-        LOG.info("Starting polling thread " + threadId + " for run " + runId);
+    private record ResponseStatus(String status, String outputText) {}
+
+    private ResponseStatus fetchResponse(String responseId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(openAiApiKey);
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+                "https://api.openai.com/v1/responses/" + responseId, HttpMethod.GET, requestEntity, String.class);
+
+        String status = JsonPath.read(response.getBody(), "$.status");
+        String outputText = status.equals("completed") ? extractOutputText(response.getBody()) : null;
+        return new ResponseStatus(status, outputText);
+    }
+
+    private String extractOutputText(String responseBody) {
+        List<String> texts = JsonPath.read(responseBody, "$.output[?(@.type=='message')].content[0].text");
+        return texts.isEmpty() ? "" : texts.get(texts.size() - 1);
+    }
+
+    @Override
+    public SseEmitter responsePolling(String username, String fileId, String responseId) {
+        LOG.info("Starting polling response " + responseId);
         this.emitter = new SseEmitter(600000L);
+        IdFile idFile = IdFile.createIdFile(username, fileId);
 
         final Runnable pollTask = () -> {
             try {
-
                 LOG.info("polling");
-                boolean completed = this.getRunStatus(threadId, runId);
+                ResponseStatus rs = fetchResponse(responseId);
 
-                if(completed) {
+                if (rs.status().equals("completed")) {
                     LOG.info("completed !");
-                    String result = this.getLastResponse(threadId);
+                    saveMessage(idFile, MessageDir.assistant, rs.outputText());
 
                     scheduler.shutdown();
                     scheduler = Executors.newScheduledThreadPool(1);
@@ -427,9 +321,9 @@ public class AgentServiceImpl implements AgentService {
                     this.emitter.send(SseEmitter.event()
                             .name("message")
                             .id("" + lastId++)
-                            .data(result));
+                            .data(rs.outputText()));
                 } else {
-                    LOG.info("still running");
+                    LOG.info("still " + rs.status());
 
                     this.emitter.send(SseEmitter.event()
                             .name("message")
@@ -446,6 +340,23 @@ public class AgentServiceImpl implements AgentService {
         return emitter;
     }
 
+    private String openAiPostRequest(String path, JSONObject jsonObject) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(openAiApiKey);
+        headers.add("OpenAI-Beta", "assistants=v2");
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(jsonObject.toString(), headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.openai.com" + path;
+
+        ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+        DocumentContext context = JsonPath.parse(response.getBody());
+        String id = context.read("$.id");
+        return id;
+    }
+
     //todo when no polling is active ?
     @Scheduled(fixedRate = 30000)
     public void heartbeat() throws IOException {
@@ -454,6 +365,5 @@ public class AgentServiceImpl implements AgentService {
                 .id("" + ++lastId)
                 .data("heartbeat"));
     }
-
 
 }

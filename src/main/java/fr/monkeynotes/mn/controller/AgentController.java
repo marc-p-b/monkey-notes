@@ -2,9 +2,9 @@ package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.JwtUtil;
 import fr.monkeynotes.mn.data.dto.DtoURL;
-import fr.monkeynotes.mn.data.dto.agent.DtoAgent;
 import fr.monkeynotes.mn.data.dto.agent.DtoAgentPrepare;
 import fr.monkeynotes.mn.data.dto.agent.DtoAssistantOptions;
+import fr.monkeynotes.mn.data.entity.EntityAgent;
 import fr.monkeynotes.mn.service.AgentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,26 +53,25 @@ public class AgentController {
                 .setModel(newAssistantModel)
                 .setInstructions(newAssistantInstructions);
 
-        DtoAgent dtoAgent = agentService.getOrCreateAssistant(agentPrepare.getFileId(), dtoOptions);
-        //agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getQuestion());
+        EntityAgent agent = agentService.getOrCreateAgent(agentPrepare.getFileId(), dtoOptions);
         //getlast() safe ?
-        agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getMessages().getLast().getContent());
-        String runId = agentService.createRun(dtoAgent);
-        String streamLink = "agent/subscribe/" + dtoAgent.getThreadId() + "/" + runId;
+        String responseId = agentService.askAgent(agent, agentPrepare.getMessages().getLast().getContent());
+        String streamLink = "agent/subscribe/" + agentPrepare.getFileId() + "/" + responseId;
 
         return ResponseEntity.ok().body(new DtoURL(streamLink));
 
     }
 
-    @GetMapping("/agent/subscribe/{threadId}/{runId}/{token}")
-    public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId, @PathVariable String token) throws IOException {
+    @GetMapping("/agent/subscribe/{fileId}/{responseId}/{token}")
+    public SseEmitter subscribe(@PathVariable String fileId, @PathVariable String responseId, @PathVariable String token) throws IOException {
 
         if(JwtUtil.validateToken(token) == false) {
             LOG.error("Invalid token");
             return null;
         }
 
-        return agentService.threadRunPolling(threadId, runId);
+        String username = JwtUtil.extractUsername(token);
+        return agentService.responsePolling(username, fileId, responseId);
     }
 
 }

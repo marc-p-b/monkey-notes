@@ -119,6 +119,7 @@ public class AgentServiceImpl implements AgentService {
                     .toList());
             LOG.info("");
             agentPrepare.setFileId(fileId);
+            agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
             return agentPrepare;
         } else {
 

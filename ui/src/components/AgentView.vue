@@ -12,7 +12,7 @@
     <div v-if="settingsVisible" class="agent-settings">
       <div class="settings-row">
         <label>Model</label>
-        <Select v-model="agentPrepare.model" :options="modelOptions" optionLabel="label" optionValue="value" class="settings-select" />
+        <Select v-model="agentPrepare.model" :options="agentPrepare.availableAIModels" optionLabel="label" optionValue="name" class="settings-select" />
       </div>
       <div class="settings-row">
         <label>Instructions</label>
@@ -81,6 +81,7 @@ interface DtoAgentPrepare {
   model: string
   instructions: string
   availableAIModels: AIModel[]
+  selectedAIModel?: string
   createdAt: string
   exists: boolean
   threadId?: string
@@ -93,7 +94,16 @@ interface DtoAgentPrepare {
 const props = defineProps<{ fileId: string }>()
 const router = useRouter()
 
-const agentPrepare = ref<DtoAgentPrepare>;
+const agentPrepare = ref<DtoAgentPrepare>({
+  model: '',
+  instructions: '',
+  availableAIModels: [],
+  createdAt: '',
+  exists: false,
+  messages: [],
+  question: '',
+  reset: false,
+})
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -102,12 +112,6 @@ const requested = ref(false)
 const settingsVisible = ref(false)
 const messagesEl = ref<HTMLElement | null>(null)
 let eventSource: EventSource | null = null
-
-const modelOptions = [
-  { label: 'Default', value: 'default' },
-  { label: 'GPT-4o', value: 'gpt-4o' },
-  { label: 'GPT-4o mini', value: 'gpt-4o-mini' },
-]
 
 const formatTime = (iso: string) => {
   if (!iso) return ''
@@ -129,6 +133,7 @@ async function prepareAgent() {
     if (!response.ok) throw new Error("Network response was not ok")
     agentPrepare.value = await response.json()
     if (!agentPrepare.value.messages) agentPrepare.value.messages = []
+    if (!agentPrepare.value.model) agentPrepare.value.model = agentPrepare.value.selectedAIModel ?? ''
     settingsVisible.value = !agentPrepare.value.exists
     await scrollToBottom()
   } catch (err: any) {

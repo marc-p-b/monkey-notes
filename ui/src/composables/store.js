@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { isTokenValid } from '@/router/index'
+import { authFetch } from '@/requests'
 
 export const useUiStore = defineStore('ui', {
     state: () => ({
@@ -7,7 +8,8 @@ export const useUiStore = defineStore('ui', {
         transcript_edit_mode: false,
         search: '',
         srPages: [],
-        isConnected: isTokenValid(localStorage.getItem("token"))
+        isConnected: isTokenValid(localStorage.getItem("token")),
+        userData: null
     }),
     actions: {
         setLoading(value) {
@@ -27,6 +29,19 @@ export const useUiStore = defineStore('ui', {
         },
         refreshAuth() {
             this.isConnected = isTokenValid(localStorage.getItem("token"))
+        },
+        async fetchCurrentUser() {
+            try {
+                const response = await authFetch("user/whoami")
+                if (!response.ok) throw new Error("Network response was not ok")
+
+                this.userData = await response.json()
+            } catch (err) {
+                console.error(err)
+            }
+        },
+        clearCurrentUser() {
+            this.userData = null
         }
     }
 })

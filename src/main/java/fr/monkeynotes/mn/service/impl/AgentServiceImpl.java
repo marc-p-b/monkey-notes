@@ -6,7 +6,6 @@ import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoFile;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
-import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
 import fr.monkeynotes.mn.data.dto.agent.*;
 import fr.monkeynotes.mn.data.entity.EntityAgent;
 import fr.monkeynotes.mn.data.entity.EntityFile;
@@ -29,7 +28,6 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -119,7 +117,7 @@ public class AgentServiceImpl implements AgentService {
 
         String uuid = UUID.randomUUID().toString();
         //TODO thread name
-        String threadName = uuid;
+        String threadName = buildDefaultName(setFileIds);
 
         return new DtoAgentPrepare()
             .setUuid(uuid)
@@ -176,15 +174,9 @@ public class AgentServiceImpl implements AgentService {
         //add title
         //String name = "knowledge document uuid " + dtoAgentPrepare.getUuid();
 
-        String threadName;
-        //TODO cover folder case
-        if(files.size() == 1) {
-            threadName = files.stream().findFirst().get().getName();
-        } else {
-            threadName = "Discussion about " + files.size() + " documents";
-        }
+        //String threadName = buildDefaultName(files);
 
-        String assistantId = createAssistant(threadName, options.getInstructions(), options.getModel(), vectorId);
+        String assistantId = createAssistant(dtoAgentPrepare.getUuid(), options.getInstructions(), options.getModel(), vectorId);
         String threadId = createThread();
         LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
 
@@ -192,7 +184,7 @@ public class AgentServiceImpl implements AgentService {
                 .setUsername(authService.getUsernameFromContext())
                 .setAssistantId(assistantId)
                 .setThreadId(threadId)
-                .setThreadName(threadName)
+                .setThreadName(dtoAgentPrepare.getThreadName())
                 .setUuid(dtoAgentPrepare.getUuid())
                 .setCreatedDate(OffsetDateTime.now())
                 .setLastUsageDate(OffsetDateTime.now())
@@ -200,6 +192,22 @@ public class AgentServiceImpl implements AgentService {
 
         repositoryAgent.save(entityAgent);
         return DtoAgent.of(entityAgent);
+    }
+
+    private String buildDefaultName(Set<String> setFileIds) {
+        //TODO cover folder case
+        if(setFileIds.size() == 1) {
+
+            IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), setFileIds.stream().findFirst().get());
+            Optional<EntityFile> file = repositoryFile.findById(idFile);
+            if(file.isPresent()) {
+                return file.get().getName();
+            }
+
+        } else {
+            return  "Discussion about " + setFileIds.size() + " documents";
+        }
+        return "unkown discussion";
     }
 
     private JSONObject filesToJson(List<EntityFile> files) {
@@ -281,9 +289,9 @@ public class AgentServiceImpl implements AgentService {
         return vectorId;
     }
 
-    private String createAssistant(String name, String instructions, String model, String knowledgeVectorId) {
+    private String createAssistant(String uuid, String instructions, String model, String knowledgeVectorId) {
         JSONObject jsonObject = new JSONObject()
-                .put("name", name)
+                .put("name", uuid)
                 .put("instructions", instructions)
                 .put("model", model)
                 .put("tools",
@@ -530,5 +538,13 @@ public class AgentServiceImpl implements AgentService {
                 .data("heartbeat"));
     }
 
+    public void setAgentName(String uuid, String agentName) {
+        Optional<EntityAgent> optAgent = repositoryAgent.findById(uuid);
+        if(optAgent.isPresent()) {
+            EntityAgent entityAgent = optAgent.get();
+            entityAgent.setThreadName(agentName);
+            repositoryAgent.save(entityAgent);
+        }
+    }
 
 }

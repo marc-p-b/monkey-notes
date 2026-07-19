@@ -19,4 +19,5 @@ public interface AgentService {
     String getLastResponse(String threadId);
     SseEmitter threadRunPolling(String threadId, String runId);
     List<DtoAgentPrepare> listThreads();
+    void setAgentName(String uuid, String agentName);
 }

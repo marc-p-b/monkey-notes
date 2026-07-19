@@ -31,6 +31,12 @@ public class AgentController {
     @Value("${app.openai.models.instructions}")
     private String defaultInstructions;
 
+    @PutMapping("/agent/uuid/name")
+    public ResponseEntity<String> updateAgentName(@RequestParam("uuid") String uuid, @RequestParam("name") String name) {
+        agentService.setAgentName(uuid, name);
+        return ResponseEntity.ok("");
+    }
+
     @GetMapping("/agent/prepare")
     public ResponseEntity<DtoAgentPrepare> agentPrepare(@RequestParam String fileIds) {
         return ResponseEntity.ok(agentService.prepareAssistant(fileIds));

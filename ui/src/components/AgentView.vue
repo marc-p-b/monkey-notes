@@ -4,7 +4,24 @@
     <div class="agent-header">
       <Button icon="pi pi-arrow-left" text size="small" @click="goBack" />
       <span class="agent-header-title">
-        <i class="pi pi-bolt" /> AI Agent<span v-if="isMultiple"> &middot; {{ fileIds.length }} documents</span>
+        <i class="pi pi-bolt" />
+        <span
+          v-if="!editingName"
+          class="agent-name"
+          v-tooltip.bottom="'Click to rename'"
+          @click="startEditName"
+        >{{ agentPrepare.threadName || 'AI Agent' }}</span>
+        <InputText
+          v-else
+          ref="nameInputEl"
+          v-model="agentNameDraft"
+          size="small"
+          class="agent-name-input"
+          @keydown.enter="confirmEditName"
+          @keydown.esc="cancelEditName"
+          @blur="saveAgentName"
+        />
+        <span v-if="isMultiple" class="agent-doc-count"> &middot; {{ fileIds.length }} documents</span>
       </span>
       <Button :icon="settingsVisible ? 'pi pi-times' : 'pi pi-cog'" text size="small" @click="settingsVisible = !settingsVisible" />
     </div>
@@ -81,6 +98,7 @@ interface DtoAgentPrepare {
   uuid: string
   model: string
   instructions: string
+  threadName?: string
   availableAIModels: AIModel[]
   selectedAIModel?: string
   createdAt: string
@@ -143,9 +161,45 @@ const settingsVisible = ref(false)
 const messagesEl = ref<HTMLElement | null>(null)
 let eventSource: EventSource | null = null
 
+const editingName = ref(false)
+const agentNameDraft = ref('')
+const nameInputEl = ref()
+
 const formatTime = (iso: string) => {
   if (!iso) return ''
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const startEditName = () => {
+  agentNameDraft.value = agentPrepare.value.threadName ?? ''
+  editingName.value = true
+  nextTick(() => nameInputEl.value?.$el?.focus())
+}
+
+const confirmEditName = (e: KeyboardEvent) => {
+  (e.target as HTMLInputElement)?.blur()
+}
+
+const cancelEditName = () => {
+  editingName.value = false
+}
+
+const saveAgentName = async () => {
+  if (!editingName.value) return
+  editingName.value = false
+
+  const newName = agentNameDraft.value.trim()
+  if (newName === (agentPrepare.value.threadName ?? '') || !agentPrepare.value.uuid) return
+
+  agentPrepare.value.threadName = newName
+  try {
+    await authFetch(
+      `agent/uuid/name?uuid=${encodeURIComponent(agentPrepare.value.uuid)}&name=${encodeURIComponent(newName)}`,
+      { method: 'PUT' }
+    )
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 const scrollToBottom = async () => {
@@ -267,6 +321,33 @@ watch([fileIds, resumeUuid], () => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
+}
+
+.agent-name {
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  margin: -0.1rem -0.35rem;
+}
+
+.agent-name:hover {
+  background: var(--p-surface-100);
+}
+
+.agent-name-input {
+  font-weight: 600;
+  font-size: 1rem;
+  max-width: 320px;
+}
+
+.agent-doc-count {
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
 }
 
 .agent-settings {

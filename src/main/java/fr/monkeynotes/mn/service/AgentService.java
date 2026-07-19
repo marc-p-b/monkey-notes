@@ -6,9 +6,9 @@ import fr.monkeynotes.mn.data.dto.agent.DtoAssistantOptions;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 public interface AgentService {
-    DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options);
-    DtoAgent newAssistant(String fileId, DtoAssistantOptions options);
-    DtoAgentPrepare prepareAssistant(String assistantId);
+    DtoAgent getOrCreateAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options);
+    DtoAgent newAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options);
+    DtoAgentPrepare prepareAssistant(String fileIds);
     String createThread();
     void addMessage(String threadId, String content);
     String createRun(DtoAgent agent);

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 public class DtoAgentPrepare {
+        private String uuid;
         private String model;
         private boolean exists;
         private String instructions;
@@ -15,22 +16,31 @@ public class DtoAgentPrepare {
         private String selectedAIModel;
         private OffsetDateTime createdAt;
         //form posted
-        private String fileId;
+        private Set<String> fileIds;
         private String question;
         private boolean reset;
 
-    public String getFileId() {
-        return fileId;
-    }
-
-    public DtoAgentPrepare setFileId(String fileId) {
-        this.fileId = fileId;
-        return this;
-    }
-
-    public String getQuestion() {
-            return question;
+        public String getUuid() {
+            return uuid;
         }
+
+        public DtoAgentPrepare setUuid(String uuid) {
+            this.uuid = uuid;
+            return this;
+        }
+
+        public Set<String> getFileIds() {
+            return fileIds;
+        }
+
+        public DtoAgentPrepare setFileIds(Set<String> fileIds) {
+            this.fileIds = fileIds;
+            return this;
+        }
+
+        public String getQuestion() {
+                return question;
+            }
 
         public DtoAgentPrepare setQuestion(String question) {
             this.question = question;

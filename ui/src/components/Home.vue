@@ -26,6 +26,17 @@
           @click="orderDir = orderDir === 'asc' ? 'desc' : 'asc'"
           v-tooltip.top="orderDir === 'asc' ? 'Ascending' : 'Descending'"
       />
+      <Button
+          v-if="selectMode && selectedIds.size > 0"
+          label="Actions"
+          icon="pi pi-chevron-down"
+          iconPos="right"
+          size="small"
+          outlined
+          severity="secondary"
+          @click="(e) => actionsMenu?.toggle(e)"
+      />
+      <Menu ref="actionsMenu" :model="bulkActionItems" popup />
     </div>
 
     <div class="home-layout">
@@ -53,7 +64,7 @@
 <script lang="ts" setup>
 defineOptions({ name: 'Home' });
 import TreeView from "@/components/TreeView.vue";
-import { ref, onMounted } from "vue";
+import { ref, reactive, computed, provide, watch, onMounted } from "vue";
 import { authFetch } from "@/requests";
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -78,6 +89,29 @@ const orderOptions = [
   { label: 'Name', value: 'name' },
   { label: 'Date', value: 'date' },
 ]
+
+const actionsMenu = ref()
+const selectedIds = reactive(new Set<string>())
+
+function toggleSelectedId(id: string) {
+  if (selectedIds.has(id)) selectedIds.delete(id)
+  else selectedIds.add(id)
+}
+
+provide('selectedIds', selectedIds)
+provide('toggleSelectedId', toggleSelectedId)
+
+watch(selectMode, (on) => {
+  if (!on) selectedIds.clear()
+})
+
+function askAgent() {
+  router.push({ name: 'agent', query: { ids: Array.from(selectedIds).join(',') } })
+}
+
+const bulkActionItems = computed(() => [
+  { label: 'Ask Agent', icon: 'pi pi-bolt', command: askAgent },
+])
 
 let recentLoading: boolean = false
 let foldersLoading: boolean = false
@@ -141,6 +175,7 @@ onMounted(() => {
 .action-row {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
   flex-wrap: wrap;
   padding: 0.75rem 1rem;

@@ -2,9 +2,9 @@
   <div class="agent-shell">
 
     <div class="agent-header">
-      <Button icon="pi pi-arrow-left" text size="small" @click="router.push('/transcript/' + props.fileId)" />
+      <Button icon="pi pi-arrow-left" text size="small" @click="goBack" />
       <span class="agent-header-title">
-        <i class="pi pi-bolt" /> AI Agent
+        <i class="pi pi-bolt" /> AI Agent<span v-if="isMultiple"> &middot; {{ fileIds.length }} documents</span>
       </span>
       <Button :icon="settingsVisible ? 'pi pi-times' : 'pi pi-cog'" text size="small" @click="settingsVisible = !settingsVisible" />
     </div>
@@ -62,8 +62,8 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, nextTick } from "vue"
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, nextTick } from "vue"
+import { useRouter, useRoute } from 'vue-router'
 import { authFetch } from "@/requests.ts"
 
 interface DtoAgentMessage {
@@ -78,6 +78,7 @@ interface AIModel{
 }
 
 interface DtoAgentPrepare {
+  uuid: string
   model: string
   instructions: string
   availableAIModels: AIModel[]
@@ -85,14 +86,37 @@ interface DtoAgentPrepare {
   createdAt: string
   exists: boolean
   threadId?: string
-  fileId?: string
+  fileIds: string[]
   messages: DtoAgentMessage[]
   question: string
   reset: boolean
 }
 
-const props = defineProps<{ fileId: string }>()
+const props = defineProps<{ fileId?: string }>()
 const router = useRouter()
+const route = useRoute()
+
+// ids can arrive as a single route param (single-document case, from TranscriptView)
+// or as a comma-separated ?ids= query (multi-select case, from Home's select mode).
+// The full set is sent to agent/prepare; primaryFileId is only used for single-doc
+// UI concerns (e.g. the back button target).
+const fileIds = computed<string[]>(() => {
+  const idsParam = route.query.ids
+  if (typeof idsParam === 'string' && idsParam.length) {
+    return idsParam.split(',').map(id => id.trim()).filter(Boolean)
+  }
+  return props.fileId ? [props.fileId] : []
+})
+const primaryFileId = computed(() => fileIds.value[0])
+const isMultiple = computed(() => fileIds.value.length > 1)
+
+const goBack = () => {
+  if (isMultiple.value || !primaryFileId.value) {
+    router.push('/')
+  } else {
+    router.push('/transcript/' + primaryFileId.value)
+  }
+}
 
 const agentPrepare = ref<DtoAgentPrepare>({
   model: '',
@@ -126,10 +150,15 @@ const scrollToBottom = async () => {
 }
 
 async function prepareAgent() {
+  if (fileIds.value.length === 0) {
+    error.value = "No document selected."
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = null
   try {
-    const response = await authFetch("agent/prepare/" + props.fileId)
+    const response = await authFetch("agent/prepare?fileIds=" + encodeURIComponent(fileIds.value.join(',')))
     if (!response.ok) throw new Error("Network response was not ok")
     agentPrepare.value = await response.json()
     if (!agentPrepare.value.messages) agentPrepare.value.messages = []
@@ -201,9 +230,9 @@ const initStream = (url: string) => {
   }
 }
 
-onMounted(() => {
+watch(fileIds, () => {
   prepareAgent()
-})
+}, { immediate: true })
 </script>
 
 <style scoped>

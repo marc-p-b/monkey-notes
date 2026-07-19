@@ -30,9 +30,9 @@ public class AgentController {
     @Value("${app.openai.models.instructions}")
     private String defaultInstructions;
 
-    @GetMapping("/agent/prepare/{fileId}")
-    public ResponseEntity<DtoAgentPrepare> agentPrepare(@PathVariable String fileId) {
-        return ResponseEntity.ok(agentService.prepareAssistant(fileId));
+    @GetMapping("/agent/prepare")
+    public ResponseEntity<DtoAgentPrepare> agentPrepare(@RequestParam String fileIds) {
+        return ResponseEntity.ok(agentService.prepareAssistant(fileIds));
     }
 
     @PostMapping("/agent/ask")
@@ -53,7 +53,7 @@ public class AgentController {
                 .setModel(newAssistantModel)
                 .setInstructions(newAssistantInstructions);
 
-        DtoAgent dtoAgent = agentService.getOrCreateAssistant(agentPrepare.getFileId(), dtoOptions);
+        DtoAgent dtoAgent = agentService.getOrCreateAssistant(agentPrepare, dtoOptions);
         //agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getQuestion());
         //getlast() safe ?
         agentService.addMessage(dtoAgent.getThreadId(), agentPrepare.getMessages().getLast().getContent());

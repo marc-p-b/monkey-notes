@@ -4,6 +4,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.ViewOptions;
+import fr.monkeynotes.mn.data.dto.DtoFile;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
 import fr.monkeynotes.mn.data.dto.agent.*;
@@ -28,6 +29,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -43,6 +45,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentServiceImpl implements AgentService {
@@ -82,21 +85,21 @@ public class AgentServiceImpl implements AgentService {
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
-    public DtoAgent getOrCreateAssistant(String fileId, DtoAssistantOptions options) {
+    public DtoAgent getOrCreateAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options) {
         if(options.isForceNew() == true) {
-            return this.newAssistant(fileId, options);
+            return this.newAssistant(dtoAgentPrepare, options);
         } else {
-            Optional<EntityAgent> agent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+            Optional<EntityAgent> agent = repositoryAgent.findById(dtoAgentPrepare.getUuid());
             if(agent.isPresent()) {
                 return DtoAgent.of(agent.get());
             } else {
-                return this.newAssistant(fileId, options);
+                return this.newAssistant(dtoAgentPrepare, options);
             }
         }
     }
 
     @Override
-    public DtoAgentPrepare prepareAssistant(String fileId) {
+    public DtoAgentPrepare prepareAssistant(String fileIds) {
         String agentInstruction = instructionsDefault;
         try {
             instructionsDefault = preferencesService.getPreference(PreferenceKey.agentInstructions);
@@ -104,76 +107,67 @@ public class AgentServiceImpl implements AgentService {
             LOG.error("failed to retrieve preferences", e);
         }
 
-        Optional<EntityAgent> optAgent = repositoryAgent.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
-        if(optAgent.isPresent()) {
-            DtoAgentPrepare agentPrepare = this.getAssistant(optAgent.get().getAssistantId());
-            List<DtoAgentMessage> listMessages = this.getThreadMessages(optAgent.get().getThreadId());
+        if(fileIds.isEmpty()) {
+            LOG.error("No fileIds provided");
+        }
+        //TODO process errors
 
-            listMessages.add(new DtoAgentMessage()
-                    .setCreatedAt(agentPrepare.getCreatedAt())
-                    .setMessageDir(MessageDir.system)
-                    .setContent(agentPrepare.getInstructions()));
+        Set<String> setFileIds = DtoAgent.createIdFilesSet(fileIds, authService.getUsernameFromContext());
 
-            agentPrepare.setMessages(listMessages.stream()
-                    .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
-                    .toList());
-            LOG.info("");
-            agentPrepare.setFileId(fileId);
-            agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
-            return agentPrepare;
-        } else {
+//        Optional<EntityAgent> optAgent = Optional.empty();
+//        if(setFileIds.size() == 1) {
+//            optAgent = repositoryAgent.findById(setFileIds.stream().findFirst().get());
+//        }
+//
+//        if(optAgent.isPresent()) {
+//            EntityAgent agent = optAgent.get();
+//
+//            DtoAgentPrepare agentPrepare = this.getAssistant(agent.getAssistantId());
+//            List<DtoAgentMessage> listMessages = this.getThreadMessages(agent.getThreadId());
+//
+//            listMessages.add(new DtoAgentMessage()
+//                    .setCreatedAt(agentPrepare.getCreatedAt())
+//                    .setMessageDir(MessageDir.system)
+//                    .setContent(agentPrepare.getInstructions()));
+//
+//            agentPrepare.setMessages(listMessages.stream()
+//                    .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
+//                    .toList());
+//
+//            agentPrepare.setUuid(agent.getUuid());
+//            agentPrepare.setFileIds(setFileIds);
+//            agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
+//            return agentPrepare;
+//        } else {
+
 
             return new DtoAgentPrepare()
-                .setFileId(fileId)
+                .setUuid(UUID.randomUUID().toString())
+                .setFileIds(setFileIds)
                 .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
                 .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
                 .setInstructions(agentInstruction);
-        }
+//        }
     }
 
     @Override
-    public DtoAgent newAssistant(String fileId, DtoAssistantOptions options) {
-        LOG.info("New agent based on fileId {}", fileId);
+    public DtoAgent newAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options) {
 
-        //TODO create a service to do this kind of operations
-        Optional<EntityFile> f = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+        List<IdFile> list = dtoAgentPrepare.getFileIds().stream()
+                .map(id -> IdFile.createIdFile(authService.getUsernameFromContext(), id))
+                .toList();
 
-        if(f.isPresent() == false) {
-            //TODO error
-            return null;
-        }
+        List<EntityFile> files = repositoryFile.findAllById(list);
 
-        JSONObject jsonObject = null;
-        if(f.get().getType().equals(FileType.folder)) {
-            List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(fileId)
-                    .stream()
-                    .map(t -> {
-                        return new JSONObject()
-                                .put("title", t.getTitle())
-                                .put("date", t.getDocumented_at())
-                                .put("pages", t.getPages().stream()
-                                        .map(DtoTranscriptPage::getTranscript)
-                                        .toList());
-                    })
-                    .toList();
-            jsonObject = new JSONObject()
-                    .put("documents", jsonList);
-        } else {
-            DtoTranscript t = viewService.getTranscript(fileId, ViewOptions.all());
 
-            jsonObject = new JSONObject()
-                    .put("title", t.getTitle())
-                    .put("date", t.getDocumented_at())
-                    .put("pages", t.getPages().stream()
-                            .map(DtoTranscriptPage::getTranscript)
-                            .toList());
-        }
+        JSONObject jsonObject = filesToJson(files);
+
 
         String knowledgeFileId = uploadKnowledgeFile(jsonObject.toString());
         String vectorId = createKnowledgeVector(knowledgeFileId);
 
         //add title
-        String name = "knowledge fileId " + fileId;
+        String name = "knowledge document uuid " + dtoAgentPrepare.getUuid();
         String assistantId = createAssistant(name, options.getInstructions(), options.getModel(), vectorId);
         String threadId = createThread();
         LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
@@ -181,10 +175,51 @@ public class AgentServiceImpl implements AgentService {
         EntityAgent entityAgent = new EntityAgent()
                 .setAssistantId(assistantId)
                 .setThreadId(threadId)
-                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));
+                .setUuid(dtoAgentPrepare.getUuid())
+                .setFileIds(dtoAgentPrepare.getFileIds().stream().collect(Collectors.joining(",")));
 
         repositoryAgent.save(entityAgent);
         return DtoAgent.of(entityAgent);
+    }
+
+    private JSONObject filesToJson(List<EntityFile> files) {
+        return new JSONObject()
+            .put("documents", files.stream()
+                .map(file -> {
+                    DtoFile dtoFile = DtoFile.fromEntity(file);
+                    if(dtoFile.getType().equals(FileType.folder)) {
+                        return new JSONObject().put("folder", folderToJson(dtoFile));
+                    } else {
+                        DtoTranscript dtoTranscript = viewService.getTranscript(file.getIdFile().getFileId(), ViewOptions.all());
+                        return new JSONObject().put("document", transcriptToJson(dtoTranscript));
+                    }
+                })
+                .toList());
+    }
+
+    private JSONObject folderToJson(DtoFile dtoFile) {
+        //TODO folder desc
+        List<JSONObject> jsonList = viewService.listTranscriptFromFolderRecurs(dtoFile.getFileId())
+                .stream()
+                .map(t -> transcriptToJson(t))
+                .toList();
+        return new JSONObject()
+                .put("folder_name", dtoFile.getName())
+                .put("description", "")
+                .put("transcripts", jsonList);
+    }
+
+
+    private JSONObject transcriptToJson(DtoTranscript dtoTranscript) {
+        return new JSONObject()
+            .put("title", dtoTranscript.getTitle())
+            .put("date", dtoTranscript.getDocumented_at())
+            .put("pages", dtoTranscript.getPages().stream()
+                    .map(p -> new JSONObject()
+                            .put("page_number", p.getPageNumber())
+                            //TODO apply delta !
+                            .put("content", p.getTranscript()))
+                .toList());
     }
 
     private String uploadKnowledgeFile(String knowledge) {

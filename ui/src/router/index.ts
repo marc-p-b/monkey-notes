@@ -53,7 +53,7 @@ const router = createRouter({
       props: true,
     },
     {
-      path: '/agent/:fileId',
+      path: '/agent/:fileId?',
       name: 'agent',
       component: AgentView,
       props: true,

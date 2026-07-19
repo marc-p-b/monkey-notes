@@ -1,25 +1,45 @@
 package fr.monkeynotes.mn.data.entity;
 
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 
 @Entity(name="agent")
 public class EntityAgent {
-    @EmbeddedId
-    private IdFile idFile;
+    @Id
+    private String uuid;
 
+    private String username;
+    private String fileIds;
     private String assistantId;
     private String threadId;
 
     public EntityAgent() {
     }
 
-    public IdFile getIdFile() {
-        return idFile;
+    public String getUsername() {
+        return username;
     }
 
-    public EntityAgent setIdFile(IdFile idFIle) {
-        this.idFile = idFIle;
+    public EntityAgent setUsername(String username) {
+        this.username = username;
+        return this;
+    }
+
+    public String getFileIds() {
+        return fileIds;
+    }
+
+    public EntityAgent setFileIds(String fileIds) {
+        this.fileIds = fileIds;
+        return this;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public EntityAgent setUuid(String uuid) {
+        this.uuid = uuid;
         return this;
     }
 

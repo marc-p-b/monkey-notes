@@ -43,12 +43,14 @@
 <script setup lang="ts">
 import TreeNode from "./TreeNode.vue";
 import { authFetch } from "@/requests";
-import { ref, computed } from "vue";
+import { ref, computed, inject } from "vue";
 import { sortNodes } from "@/utils/treeSort";
 
 const error = ref<string | null>(null)
 const expanded = ref(false)
-const checked = ref(false)
+
+const selectedIds = inject<Set<string>>('selectedIds', new Set())
+const toggleSelectedId = inject<(id: string) => void>('toggleSelectedId', () => {})
 
 interface Node {
   name: string;
@@ -72,6 +74,11 @@ const props = withDefaults(defineProps<{
 });
 
 const sortedChildren = computed(() => sortNodes(props.node.children ?? [], props.orderBy, props.orderDir))
+
+const checked = computed({
+  get: () => selectedIds.has(String(props.node.dtoFile.fileId)),
+  set: () => toggleSelectedId(String(props.node.dtoFile.fileId)),
+})
 
 const emit = defineEmits<{
   (e: "folder-clicked", node: Node): void;

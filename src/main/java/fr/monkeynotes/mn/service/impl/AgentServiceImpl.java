@@ -173,9 +173,12 @@ public class AgentServiceImpl implements AgentService {
         LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
 
         EntityAgent entityAgent = new EntityAgent()
+                .setUsername(authService.getUsernameFromContext())
                 .setAssistantId(assistantId)
                 .setThreadId(threadId)
                 .setUuid(dtoAgentPrepare.getUuid())
+                .setCreatedDate(OffsetDateTime.now())
+                .setLastUsageDate(OffsetDateTime.now())
                 .setFileIds(dtoAgentPrepare.getFileIds().stream().collect(Collectors.joining(",")));
 
         repositoryAgent.save(entityAgent);
@@ -366,6 +369,13 @@ public class AgentServiceImpl implements AgentService {
                 .put("role", "user")
                 .put("content", content);
 
+        Optional<EntityAgent> agent= repositoryAgent.findEntityAgentByThreadId(threadId);
+        if(agent.isPresent()) {
+            agent.get().setLastUsageDate(OffsetDateTime.now());
+            repositoryAgent.save(agent.get());
+        }
+
+
         openAiPostRequest("/v1/threads/" + threadId + "/messages", jsonObject);
         LOG.info("Message added to thread id {}", threadId);
     }
@@ -479,6 +489,17 @@ public class AgentServiceImpl implements AgentService {
 
         scheduler.scheduleAtFixedRate(pollTask, 0, 5, TimeUnit.SECONDS);
         return emitter;
+    }
+
+    public List<DtoAgentPrepare> listThreads() {
+        List<EntityAgent> list = repositoryAgent.findAllByUsername(authService.getUsernameFromContext());
+
+        list.stream()
+                .map(a -> {
+                    return new DtoAgentPrepare()
+                            .setThreadName(a.getThreadName())
+                            .setUuid(a.getUuid());
+                })
     }
 
     //todo when no polling is active ?

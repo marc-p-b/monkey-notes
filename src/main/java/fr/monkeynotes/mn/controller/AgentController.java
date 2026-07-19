@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Controller
 public class AgentController {
@@ -73,6 +74,11 @@ public class AgentController {
         }
 
         return agentService.threadRunPolling(threadId, runId);
+    }
+
+    @GetMapping("/agent/list")
+    public ResponseEntity<List<DtoAgentPrepare>> agentList() {
+        return ResponseEntity.ok(agentService.listThreads());
     }
 
 }

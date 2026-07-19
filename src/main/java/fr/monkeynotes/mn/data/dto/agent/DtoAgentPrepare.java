@@ -11,13 +11,13 @@ public class DtoAgentPrepare {
         private String model;
         private boolean exists;
         private String instructions;
+        private String threadName;
         private List<DtoAgentMessage> messages;
         private Set<DtoPreferences.AIModel> availableAIModels;
         private String selectedAIModel;
         private OffsetDateTime createdAt;
         //form posted
         private Set<String> fileIds;
-        private String question;
         private boolean reset;
 
         public String getUuid() {
@@ -29,21 +29,21 @@ public class DtoAgentPrepare {
             return this;
         }
 
+        public String getThreadName() {
+            return threadName;
+        }
+
+        public DtoAgentPrepare setThreadName(String threadName) {
+            this.threadName = threadName;
+            return this;
+        }
+
         public Set<String> getFileIds() {
             return fileIds;
         }
 
         public DtoAgentPrepare setFileIds(Set<String> fileIds) {
             this.fileIds = fileIds;
-            return this;
-        }
-
-        public String getQuestion() {
-                return question;
-            }
-
-        public DtoAgentPrepare setQuestion(String question) {
-            this.question = question;
             return this;
         }
 

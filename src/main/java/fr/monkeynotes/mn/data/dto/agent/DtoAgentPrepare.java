@@ -16,6 +16,7 @@ public class DtoAgentPrepare {
         private Set<DtoPreferences.AIModel> availableAIModels;
         private String selectedAIModel;
         private OffsetDateTime createdAt;
+        private OffsetDateTime lastThreadUpdate;
         //form posted
         private Set<String> fileIds;
         private boolean reset;
@@ -98,6 +99,15 @@ public class DtoAgentPrepare {
 
     public DtoAgentPrepare setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+        return this;
+    }
+
+    public OffsetDateTime getLastThreadUpdate() {
+        return lastThreadUpdate;
+    }
+
+    public DtoAgentPrepare setLastThreadUpdate(OffsetDateTime lastThreadUpdate) {
+        this.lastThreadUpdate = lastThreadUpdate;
         return this;
     }
 

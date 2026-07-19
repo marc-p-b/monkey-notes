@@ -91,7 +91,10 @@ public class AgentServiceImpl implements AgentService {
         } else {
             Optional<EntityAgent> agent = repositoryAgent.findById(dtoAgentPrepare.getUuid());
             if(agent.isPresent()) {
-                return DtoAgent.of(agent.get());
+                EntityAgent entityAgent = agent.get();
+                entityAgent.setLastUsageDate(OffsetDateTime.now());
+                repositoryAgent.save(entityAgent);
+                return DtoAgent.of(entityAgent);
             } else {
                 return this.newAssistant(dtoAgentPrepare, options);
             }
@@ -114,40 +117,45 @@ public class AgentServiceImpl implements AgentService {
 
         Set<String> setFileIds = DtoAgent.createIdFilesSet(fileIds, authService.getUsernameFromContext());
 
-//        Optional<EntityAgent> optAgent = Optional.empty();
-//        if(setFileIds.size() == 1) {
-//            optAgent = repositoryAgent.findById(setFileIds.stream().findFirst().get());
-//        }
-//
-//        if(optAgent.isPresent()) {
-//            EntityAgent agent = optAgent.get();
-//
-//            DtoAgentPrepare agentPrepare = this.getAssistant(agent.getAssistantId());
-//            List<DtoAgentMessage> listMessages = this.getThreadMessages(agent.getThreadId());
-//
-//            listMessages.add(new DtoAgentMessage()
-//                    .setCreatedAt(agentPrepare.getCreatedAt())
-//                    .setMessageDir(MessageDir.system)
-//                    .setContent(agentPrepare.getInstructions()));
-//
-//            agentPrepare.setMessages(listMessages.stream()
-//                    .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
-//                    .toList());
-//
-//            agentPrepare.setUuid(agent.getUuid());
-//            agentPrepare.setFileIds(setFileIds);
-//            agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
-//            return agentPrepare;
-//        } else {
+        String uuid = UUID.randomUUID().toString();
+        //TODO thread name
+        String threadName = uuid;
 
+        return new DtoAgentPrepare()
+            .setUuid(uuid)
+            .setThreadName(threadName)
+            .setFileIds(setFileIds)
+            .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
+            .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
+            .setInstructions(agentInstruction);
+    }
 
-            return new DtoAgentPrepare()
-                .setUuid(UUID.randomUUID().toString())
-                .setFileIds(setFileIds)
-                .setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels))
-                .setSelectedAIModel(preferencesService.getPreferenceOpt(PreferenceKey.selectedAgentModel).orElse(""))
-                .setInstructions(agentInstruction);
-//        }
+    @Override
+    public DtoAgentPrepare prepareExistingAssistant(String uuid) {
+        Optional<EntityAgent> optAgent = repositoryAgent.findById(uuid);
+        if(optAgent.isEmpty()) {
+            LOG.error("No agent found for uuid {}", uuid);
+            return new DtoAgentPrepare();
+        }
+
+        EntityAgent agent = optAgent.get();
+        DtoAgentPrepare agentPrepare = this.getAssistant(agent.getAssistantId());
+        List<DtoAgentMessage> listMessages = this.getThreadMessages(agent.getThreadId());
+
+        listMessages.add(new DtoAgentMessage()
+                .setCreatedAt(agentPrepare.getCreatedAt())
+                .setMessageDir(MessageDir.system)
+                .setContent(agentPrepare.getInstructions()));
+
+        agentPrepare.setMessages(listMessages.stream()
+                .sorted(Comparator.comparing(DtoAgentMessage::getCreatedAt))
+                .toList());
+
+        agentPrepare.setUuid(agent.getUuid());
+        agentPrepare.setThreadName(agent.getThreadName());
+        agentPrepare.setFileIds(DtoAgent.createIdFilesSet(agent.getFileIds(), agent.getUsername()));
+        agentPrepare.setAvailableAIModels(preferencesService.aiModelsFromConfig(agentAvailableModels));
+        return agentPrepare;
     }
 
     @Override
@@ -162,13 +170,21 @@ public class AgentServiceImpl implements AgentService {
 
         JSONObject jsonObject = filesToJson(files);
 
-
         String knowledgeFileId = uploadKnowledgeFile(jsonObject.toString());
         String vectorId = createKnowledgeVector(knowledgeFileId);
 
         //add title
-        String name = "knowledge document uuid " + dtoAgentPrepare.getUuid();
-        String assistantId = createAssistant(name, options.getInstructions(), options.getModel(), vectorId);
+        //String name = "knowledge document uuid " + dtoAgentPrepare.getUuid();
+
+        String threadName;
+        //TODO cover folder case
+        if(files.size() == 1) {
+            threadName = files.stream().findFirst().get().getName();
+        } else {
+            threadName = "Discussion about " + files.size() + " documents";
+        }
+
+        String assistantId = createAssistant(threadName, options.getInstructions(), options.getModel(), vectorId);
         String threadId = createThread();
         LOG.info("Create assistant id {} threadId {}", assistantId, threadId);
 
@@ -176,6 +192,7 @@ public class AgentServiceImpl implements AgentService {
                 .setUsername(authService.getUsernameFromContext())
                 .setAssistantId(assistantId)
                 .setThreadId(threadId)
+                .setThreadName(threadName)
                 .setUuid(dtoAgentPrepare.getUuid())
                 .setCreatedDate(OffsetDateTime.now())
                 .setLastUsageDate(OffsetDateTime.now())
@@ -369,11 +386,11 @@ public class AgentServiceImpl implements AgentService {
                 .put("role", "user")
                 .put("content", content);
 
-        Optional<EntityAgent> agent= repositoryAgent.findEntityAgentByThreadId(threadId);
-        if(agent.isPresent()) {
-            agent.get().setLastUsageDate(OffsetDateTime.now());
-            repositoryAgent.save(agent.get());
-        }
+//        Optional<EntityAgent> agent= repositoryAgent.findEntityAgentByThreadId(threadId);
+//        if(agent.isPresent()) {
+//            agent.get().setLastUsageDate(OffsetDateTime.now());
+//            repositoryAgent.save(agent.get());
+//        }
 
 
         openAiPostRequest("/v1/threads/" + threadId + "/messages", jsonObject);
@@ -494,12 +511,14 @@ public class AgentServiceImpl implements AgentService {
     public List<DtoAgentPrepare> listThreads() {
         List<EntityAgent> list = repositoryAgent.findAllByUsername(authService.getUsernameFromContext());
 
-        list.stream()
-                .map(a -> {
-                    return new DtoAgentPrepare()
-                            .setThreadName(a.getThreadName())
-                            .setUuid(a.getUuid());
-                })
+        return list.stream()
+                .sorted(Comparator.comparing(EntityAgent::getLastUsageDate).reversed())
+                .map(a -> new DtoAgentPrepare()
+                        .setUuid(a.getUuid())
+                        .setThreadName(a.getThreadName())
+                        .setCreatedAt(a.getCreatedDate())
+                        .setLastThreadUpdate(a.getLastUsageDate()))
+                .toList();
     }
 
     //todo when no polling is active ?

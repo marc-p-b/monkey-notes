@@ -4,6 +4,7 @@ import LoginView from '../components/Login.vue'
 import PreferencesView from "../components/Preferences.vue";
 import TranscriptView from "@/components/TranscriptView.vue";
 import AgentView from "@/components/AgentView.vue";
+import AgentListView from "@/components/AgentListView.vue";
 import ProcessesView from "@/components/ProcessesView.vue";
 import NamedEntitiesView from "@/components/NamedEntitiesView.vue";
 import SearchView from "@/components/SearchView.vue";
@@ -57,6 +58,11 @@ const router = createRouter({
       name: 'agent',
       component: AgentView,
       props: true,
+    },
+    {
+      path: '/agents',
+      name: 'agentList',
+      component: AgentListView,
     },
     {
       path: '/preferences',

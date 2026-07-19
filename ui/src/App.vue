@@ -46,6 +46,11 @@ const menuItems = computed(() => [
     command: () => router.push('/processes')
   },
   {
+    label: 'Agents',
+    icon: 'pi pi-comments',
+    command: () => router.push('/agents')
+  },
+  {
     label: 'Admin',
     icon: 'pi pi-users',
     visible: store.userData?.admin === true,

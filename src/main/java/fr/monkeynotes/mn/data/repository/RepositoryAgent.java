@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface RepositoryAgent extends JpaRepository<EntityAgent, String> {
     List<EntityAgent> findAllByUsername(String username);
-    Optional<EntityAgent> findEntityAgentByThreadId(String threadId);
+    //Optional<EntityAgent> findEntityAgentByThreadId(String threadId);
 }

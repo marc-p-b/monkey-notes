@@ -11,6 +11,7 @@ public interface AgentService {
     DtoAgent getOrCreateAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options);
     DtoAgent newAssistant(DtoAgentPrepare dtoAgentPrepare, DtoAssistantOptions options);
     DtoAgentPrepare prepareAssistant(String fileIds);
+    DtoAgentPrepare prepareExistingAssistant(String uuid);
     String createThread();
     void addMessage(String threadId, String content);
     String createRun(DtoAgent agent);

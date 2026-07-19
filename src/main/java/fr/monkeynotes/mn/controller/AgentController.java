@@ -36,6 +36,11 @@ public class AgentController {
         return ResponseEntity.ok(agentService.prepareAssistant(fileIds));
     }
 
+    @GetMapping("/agent/prepare/{uuid}")
+    public ResponseEntity<DtoAgentPrepare> agentPrepareExisting(@PathVariable String uuid) {
+        return ResponseEntity.ok(agentService.prepareExistingAssistant(uuid));
+    }
+
     @PostMapping("/agent/ask")
     public ResponseEntity<DtoURL> agentStreamLink(@RequestBody DtoAgentPrepare agentPrepare) {
         String newAssistantInstructions = agentPrepare.getInstructions();

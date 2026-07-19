@@ -110,8 +110,14 @@ const fileIds = computed<string[]>(() => {
 const primaryFileId = computed(() => fileIds.value[0])
 const isMultiple = computed(() => fileIds.value.length > 1)
 
+// a ?uuid= query resumes a past conversation from AgentListView, bypassing
+// the fileIds-based prepare flow entirely.
+const resumeUuid = computed(() => typeof route.query.uuid === 'string' ? route.query.uuid : undefined)
+
 const goBack = () => {
-  if (isMultiple.value || !primaryFileId.value) {
+  if (resumeUuid.value) {
+    router.push('/agents')
+  } else if (isMultiple.value || !primaryFileId.value) {
     router.push('/')
   } else {
     router.push('/transcript/' + primaryFileId.value)
@@ -150,7 +156,7 @@ const scrollToBottom = async () => {
 }
 
 async function prepareAgent() {
-  if (fileIds.value.length === 0) {
+  if (!resumeUuid.value && fileIds.value.length === 0) {
     error.value = "No document selected."
     loading.value = false
     return
@@ -158,7 +164,9 @@ async function prepareAgent() {
   loading.value = true
   error.value = null
   try {
-    const response = await authFetch("agent/prepare?fileIds=" + encodeURIComponent(fileIds.value.join(',')))
+    const response = resumeUuid.value
+      ? await authFetch("agent/prepare/" + resumeUuid.value)
+      : await authFetch("agent/prepare?fileIds=" + encodeURIComponent(fileIds.value.join(',')))
     if (!response.ok) throw new Error("Network response was not ok")
     agentPrepare.value = await response.json()
     if (!agentPrepare.value.messages) agentPrepare.value.messages = []
@@ -230,7 +238,7 @@ const initStream = (url: string) => {
   }
 }
 
-watch(fileIds, () => {
+watch([fileIds, resumeUuid], () => {
   prepareAgent()
 }, { immediate: true })
 </script>

@@ -6,7 +6,7 @@ networks:
     mn_ext:
 services:
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.7.8
     restart: unless-stopped
     command:
       - "--providers.docker=true"

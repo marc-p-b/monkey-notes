@@ -5,16 +5,33 @@ networks:
         internal: true
     mn_ext:
 services:
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mn_ext
   nginx:
     image: monkeynotes/mn-ui
     restart: unless-stopped
     volumes:
       - ./data/nginx:/etc/nginx/conf.d
       - ./data/nginx/env.js:/var/www/mn-ui/dist/env.js:ro
-    ports:
-      - "80:80"
-      - "443:443"
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mn-ui.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.mn-ui.entrypoints=web"
+      - "traefik.http.services.mn-ui.loadbalancer.server.port=80"
     networks:
       - mn_int
       - mn_ext

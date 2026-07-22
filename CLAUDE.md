@@ -2,6 +2,101 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Upgrade
+
+1. Flaws to fix, in priority order
+
+1. IDOR on image endpoints — security. ImageController.java:32-50 (getImageWithMediaType, streamImageWithMediaType) take username as a client-supplied path parameter and never check it against authService.getUsernameFromContext(). Every other controller scopes data through IdFile.createIdFile(authService.getUsernameFromContext(), fileId); this one trusts the caller.
+   Any authenticated user who knows/guesses another user's username + fileId can view their private handwritten-note images. SecurityConfig.java:45 even has a commented-out permitAll for /image/*/*/*, showing this was flagged and never resolved.
+2. Single shared SSE emitter for all users. AgentServiceImpl's emitter/lastId/scheduler are plain instance fields on a singleton bean (own //TODO make this multiuser comment, line 80). Two users chatting with agents concurrently will stomp each other's this.emitter. The @Scheduled heartbeat() (every 30s) also dereferences this.emitter unconditionally — NPE loop before
+   any agent conversation has ever been started.
+3. Silent batch-abort bug. UpdateServiceImpl.java:170-173: inside the for(file2Process : files2Process) loop, an unchanged file triggers return; instead of continue;. This aborts the entire batch (every remaining file in the list) and skips createFileEntities(files2Process) at the end of the method — silently incomplete processing on the main OCR update pipeline
+   whenever one file in a batch has no new pages.
+4. Manual edits silently lost on OCR re-run. EditServiceImpl.edit() never updates EntityTranscriptPage.transcript or bumps its version — it only stores a diff keyed to the page's current version. UpdateServiceImpl.asyncForcePageUpdate() (line ~608) bumps the version and overwrites the transcript directly. Once that happens, the diff keyed to the old version becomes
+   orphaned and is never reapplied — a user's manual correction disappears with no warning the next time OCR is force-rerun on that page. Compounding this: EditServiceImpl.applyPatch() rethrows any PatchFailedException/parse failure as an unchecked RuntimeException, and neither of its two call sites (ViewServiceImpl.buildDtoTranscript, SearchServiceImpl.initLucene) catch
+   it — one bad/orphaned diff 500s an entire transcript view, or aborts the whole search re-index.
+5. Optional.orElse() eager-evaluation bug. NamedEntitiesServiceImpl.indexNamedEntity():73-75 — repositoryNamedEntityIndex.findById(id).orElse(repositoryNamedEntityIndex.save(new EntityNamedEntityIndex()...)). orElse()'s argument is evaluated unconditionally, so .save() runs on every call, resetting createdAt to now() even when the tag/person/etc. already exists.
+   Should be orElseGet(...).
+6. Two consumers racing on one process map. ProcessServiceImpl.listProcess():201-207 evicts every completed/failed entry from mapAsyncProcess on each call — including calls from the UI's poller. getCompletedProcessesToNotify() (used by the mailer) reads the same map. Whichever runs first destructively wins: fast UI polling can starve the mailer of ever seeing a
+   completed process (no notification email sent).
+7. Search breaks entirely after any delete. SearchServiceImpl.search():176-178 does mapT.get(e.getId()).getDocumented_at() with no null-guard. The Lucene index isn't invalidated on delete (ViewServiceImpl.delete() never re-indexes), so a stale hit for a deleted transcript throws an NPE that kills the whole search response for every query, until someone manually hits
+   /search/init.
+8. Folder PDF export hard-depends on Google Drive even for MonkeySync-only users. TranscriptController.getFolderPdf():119-133 calls driveUtilsService.getFileName(folderId), hitting the live Drive API unconditionally. The single-transcript PDF path was migrated to read the name from repositoryFile (line 84) but the folder path wasn't — this feature is broken for anyone
+   not connected to Google Drive.
+9. Non-thread-safe shared maps in DriveServiceImpl. mapCredentials/mapDrive are plain HashMap fields on a singleton bean, mutated from concurrent request threads and from scheduled RefreshTokenTasks. Everywhere else in the codebase this pattern correctly uses ConcurrentHashMap (ProcessServiceImpl, MonkeySyncServiceImpl, DriveChangeManagerServiceImpl) — this one
+   doesn't.
+10. Stub endpoint lies about success. AuthController.removeUser():81-86 is a //TODO stub that does nothing but unconditionally returns "User X removed" (200 OK). An admin has no way to know the deletion never happened.
+11. Smaller, worth a pass: UserServiceImpl.saveAllUsers():100-104 assumes the client-submitted user list is a complete superset of the DB (NPEs otherwise — latent, not currently hit by UsersView.vue's load-all/save-all pattern); TranscriptController.getTranscriptPdf():84 and ViewServiceImpl have several Optional.get() calls with no isPresent() check that will throw
+
+1. Flaws to fix, in priority order
+
+1. IDOR on image endpoints — security. ImageController.java:32-50 (getImageWithMediaType, streamImageWithMediaType) take username as a client-supplied path parameter and never check it against authService.getUsernameFromContext(). Every other controller scopes data through IdFile.createIdFile(authService.getUsernameFromContext(), fileId); this one trusts the caller.
+   Any authenticated user who knows/guesses another user's username + fileId can view their private handwritten-note images. SecurityConfig.java:45 even has a commented-out permitAll for /image/*/*/*, showing this was flagged and never resolved.
+2. Single shared SSE emitter for all users. AgentServiceImpl's emitter/lastId/scheduler are plain instance fields on a singleton bean (own //TODO make this multiuser comment, line 80). Two users chatting with agents concurrently will stomp each other's this.emitter. The @Scheduled heartbeat() (every 30s) also dereferences this.emitter unconditionally — NPE loop before
+   any agent conversation has ever been started.
+3. Silent batch-abort bug. UpdateServiceImpl.java:170-173: inside the for(file2Process : files2Process) loop, an unchanged file triggers return; instead of continue;. This aborts the entire batch (every remaining file in the list) and skips createFileEntities(files2Process) at the end of the method — silently incomplete processing on the main OCR update pipeline
+   whenever one file in a batch has no new pages.
+4. Manual edits silently lost on OCR re-run. EditServiceImpl.edit() never updates EntityTranscriptPage.transcript or bumps its version — it only stores a diff keyed to the page's current version. UpdateServiceImpl.asyncForcePageUpdate() (line ~608) bumps the version and overwrites the transcript directly. Once that happens, the diff keyed to the old version becomes
+   orphaned and is never reapplied — a user's manual correction disappears with no warning the next time OCR is force-rerun on that page. Compounding this: EditServiceImpl.applyPatch() rethrows any PatchFailedException/parse failure as an unchecked RuntimeException, and neither of its two call sites (ViewServiceImpl.buildDtoTranscript, SearchServiceImpl.initLucene) catch
+   it — one bad/orphaned diff 500s an entire transcript view, or aborts the whole search re-index.
+5. Optional.orElse() eager-evaluation bug. NamedEntitiesServiceImpl.indexNamedEntity():73-75 — repositoryNamedEntityIndex.findById(id).orElse(repositoryNamedEntityIndex.save(new EntityNamedEntityIndex()...)). orElse()'s argument is evaluated unconditionally, so .save() runs on every call, resetting createdAt to now() even when the tag/person/etc. already exists.
+   Should be orElseGet(...).
+6. Two consumers racing on one process map. ProcessServiceImpl.listProcess():201-207 evicts every completed/failed entry from mapAsyncProcess on each call — including calls from the UI's poller. getCompletedProcessesToNotify() (used by the mailer) reads the same map. Whichever runs first destructively wins: fast UI polling can starve the mailer of ever seeing a
+   completed process (no notification email sent).
+7. Search breaks entirely after any delete. SearchServiceImpl.search():176-178 does mapT.get(e.getId()).getDocumented_at() with no null-guard. The Lucene index isn't invalidated on delete (ViewServiceImpl.delete() never re-indexes), so a stale hit for a deleted transcript throws an NPE that kills the whole search response for every query, until someone manually hits
+   /search/init.
+8. Folder PDF export hard-depends on Google Drive even for MonkeySync-only users. TranscriptController.getFolderPdf():119-133 calls driveUtilsService.getFileName(folderId), hitting the live Drive API unconditionally. The single-transcript PDF path was migrated to read the name from repositoryFile (line 84) but the folder path wasn't — this feature is broken for anyone
+   not connected to Google Drive.
+9. Non-thread-safe shared maps in DriveServiceImpl. mapCredentials/mapDrive are plain HashMap fields on a singleton bean, mutated from concurrent request threads and from scheduled RefreshTokenTasks. Everywhere else in the codebase this pattern correctly uses ConcurrentHashMap (ProcessServiceImpl, MonkeySyncServiceImpl, DriveChangeManagerServiceImpl) — this one
+   doesn't.
+10. Stub endpoint lies about success. AuthController.removeUser():81-86 is a //TODO stub that does nothing but unconditionally returns "User X removed" (200 OK). An admin has no way to know the deletion never happened.
+11. Smaller, worth a pass: UserServiceImpl.saveAllUsers():100-104 assumes the client-submitted user list is a complete superset of the DB (NPEs otherwise — latent, not currently hit by UsersView.vue's load-all/save-all pattern); TranscriptController.getTranscriptPdf():84 and ViewServiceImpl have several Optional.get() calls with no isPresent() check that will throw
+    NoSuchElementException instead of a clean 404.
+
+2. Upgrades / refactors for a better backend
+
+- Split the two "god" services. UpdateServiceImpl (742 lines) mixes a generic OCR pipeline with Drive-specific and MonkeySync-specific branches inline (SyncOption checks scattered through runListAsyncProcess, asyncForceTranscriptUpdate, etc.). AgentServiceImpl (550 lines) mixes OpenAI REST plumbing (6+ private methods hand-parsing JSON via JsonPath) with
+  business/persistence logic. Both are natural candidates for a strategy-object split (sync-source strategy; a dedicated OpenAiAssistantClient).
+- No consistent error contract. Success/failure is communicated inconsistently — plain ResponseEntity<String>("OK"), silent return null, logged-and-swallowed exceptions, or an uncaught RuntimeException reaching Spring's default handler. There's no @ControllerAdvice/@ExceptionHandler anywhere. The frontend's generic !response.ok handling is a symptom of this.
+- Per-call RestTemplate instantiation. Both AgentServiceImpl and QwenServiceImpl new RestTemplate() (or new RestTemplate(factory)) on every single API call instead of a shared, pooled, pre-configured bean — no connection reuse, no centralized timeout/retry/interceptor policy.
+- Dual "current user" mechanisms. SecurityContextHolder for real requests and NoAuthContextHolder (raw ThreadLocal) for webhook/scheduled contexts are both read ad hoc; AuthServiceImpl.getUserDataFromContext() doesn't check NoAuthContextHolder at all (its own comment: "no applicable ?"), unlike getUsernameFromContext(). Worth unifying behind one CurrentUserProvider.
+- Preferences as a flat key/value table. PreferencesServiceImpl.fromMap/toEntities hand-maps every PreferenceKey through a switch; every new preference means touching the enum, the DTO, and both switch directions. A typed settings object (or JSON column) would remove this repetitive growth pattern.
+- Constructor injection. Everything uses @Autowired field injection — makes partial construction easy in tests and obscures real dependencies; standard modern-Spring guidance is constructor injection with final fields.
+- No pagination on /user/list, /agent/list, /ne/verb/{verb} etc. — fine today, won't scale.
+
+3. Global code advice
+
+- Null/Optional handling is inconsistent — some call sites check isPresent() properly, others call .get() blind (TranscriptController:84, ViewServiceImpl:214,338), others return raw null from a service method (ViewServiceImpl.getTranscript():75). Pick one convention.
+- Logging is inconsistent: real LOG.error/warn mixed with stray System.out.println (MonkeySyncServiceImpl:105-115) and e.printStackTrace() (DriveServiceUtilsImpl:98, followed immediately by code that dereferences the now-possibly-null result).
+- Several empty/log-only catch blocks let execution continue with partially-initialized state rather than failing fast or propagating a clear error (MailServiceImpl:128-130).
+- Widespread == true / == false comparisons instead of the boolean itself (AuthController, NamedEntitiesServiceImpl, UpdateServiceImpl, DriveServiceUtilsImpl, dozens more) — purely stylistic but pervasive.
+- setUserPassowrd is misspelled consistently across UserService/UserServiceImpl/AuthController — safe, mechanical rename since it's uniformly wrong.
+- Bean Validation (@Valid/JSR-303) is essentially unused at controller boundaries — request bodies/params are trusted as-is (e.g. AgentController.agentPrepare's fileIds CSV, MonkeySync.syncPdf's event payload).
+- Large amounts of commented-out code are kept in place rather than deleted (see below) — git history is the changelog; comments shouldn't be.
+
+4. Dead code
+
+- ImageController.getImageWithMediaType():36-39 — defines a StreamingResponseBody stream that's never used (a separate ByteArrayOutputStream path is used instead); the whole commented-out /imagetemp/... endpoint at lines 71-84.
+- DataController.exportUserData():46-53 — large commented-out streaming-response alternative.
+- DriveChangeManagerServiceImpl.getStatus():427-443 and watchStop():418-422 — bodies entirely commented out; the endpoints exist (AdminController /status, /watch/stop) but do nothing.
+- AgentServiceImpl — commented @Value defaultModel field (lines 56-57), commented name/threadName build lines in newAssistant (175-177), and a fully commented-out "touch lastUsageDate" block in addMessage() (397-401) that's now redundant with the working version in getOrCreateAssistant.
+- TranscriptController.java:146-149 — a dangling commented-out /folder/list mapping sitting between two active methods.
+- QwenServiceImpl:67-68 — old content1_url/commented image_url approach left beside the active implementation.
+- ProcessServiceImpl.listProcess():152 — stray commented-out getMapAsyncProcess() line.
+
+5. Google Drive as a deactivable module?
+
+Feasible, but not free — today it's load-bearing in a couple of places:
+
+- Startup hard-dependency: DriveServiceImpl's @Value fields (app.drive.auth.client-id, client-secret, etc.) have no defaults, so the Spring context fails to start without real Google OAuth credentials configured — a MonkeySync-only deployment still has to supply dummy Drive credentials just to boot.
+- Shared pipeline coupling: UpdateServiceImpl is genuinely shared between SyncOption.gdrive and SyncOption.monkey — Drive-only logic (updateAncestorsFoldersGDrive, recursRefreshFolder, asyncUpdateFolder, the gdrive branch inside asyncForceTranscriptUpdate) is interleaved with the generic OCR pipeline in the same class rather than living behind a clean seam.
+- Feature #8 above (folder PDF export) already silently assumes Drive is available, which is itself evidence the separation isn't currently clean.
+- Cleanly isolated pieces that would toggle off easily: DriveChangeManagerServiceImpl's webhook watch/flush cycle, AuthWebhooksController's /grant-callback and /notify, PreferencesController.authGoogleDrive(), and AdminController (which is Drive-only end to end).
+
+To make it a real app.drive.enabled toggle: make the three Drive @Value properties optional with safe defaults, gate the Drive beans/controllers behind @ConditionalOnProperty, and extract the Drive-specific branches out of UpdateServiceImpl into a strategy that's simply not registered when the flag is off. The webhook/admin/preferences side is easy;
+UpdateServiceImpl's entanglement is the real work.
+
+
 ## Project Overview
 
 MonkeyNotes is a document OCR and management platform for eInk tablet users. It automatically extracts handwritten notes from PDF exports using AI-powered OCR (Qwen VL), provides full-text search via Lucene, named entity extraction, and AI agent interaction via OpenAI.

@@ -11,13 +11,18 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./data/traefik/certs:/etc/traefik/certs:ro
     networks:
       - mn_ext
   nginx:
@@ -29,8 +34,9 @@ services:
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mn-ui.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.mn-ui.entrypoints=web"
+      - "traefik.http.routers.mn-ui.rule=Host(`notes.monkeynotes.fr`)"
+      - "traefik.http.routers.mn-ui.entrypoints=websecure"
+      - "traefik.http.routers.mn-ui.tls=true"
       - "traefik.http.services.mn-ui.loadbalancer.server.port=80"
     networks:
       - mn_int

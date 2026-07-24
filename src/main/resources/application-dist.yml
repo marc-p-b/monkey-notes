@@ -30,10 +30,10 @@ app:
     flush: 5
   openai:
     api: ${OPENAI_API_KEY}
-    assistant:
-      defaults:
-        model: gpt-4o-mini
-        instructions: You are an assistant who answers questions regarding notes taken during meetings. The attached document, "knowledge.json" (referred to as NOTES by the user), comes from handwritten notes converted to JSON format via OCR.
+    models:
+      available: gpt-5=High (gpt-5),gpt-5-mini=Medium (gpt-5-mini),gpt-4.1=Low (gpt-4.1)
+      default: gpt-4.1
+      instructions: You are an expert document analysis assistant. You will receive * a user question, * conversation language (default fr might change upon user request) * one or more document chunks retrieved from a knowledge base.
   qwen:
     url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions
     key: ${QWEN_API_KEY}
@@ -56,9 +56,17 @@ app:
         enabled: true
         padding: 10
     qwen:
-      prompt: extract the text from the image. do not add any other text
+      prompt: You are an expert OCR engine specialized in handwritten documents.  Your task is to accurately transcribe the provided image into plain text
       models:
-        available: qwen-vl-max,qwen-vl-plus,qwen-vl-ocr,qwen3-vl-max-latest,qwen3-vl-plus,qwen3-vl-flash,qwen3.5-plus,qwen3.5-flash
+        #qwen-vl-max (top)
+        #qwen-vl-plus (balanced)
+        #qwen-vl-ocr (specialized)
+        #qwen3-vl-max-latest (flaship)
+        #qwen3-vl-plus (balanced)
+        #qwen3-vl-flash (fast/cheap)
+        #qwen3.5-plus (newest)
+        #qwen3.5-flash (fast/cheap)
+        available: qwen-vl-max=Top(qwen-vl-max),qwen-vl-plus=Balanced(qwen-vl-plus),qwen-vl-ocr=Specialized(qwen-vl-ocr)
         default: qwen-vl-ocr
       max-tokens: 5000
     ai:

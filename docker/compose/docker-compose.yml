@@ -34,7 +34,8 @@ services:
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mn-ui.rule=Host(`notes.monkeynotes.fr`)"
+      - "traefik.docker.network=mn_ext"
+      - "traefik.http.routers.mn-ui.rule=Host(`<<YOUR_DOMAIN>>`)"
       - "traefik.http.routers.mn-ui.entrypoints=websecure"
       - "traefik.http.routers.mn-ui.tls=true"
       - "traefik.http.services.mn-ui.loadbalancer.server.port=80"

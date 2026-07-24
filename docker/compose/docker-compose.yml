@@ -26,7 +26,7 @@ services:
     networks:
       - mn_ext
   nginx:
-    image: monkeynotes/mn-ui
+    image: monkeynotes/mn-ui:latest
     restart: unless-stopped
     volumes:
       - ./data/nginx:/etc/nginx/conf.d
@@ -35,7 +35,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mn_ext"
-      - "traefik.http.routers.mn-ui.rule=Host(`<<YOUR_DOMAIN>>`)"
+      - "traefik.http.routers.mn-ui.rule=Host(`notes.monkeynotes.fr`)"
       - "traefik.http.routers.mn-ui.entrypoints=websecure"
       - "traefik.http.routers.mn-ui.tls=true"
       - "traefik.http.services.mn-ui.loadbalancer.server.port=80"
@@ -67,6 +67,10 @@ services:
       - GDRIVE_SECRET=${GDRIVE_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - QWEN_API_KEY=${QWEN_API_KEY}
+      - EMAIL_ENABLE=${EMAIL_ENABLE}
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - MAILJET_PUBLIC=${MAILJET_PUBLIC}
+      - MAILJET_PRIVATE=${MAILJET_PRIVATE}
     volumes:
       - ./data/mn_data/:/mn_data
       - ./data/logs/:/logs

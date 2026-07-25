@@ -92,3 +92,13 @@ tooling :
 logging:
   level:
     ROOT: INFO
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
+    fr.monkeynotes.mn: DEBUG
+
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: /logs
+      pattern: "%h %t \"%r\" %s %b"

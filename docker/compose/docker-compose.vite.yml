@@ -1,4 +1,10 @@
 #version: '3'
+# Alternate stack: serves the UI straight from ui/ source via the Vite dev server
+# (npm-docker/Dockerfile) instead of the nginx+dist build. /api still goes through
+# Traefik straight to mn-api, same as docker-compose.yml.
+#
+# Usage (from docker/compose/):
+#   UID=$(id -u) GID=$(id -g) docker compose -f docker-compose.vite.yml up
 
 networks:
     mn_int:
@@ -25,23 +31,19 @@ services:
       - ./data/traefik/certs:/etc/traefik/certs:ro
     networks:
       - mn_ext
-  nginx:
-    image: monkeynotes/mn-ui:latest
-    restart: unless-stopped
-    volumes:
-      - ./data/nginx:/etc/nginx/conf.d
-      - ./data/nginx/env.js:/var/www/mn-ui/dist/env.js:ro
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+  vite-ui:
+    image: mn-vite
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mn_ext"
       - "traefik.http.routers.mn-ui.rule=Host(`notes.monkeynotes.fr`)"
       - "traefik.http.routers.mn-ui.entrypoints=websecure"
       - "traefik.http.routers.mn-ui.tls=true"
-      - "traefik.http.services.mn-ui.loadbalancer.server.port=80"
+      - "traefik.http.services.mn-ui.loadbalancer.server.port=5173"
     networks:
       - mn_int
       - mn_ext
+
   db:
     image: postgres:18.1
     restart: on-failure
@@ -71,7 +73,7 @@ services:
       - EMAIL_SENDER=
       - MAILJET_PUBLIC=
       - MAILJET_PRIVATE=
-      - EMAIL_ENABLE=false
+      - EMAIL_ENABLE=
       - EMAIL_SENDER=
       - MAILJET_PUBLIC=
       - MAILJET_PRIVATE=

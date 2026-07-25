@@ -74,6 +74,15 @@ services:
     volumes:
       - ./data/mn_data/:/mn_data
       - ./data/logs/:/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=mn_ext"
+      - "traefik.http.routers.mn-api.rule=Host(`notes.monkeynotes.fr`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.mn-api.entrypoints=websecure"
+      - "traefik.http.routers.mn-api.tls=true"
+      - "traefik.http.routers.mn-api.middlewares=mn-api-stripprefix"
+      - "traefik.http.middlewares.mn-api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.services.mn-api.loadbalancer.server.port=8080"
     networks:
       - mn_int
       - mn_ext

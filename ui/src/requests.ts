@@ -1,7 +1,11 @@
+function joinUrl(base, path) {
+    return base.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
 export async function noAuthFetch(path, options = {}) {
 
-    //TODO check url to remove multiple /
-    const url = window._env_.API_URL + '/' + path
+    const url = joinUrl(window._env_.API_URL, path);
+
     const headers = {
         ...(options.headers || {}),
         "Content-Type": "application/json",
@@ -13,7 +17,8 @@ export async function noAuthFetch(path, options = {}) {
 }
 
 export async function authFetch(path, options = {}) {
-    const url = window._env_.API_URL + '/' +  path
+    const url = joinUrl(window._env_.API_URL, path);
+
     const token = localStorage.getItem("token");
     const headers = {
         ...(options.headers || {}),
@@ -33,7 +38,7 @@ export async function authFetch(path, options = {}) {
 
 
 export async function authPostFile(path, formData) {
-    const url = window._env_.API_URL + path
+    const url = joinUrl(window._env_.API_URL, path);
     const token = localStorage.getItem("token");
 
     const response = await fetch(url, {

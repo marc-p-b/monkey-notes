@@ -18,13 +18,14 @@ export default defineConfig(({ mode }) => ({
 		sourcemap: mode === 'debug',       // ✅ generate source maps
 		minify: mode === 'debug' ? false : 'esbuild', // ✅ no minify
 	},
-	server: {
-		allowedHosts: ["notes.monkeynotes.fr"],
-	},
+	// server: {
+	// 	allowedHosts: ["notes.monkeynotes.fr"],
+	// },
 	//debug
-	define: {
-		__DEBUG__: mode === 'debug',
-	},resolve: {
+	// define: {
+	// 	__DEBUG__: mode === 'debug',
+	// },
+	resolve: {
 		alias: {
 			'@': fileURLToPath(new URL('./src', import.meta.url))
 		},

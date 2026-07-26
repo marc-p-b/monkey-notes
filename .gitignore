@@ -76,3 +76,6 @@ node_modules
 
 
 /docker/compose/docker-compose.yml.dev
+/docker/vite-server/ui/
+
+/docker/compose/.env-vps-mn

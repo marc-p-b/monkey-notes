@@ -1,9 +1,9 @@
 spring:
   application.name: MonkeyNotes
   datasource:
-    url: jdbc:postgresql://mn-db:5432/monkey_db
-    username: monkey_user
-    password: monK3Y__42_Pa55w0rD
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     hikari.auto-commit: false
   jpa:
     hibernate.ddl-auto: update

@@ -2,26 +2,32 @@ package fr.monkeynotes.mn;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.security.Key;
 import java.util.stream.Collectors;
 
+@Component
 public class JwtUtil {
 
-    //TODO different for each env ?
-    private static final String SECRET_KEY = "SD4vhsqkP2WhBrrHm6QWqxEG2W1pagG6"; // minimum 256-bit for HS256
     //TODO config
     private static final long EXPIRATION_TIME = 86400000; // 1 day in ms
 
-    private static final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     public static final String AUTHORITIES = "authorities";
     public static final String AUTHORITY = "authority";
 
-    public static String generateToken(UserDetails ud) {
+    private final Key key;
+
+    public JwtUtil(@Value("${app.security.jwt.secret}") String jwtSecretKey) {
+        this.key = Keys.hmacShaKeyFor(jwtSecretKey.getBytes());
+    }
+
+    public String generateToken(UserDetails ud) {
         return Jwts.builder()
                 .setSubject(ud.getUsername())
                 .claim(AUTHORITIES, ud.getAuthorities())
@@ -31,12 +37,12 @@ public class JwtUtil {
                 .compact();
     }
 
-    public static String extractUsername(String token) {
+    public String extractUsername(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build()
                 .parseClaimsJws(token).getBody().getSubject();
     }
 
-    public static List<SimpleGrantedAuthority> extractAuthorities(String token) {
+    public List<SimpleGrantedAuthority> extractAuthorities(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -54,7 +60,7 @@ public class JwtUtil {
         return listAuth;
     }
 
-    public static boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;

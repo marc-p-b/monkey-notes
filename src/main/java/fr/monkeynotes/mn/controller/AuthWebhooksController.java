@@ -30,6 +30,9 @@ public class AuthWebhooksController {
     @Autowired
     private DriveChangeManagerService driveChMgmtService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Value("${app.url.frontend}")
     private String frontendUrl;
 
@@ -38,8 +41,8 @@ public class AuthWebhooksController {
         String code = request.getParameter("code");
         String state = request.getParameter("state");
         String token = state.split("=")[1];
-        if (JwtUtil.validateToken(token)) {
-            String username = JwtUtil.extractUsername(token);
+        if (jwtUtil.validateToken(token)) {
+            String username = jwtUtil.extractUsername(token);
             var auth = new UsernamePasswordAuthenticationToken(username, token, new ArrayList<>());
             SecurityContextHolder.getContext().setAuthentication(auth);
         } else {

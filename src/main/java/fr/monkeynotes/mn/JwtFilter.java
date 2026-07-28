@@ -14,6 +14,12 @@ import java.io.IOException;
 import java.util.List;
 
 public class JwtFilter extends OncePerRequestFilter {
+    private final JwtUtil jwtUtil;
+
+    public JwtFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -21,9 +27,9 @@ public class JwtFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (JwtUtil.validateToken(token)) {
-                String username = JwtUtil.extractUsername(token);
-                List<SimpleGrantedAuthority> authorities = JwtUtil.extractAuthorities(token);
+            if (jwtUtil.validateToken(token)) {
+                String username = jwtUtil.extractUsername(token);
+                List<SimpleGrantedAuthority> authorities = jwtUtil.extractAuthorities(token);
                 UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(username, token, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);

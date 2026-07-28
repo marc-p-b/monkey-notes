@@ -10,6 +10,7 @@ import fr.monkeynotes.mn.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,6 +30,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Autowired
     private RepositoryUser repositoryUser;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -66,7 +70,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
         if (ud != null && passwordEncoder.matches(request.getPassword(), ud.getPassword())) {
             LOG.info("Login username {} granted", request.getUsername());
-            String token = JwtUtil.generateToken(ud);
+            String token = jwtUtil.generateToken(ud);
             return Optional.of(new AuthResponse(token));
         }
         LOG.warn("Login username {} refused", request.getUsername());

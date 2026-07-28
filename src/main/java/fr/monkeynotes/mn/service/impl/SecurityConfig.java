@@ -1,8 +1,10 @@
 package fr.monkeynotes.mn.service.impl;
 
 import fr.monkeynotes.mn.JwtFilter;
+import fr.monkeynotes.mn.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +32,9 @@ public class SecurityConfig {
     @Value("${app.security.cors.origin}")
     private String corsOrigin;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         //TODO improve insecure routes
@@ -46,7 +51,7 @@ public class SecurityConfig {
                     .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.addFilterBefore(new JwtFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

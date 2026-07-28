@@ -25,6 +25,9 @@ public class AgentController {
     @Autowired
     private AgentService agentService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Value("${app.openai.models.default}")
     private String defaultModelName;
 
@@ -79,7 +82,7 @@ public class AgentController {
     @GetMapping("/agent/subscribe/{threadId}/{runId}/{token}")
     public SseEmitter subscribe(@PathVariable String threadId, @PathVariable String runId, @PathVariable String token) throws IOException {
 
-        if(JwtUtil.validateToken(token) == false) {
+        if(jwtUtil.validateToken(token) == false) {
             LOG.error("Invalid token");
             return null;
         }

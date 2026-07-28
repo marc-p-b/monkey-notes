@@ -15,6 +15,7 @@ spring:
 app:
   security:
     cors.origin: ${CORS_DOMAINS}
+    jwt.secret: ${JWT_SECRET}
   dry-run: false
   drive:
     auth:

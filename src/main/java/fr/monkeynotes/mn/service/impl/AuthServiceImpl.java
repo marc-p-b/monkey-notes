@@ -7,6 +7,7 @@ import fr.monkeynotes.mn.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     public Optional<Authentication> getLoggedAuthentication() {
         SecurityContext sc = SecurityContextHolder.getContext();
@@ -104,6 +108,6 @@ public class AuthServiceImpl implements AuthService {
         String username = getUsernameFromContext();
         LOG.info("Token refresh for user: {}", username);
         UserDetails ud = userDetailsService.loadUserByUsername(username);
-        return new AuthResponse(JwtUtil.generateToken(ud));
+        return new AuthResponse(jwtUtil.generateToken(ud));
     }
 }

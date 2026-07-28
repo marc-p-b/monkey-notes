@@ -18,9 +18,11 @@ export default defineConfig(({ mode }) => ({
 		sourcemap: mode === 'debug',       // ✅ generate source maps
 		minify: mode === 'debug' ? false : 'esbuild', // ✅ no minify
 	},
-	// server: {
-	// 	allowedHosts: ["notes.monkeynotes.fr"],
-	// },
+
+	//TODO needed when serving from vite container...
+	server: {
+		allowedHosts: ["notes.monkeynotes.fr"],
+	},
 	//debug
 	// define: {
 	// 	__DEBUG__: mode === 'debug',

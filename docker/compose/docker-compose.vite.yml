@@ -32,7 +32,7 @@ services:
     networks:
       - mn_ext
   vite-ui:
-    image: mn-vite
+    image: monkeynotes/mn-vite:latest
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mn_ext"
@@ -64,7 +64,7 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
       - YOUR_DOMAIN=${YOUR_DOMAIN}
       - YOUR_DOMAIN_API=${YOUR_DOMAIN_API}
-      - CORS_DOMAINS=${CORS_DOMAINS)
+      - CORS_DOMAINS=${CORS_DOMAINS}
       - GDRIVE_CLIENT_ID=${GDRIVE_CLIENT_ID}
       - GDRIVE_SECRET=${GDRIVE_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

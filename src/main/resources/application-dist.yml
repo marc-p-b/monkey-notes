@@ -1,7 +1,5 @@
 spring:
   application.name: MonkeyNotes
-  resources:
-    static-locations=classpath:static/:
   datasource:
     url: jdbc:postgresql://mn-db:5432/monkey_db
     username: monkey_user
@@ -14,7 +12,6 @@ spring:
     multipart:
       max-file-size: 500MB
       max-request-size: 500MB
-
 app:
   security:
     cors.origin: ${CORS_DOMAINS}
@@ -53,19 +50,12 @@ app:
           width: 1200
           height: 1000
       crop:
-        enabled: true
         padding: 10
     qwen:
       prompt: You are an expert OCR engine specialized in handwritten documents.  Your task is to accurately transcribe the provided image into plain text
       models:
-        #qwen-vl-max (top)
-        #qwen-vl-plus (balanced)
-        #qwen-vl-ocr (specialized)
-        #qwen3-vl-max-latest (flaship)
-        #qwen3-vl-plus (balanced)
-        #qwen3-vl-flash (fast/cheap)
-        #qwen3.5-plus (newest)
-        #qwen3.5-flash (fast/cheap)
+        #qwen-vl-max (top), qwen-vl-plus (balanced), qwen-vl-ocr (specialized), qwen3-vl-max-latest (flaship)
+        #qwen3-vl-plus (balanced), qwen3-vl-flash (fast/cheap), qwen3.5-plus (newest), qwen3.5-flash (fast/cheap)
         available: qwen-vl-max=Top(qwen-vl-max),qwen-vl-plus=Balanced(qwen-vl-plus),qwen-vl-ocr=Specialized(qwen-vl-ocr)
         default: qwen-vl-ocr
       max-tokens: 5000
@@ -92,13 +82,16 @@ tooling :
 logging:
   level:
     ROOT: INFO
-    org.springframework.security: DEBUG
-    org.springframework.web.cors: DEBUG
-    fr.monkeynotes.mn: DEBUG
 
-server:
-  tomcat:
-    accesslog:
-      enabled: true
-      directory: /logs
-      pattern: "%h %t \"%r\" %s %b"
+# debug level
+#    org.springframework.security: DEBUG
+#    org.springframework.web.cors: DEBUG
+#    fr.monkeynotes.mn: DEBUG
+
+# used for debug
+#server:
+#  tomcat:
+#    accesslog:
+#      enabled: true
+#      directory: /logs
+#      pattern: "%h %t \"%r\" %s %b"

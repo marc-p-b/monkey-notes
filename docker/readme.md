@@ -1,3 +1,11 @@
+# config
+
+## env.js
+
+local dev : ui/public/env.js
+dist server (nginx) : compose mounted volume docker/compose/data/nginx/env.js
+non-dist server (vite) : TODO mount env.js instead of modifying /ui/public/env.js
+
 # containers
 
 ## vite-local

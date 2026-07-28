@@ -36,7 +36,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mn_ext"
-      - "traefik.http.routers.mn-ui.rule=Host(`notes.monkeynotes.fr`)"
+      - "traefik.http.routers.mn-ui.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.mn-ui.entrypoints=websecure"
       - "traefik.http.routers.mn-ui.tls=true"
       - "traefik.http.services.mn-ui.loadbalancer.server.port=5173"
@@ -48,9 +48,9 @@ services:
     image: postgres:18.1
     restart: on-failure
     environment:
-      POSTGRES_DB: monkey_db
-      POSTGRES_USER: monkey_user
-      POSTGRES_PASSWORD: monK3Y__42_Pa55w0rD
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data/pg14
     hostname: mn-db
@@ -79,11 +79,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=mn_ext"
-      - "traefik.http.routers.mn-api.rule=Host(`notes.monkeynotes.fr`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.mn-api.rule=Host(`${DOMAIN}`) && PathPrefix(`${API_PATH}`)"
       - "traefik.http.routers.mn-api.entrypoints=websecure"
       - "traefik.http.routers.mn-api.tls=true"
       - "traefik.http.routers.mn-api.middlewares=mn-api-stripprefix"
-      - "traefik.http.middlewares.mn-api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.mn-api-stripprefix.stripprefix.prefixes=${API_PATH}"
       - "traefik.http.services.mn-api.loadbalancer.server.port=8080"
     networks:
       - mn_int

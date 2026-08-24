@@ -87,14 +87,17 @@ public class QwenServiceImpl implements QwenService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + qwenApiKey);
 
-            String respBody;
+            String respBody = "";
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
-
+            ResponseEntity<String> response = null;
             try {
-                ResponseEntity<String> response = createRestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
+                response = createRestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
                 respBody = response.getBody();
             } catch (RuntimeException e) {
-                throw new ServiceException("Failed to execute Qwen API", e);
+                if(response.getStatusCode().equals(HttpStatus.UNAUTHORIZED)) {
+                    //probably caused by bad/expired token
+                }
+                throw new ServiceException("Failed to execute Qwen API http status : " + response.getStatusCode(), e);
             }
             long took = System.currentTimeMillis() - start;
 

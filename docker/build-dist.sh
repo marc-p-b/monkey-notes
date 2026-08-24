@@ -16,6 +16,7 @@ docker build . -t monkeynotes/mn-vite-local-serve
 echo ">> prepare dist"
 #mounted from compose
 #cp $ui/env-mn.js $ui/public/env.js
+cp $ui/index_dist.html $ui/index.html
 docker run -it --rm -u $(id -u):$(id -g) -v $ui/:/ui monkeynotes/mn-vite-local-serve:latest bash /dist.sh
 
 cd $docker

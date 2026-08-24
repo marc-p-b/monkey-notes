@@ -2,6 +2,7 @@ package fr.monkeynotes.mn.service;
 
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.ViewOptions;
+import fr.monkeynotes.mn.data.dto.DtoCounts;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptDetails;
 import fr.monkeynotes.mn.data.dto.FileNode;
@@ -19,6 +20,7 @@ public interface ViewService {
     DtoTranscript getTranscript(String fileId, ViewOptions options);// throws IOException;
     List<DtoTranscript> listTranscriptFromFolderRecurs (String folderId);
     List<DtoTranscriptDetails> listRecentTranscripts(int from, int to);
+    DtoCounts countFiles();
     void delete(String fileId);
     String getContent(DtoTranscript dtoTranscript) throws ServiceException;
 }

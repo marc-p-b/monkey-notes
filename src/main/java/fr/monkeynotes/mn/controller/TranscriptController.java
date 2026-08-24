@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.data.ViewOptions;
+import fr.monkeynotes.mn.data.dto.DtoCounts;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptDetails;
 import fr.monkeynotes.mn.data.dto.FileNode;
@@ -61,6 +62,11 @@ public class TranscriptController {
     public ResponseEntity<List<DtoTranscriptDetails>> viewRecentTranscripts() throws IOException {
         // TODO make me configurable
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
+    }
+
+    @GetMapping("/transcript/count")
+    public ResponseEntity<DtoCounts> countFiles() {
+        return ResponseEntity.ok().body(viewService.countFiles());
     }
 
     @Autowired

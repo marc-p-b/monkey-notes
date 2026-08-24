@@ -106,6 +106,14 @@ public class ViewServiceImpl implements ViewService {
         return listDtoRecent;
     }
 
+    @Override
+    public DtoCounts countFiles() {
+        String username = authService.getUsernameFromContext();
+        return new DtoCounts()
+                .setFolders(repositoryFile.countByIdFile_UsernameAndType(username, FileType.folder))
+                .setTranscripts(repositoryFile.countByIdFile_UsernameAndType(username, FileType.transcript));
+    }
+
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
         List<FileNode> fileNodes = new ArrayList<>();

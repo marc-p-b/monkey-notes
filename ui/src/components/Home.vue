@@ -4,7 +4,7 @@
     <div class="page-header">
       <div>
         <h2>Documents</h2>
-        <span class="page-subtitle">{{ totalDocuments }} documents &middot; {{ totalFolders }} folders</span>
+        <span class="page-subtitle" v-if="counts">{{ counts.transcripts }} documents &middot; {{ counts.folders }} folders</span>
       </div>
     </div>
 
@@ -76,11 +76,13 @@ interface DtoTranscript {
   name: string;
 }
 
-const transcripts = ref<DtoTranscript[]>([])
+interface DtoCounts {
+  folders: number;
+  transcripts: number;
+}
 
-// dummy placeholders until a real counts endpoint exists
-const totalDocuments = ref(128)
-const totalFolders = ref(24)
+const transcripts = ref<DtoTranscript[]>([])
+const counts = ref<DtoCounts | null>(null)
 
 const selectMode = ref(false)
 const orderBy = ref<'name' | 'date'>('name')
@@ -130,6 +132,16 @@ async function fetchRecentTranscripts() {
   }
 }
 
+async function fetchCounts() {
+  try {
+    const response = await authFetch("transcript/count");
+    if (!response.ok) throw new Error("Network response was not ok");
+    counts.value = await response.json();
+  } catch (err: any) {
+    console.error(err);
+  }
+}
+
 function clickedTranscript(fileId) {
   router.push({ name: 'transcript', params: { fileId } })
 }
@@ -145,6 +157,7 @@ function homeLoading() {
 
 onMounted(() => {
   fetchRecentTranscripts();
+  fetchCounts();
 });
 </script>
 

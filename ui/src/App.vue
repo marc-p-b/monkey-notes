@@ -36,6 +36,11 @@ const menuItems = computed(() => [
     command: () => router.push('/')
   },
   {
+    label: 'Quicknotes',
+    icon: 'pi pi-bolt',
+    command: () => router.push('/quicknotes')
+  },
+  {
     label: 'Named Entities',
     icon: 'pi pi-tag',
     command: () => router.push('/ne')

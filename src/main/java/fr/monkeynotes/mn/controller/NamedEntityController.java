@@ -1,17 +1,16 @@
 package fr.monkeynotes.mn.controller;
 
-import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntity;
 import fr.monkeynotes.mn.data.dto.DtoNamedEntityIndex;
+import fr.monkeynotes.mn.data.dto.DtoQuickNote;
 import fr.monkeynotes.mn.data.entity.EntityFile;
-import fr.monkeynotes.mn.data.entity.EntityNamedEntityIndex;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.enums.NamedEntityVerb;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
 import fr.monkeynotes.mn.data.repository.RepositoryNamedEntityIndex;
 import fr.monkeynotes.mn.service.AuthService;
-import fr.monkeynotes.mn.service.ViewService;
+import fr.monkeynotes.mn.service.QuickNoteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,9 +30,6 @@ public class NamedEntityController {
     private AuthService authService;
 
     @Autowired
-    private ViewService viewService;
-
-    @Autowired
     private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
 
     @Autowired
@@ -41,6 +37,9 @@ public class NamedEntityController {
 
     @Autowired
     private RepositoryFile repositoryFile;
+
+    @Autowired
+    private QuickNoteService quickNoteService;
 
     //TODO put in service
     @GetMapping("/ne/verbs")
@@ -62,13 +61,7 @@ public class NamedEntityController {
                             .toList());
                 }
                 Map<String, List<DtoNamedEntity>> map2 = listNe.stream()
-                        .map(ne->{
-                            IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), ne.getFileId());
-                            Optional<EntityFile> oF = repositoryFile.findById(idFile);
-                            String filename = oF.isPresent() ? oF.get().getName() : "unknown";
-                            ne.setFileName(filename);
-                            return ne;
-                        })
+                        .map(ne -> ne.setFileName(resolveOwnerLabel(ne)))
                         .collect(Collectors.groupingBy(DtoNamedEntity::getValue));
                 map.put(verb, map2);
             }
@@ -95,15 +88,47 @@ public class NamedEntityController {
         List<DtoNamedEntity> l = repositoryNamedEntity.findByVerbAndValue(authService.getUsernameFromContext(), verb, value)
                 .stream()
                 .map(DtoNamedEntity::fromEntity)
-                .map(ne -> {
-                    //TODO check for exc
-                    String fileName = viewService.getTranscript(ne.getFileId(), ViewOptions.all()).getName();
-                    ne.setFileName(fileName);
-                    return ne;
-                })
+                .map(ne -> ne.setFileName(resolveOwnerLabel(ne)))
                 .toList();
 
 
         return ResponseEntity.ok().body(l);
+    }
+
+    /**
+     * A named_entity row belongs either to a transcript page or to a quicknote (marked by
+     * pageNumber == QUICKNOTE_PAGE_NUMBER, since a quicknote has no pages).
+     *
+     * Both display endpoints used to resolve this themselves and neither handled the other kind:
+     * getValues() went through viewService.getTranscript(), which returns null for anything that
+     * isn't a transcript and would NPE on a quicknote id, while getVerbs() looked the id up in
+     * repositoryFile and would just label it "unknown". One resolver now covers both, and the
+     * transcript path no longer builds a whole transcript DTO just to read a name.
+     */
+    private String resolveOwnerLabel(DtoNamedEntity ne) {
+        if (ne.getPageNumber() == QuickNoteService.QUICKNOTE_PAGE_NUMBER) {
+            return parseUuid(ne.getFileId())
+                    .flatMap(uuid -> quickNoteService.get(uuid))
+                    .map(DtoQuickNote::getTitle)
+                    .filter(title -> !title.isBlank())
+                    .orElse("Quick note");
+        }
+
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), ne.getFileId());
+        return repositoryFile.findById(idFile)
+                .map(EntityFile::getName)
+                .orElse("unknown");
+    }
+
+    private Optional<UUID> parseUuid(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(value));
+        } catch (IllegalArgumentException e) {
+            LOG.warn("named entity flagged as a quicknote but its id is not a uuid: {}", value);
+            return Optional.empty();
+        }
     }
 }

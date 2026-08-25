@@ -70,8 +70,10 @@ public class NamedEntitiesServiceImpl implements NamedEntitiesService {
                 .setVerb(dtoNamedEntity.getVerb())
                 .setValue(dtoNamedEntity.getValue());
 
+        //orElseGet, not orElse: orElse's argument is evaluated unconditionally, so the save ran on
+        //every call and reset createdAt to now() even for an entity that already existed
         repositoryNamedEntityIndex.findById(idNamedEntityIndex)
-                .orElse(repositoryNamedEntityIndex.save(new EntityNamedEntityIndex()
+                .orElseGet(() -> repositoryNamedEntityIndex.save(new EntityNamedEntityIndex()
                         .setIdNamedEntityIndex(idNamedEntityIndex).setCreatedAt(OffsetDateTime.now())));
     }
 }

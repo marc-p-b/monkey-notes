@@ -19,7 +19,7 @@
 
       <div v-for="docId in groupKeys" :key="docId" class="page-card">
         <div class="page-card-header">
-          <i class="pi pi-file-edit section-icon"></i>
+          <i :class="['pi', isQuickNote(results[docId]) ? 'pi-bolt' : 'pi-file-edit', 'section-icon']"></i>
           <div class="result-title-block">
             <span class="result-title">{{ docTitle(results[docId]) }}</span> -
             <span v-if="docDate(results[docId])" class="result-date">{{ formatDate(docDate(results[docId])) }}</span>
@@ -30,16 +30,24 @@
             text
             size="small"
             severity="secondary"
-            @click="clickedTranscript(docId, results[docId])"
-            v-tooltip.top="'Open transcript'"
+            @click="clickedResult(docId, results[docId])"
+            v-tooltip.top="isQuickNote(results[docId]) ? 'Open quicknote' : 'Open transcript'"
             class="result-open-btn"
           />
         </div>
         <div class="page-content">
           <a
+            v-if="isQuickNote(results[docId])"
+            href="#"
+            @click.prevent="clickedResult(docId, results[docId])"
+            class="title-match-link"
+          >
+            <Tag value="Quicknote" severity="info" class="title-match-tag" />
+          </a>
+          <a
             v-if="hasTitleMatch(results[docId])"
             href="#"
-            @click.prevent="clickedTranscript(docId, results[docId], titleMatchPage(results[docId]))"
+            @click.prevent="clickedResult(docId, results[docId], titleMatchPage(results[docId]))"
             class="title-match-link"
           >
             <Tag value="Title match" severity="info" class="title-match-tag" />
@@ -49,7 +57,7 @@
               v-for="p in contentPages(results[docId])"
               :key="p"
               href="#"
-              @click.prevent="clickedTranscript(docId, results[docId], p)"
+              @click.prevent="clickedResult(docId, results[docId], p)"
               class="page-ref-link"
             >
               <Tag :value="`p. ${p + 1}`" severity="secondary" />
@@ -77,7 +85,8 @@ const error = ref<string | null>(null)
 interface DtoSearchResult {
   id: string
   title: string
-  srType: 'title' | 'content'
+  // a 'quicknote' hit's id is a note uuid, not a transcript fileId, and it has no page
+  srType: 'title' | 'content' | 'quicknote'
   pageNumber: number
   documented_at: string
 }
@@ -97,6 +106,10 @@ function docDate(items: DtoSearchResult[]): string {
 
 function hasTitleMatch(items: DtoSearchResult[]): boolean {
   return items.some(i => i.srType === 'title')
+}
+
+function isQuickNote(items: DtoSearchResult[]): boolean {
+  return items.some(i => i.srType === 'quicknote')
 }
 
 function titleMatchPage(items: DtoSearchResult[]): number {
@@ -146,11 +159,17 @@ const request = async() => {
   }
 }
 
-function clickedTranscript(fileId: string, items: DtoSearchResult[], targetPage?: number) {
+function clickedResult(docId: string, items: DtoSearchResult[], targetPage?: number) {
+  // a quicknote id is a uuid, so routing it to /transcript/:fileId would land on a broken view
+  if (isQuickNote(items)) {
+    router.push({ name: 'quicknotes', hash: '#note' + docId })
+    return
+  }
+
   const pages = items.filter(i => i.srType === 'content').map(i => i.pageNumber)
   store.setSRPages(pages)
   const pageNumber = targetPage ?? pages[0] ?? 0
-  router.push({ name: 'transcriptSearchResult', params: { fileId }, hash: '#pageNumber' + pageNumber })
+  router.push({ name: 'transcriptSearchResult', params: { fileId: docId }, hash: '#pageNumber' + pageNumber })
 }
 
 watch(() => store.search, () => {

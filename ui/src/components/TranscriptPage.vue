@@ -57,6 +57,7 @@
 <script lang="ts" setup>
 import {ref, defineProps, defineEmits, onMounted, watch} from "vue";
 import {authFetch} from "@/requests";
+import {renderNamedEntities} from "@/utils/namedEntityRender";
 
 import { useUiStore } from '@/composables/store.js'
 const store = useUiStore()
@@ -121,10 +122,6 @@ const editMode = ref(false)
 const showStats = ref(false)
 let transcript = props.page.transcript;
 textEdit.value = transcript
-
-function replaceSubstring(str, start, end, replacement) {
-  return str.slice(0, start) + replacement + str.slice(end);
-}
 
 async function updatePage(page) {
   loading.value = true;
@@ -205,8 +202,6 @@ const save = async () => {
 }
 
 const loadPage = async () => {
-  let lFix = 0;
-
   if(props.page.pageDiagram == PageDiagram.full) {
     await downloadImage(props.page)
   } else {
@@ -217,48 +212,11 @@ const loadPage = async () => {
   }
 
 
-  props.page.listNamedEntities.forEach(ne => {
-    let repl = "";
-    if (ne.verb == 'h2') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h2 id='" + ne.uuid + "'>" + ne.value + "</h2>")
-    } else if (ne.verb == 'h3') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h3 id='" + ne.uuid + "'>" + ne.value + "</h3>")
-    } else if (ne.verb == 'h4') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h4 id='" + ne.uuid + "'>" + ne.value + "</h4>")
-    } else if (ne.verb == 'h5') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h5 id='" + ne.uuid + "'>" + ne.value + "</h5>")
-    } else if (ne.verb == 'h6') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<h6 id='" + ne.uuid + "'>" + ne.value + "</h6>")
-    } else if (ne.verb == 'tag') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-tag'></i> " + ne.value + "</span>")
-    } else if (ne.verb == 'person') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-user'></i> " + ne.value + "</span>")
-    } else if (ne.verb == 'email') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-envelope'> " + ne.value + "</i></span>")
-    } else if (ne.verb == 'link') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-link'></i> " + ne.value + "</span>")
-    } else if (ne.verb == 'dateUS' || ne.verb == 'dateEU' || ne.verb == 'dateISO') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-calendar'></i> " + ne.value + "</span>")
-    } else if (ne.verb == 'checked') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' checked /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
-    } else if (ne.verb == 'unchecked') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<input id='" + ne.uuid + "' type='checkbox' /><label for='" + ne.uuid + "'>" + ne.value + "</label>")
-    } else if (ne.verb == 'diagram') {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram : " + ne.value + " </span>")
-    } else if (ne.verb == 'diagramNextPage') {
-      const inlineImg = diagramImgSrc.value
-          ? "<br/><img src='" + diagramImgSrc.value + "' class='preview-img diagram-inline-img' alt='diagram' />"
-          : ""
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "<span id='" + ne.uuid + "'><i class='pi pi-pen-to-square'></i> Diagram : " + ne.value + "</span>" + inlineImg)
-    } else {
-      repl = replaceSubstring(transcript, ne.start - lFix, ne.end - lFix, "|" + ne.verb + ":" + ne.value + "|")
-    }
-    lFix += transcript.length - repl.length
-    transcript = repl
-
-  });
-  transcript = transcript.replaceAll("\n", "<br/>")
-  text.value = transcript
+  // `transcript` deliberately stays the raw text: the renderer is pure, so re-running loadPage()
+  // (which save() does) can no longer double-render an already-rendered string.
+  text.value = renderNamedEntities(transcript, props.page.listNamedEntities, {
+    diagramImageSrc: diagramImgSrc.value
+  })
 }
 
 //use store instead ?

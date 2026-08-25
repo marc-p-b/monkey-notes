@@ -22,6 +22,13 @@ public interface RepositoryNamedEntity extends JpaRepository<EntityNamedEntity, 
     @Query("SELECT n FROM named_entity n where n.idNamedEntity.username = :username and n.idNamedEntity.fileId = :fileId and n.idNamedEntity.pageNumber = :pageNumber")
     List<EntityNamedEntity> findBy(@Param("username") String username, @Param("fileId") String fileId, @Param("pageNumber") int pageNumber);
 
+    /**
+     * Every entity a user owns on one page index. Used with QuickNoteService.QUICKNOTE_PAGE_NUMBER to
+     * fetch the entities of the whole quicknote feed in a single query instead of one per note.
+     */
+    @Query("SELECT n FROM named_entity n where n.idNamedEntity.username = :username and n.idNamedEntity.pageNumber = :pageNumber")
+    List<EntityNamedEntity> findByPageNumber(@Param("username") String username, @Param("pageNumber") int pageNumber);
+
     @Query("SELECT n FROM named_entity n where n.idNamedEntity.username = :username and n.verb = :verb")
     List<EntityNamedEntity> findByVerb(@Param("username") String username, @Param("verb")NamedEntityVerb verb);
 

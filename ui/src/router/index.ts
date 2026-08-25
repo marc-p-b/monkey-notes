@@ -7,6 +7,7 @@ import AgentView from "@/components/AgentView.vue";
 import AgentListView from "@/components/AgentListView.vue";
 import ProcessesView from "@/components/ProcessesView.vue";
 import NamedEntitiesView from "@/components/NamedEntitiesView.vue";
+import QuickNotesView from "@/components/QuickNotesView.vue";
 import SearchView from "@/components/SearchView.vue";
 import UsersView from "@/components/UsersView.vue";
 import { jwtDecode } from "jwt-decode";
@@ -78,6 +79,11 @@ const router = createRouter({
       path: '/ne',
       name: 'ne',
       component: NamedEntitiesView,
+    },
+    {
+      path: '/quicknotes',
+      name: 'quicknotes',
+      component: QuickNotesView,
     },
     {
       path: '/search',

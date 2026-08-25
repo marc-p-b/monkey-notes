@@ -7,7 +7,9 @@ public class DtoSearchResult {
 
     public enum SRType {
         content,
-        title
+        title,
+        //a quicknote hit: `id` is the note's uuid, not a transcript fileId, and there is no page
+        quicknote
     }
 
     private String id;

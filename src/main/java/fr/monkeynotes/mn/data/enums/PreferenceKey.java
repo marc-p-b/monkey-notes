@@ -4,6 +4,7 @@ public enum PreferenceKey {
     set,
 
     syncOption,
+    //todo change this name or create another pref intended for monleySync (rootFolder id)
     inputFolderId,
     cropImage,
 

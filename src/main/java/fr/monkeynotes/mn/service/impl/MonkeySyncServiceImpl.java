@@ -195,22 +195,24 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
     }
 
     private String updateAncestorsMonkeyFolders(String path) {
-        Optional<EntityFile> optRootFolder = repositoryFile.findByIdFile_UsernameAndNameAndTypeIs(authService.getUsernameFromContext(), ROOT_FOLDER, FileType.folder);
+
+        Optional<String> optInputFolderId = preferencesService.getPreferenceOpt(PreferenceKey.inputFolderId);
+
         EntityFile rootFolder = null;
-        if(optRootFolder.isPresent() == false) {
-            // create monkey sync root if necessary
+        if(optInputFolderId.isPresent()) {
+            //root folder is defined as a parameter, just retrieve the correponding file
+            Optional<EntityFile> optRootFolder = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), optInputFolderId.get()));
+            //todo better error management / global error management
+            rootFolder = optRootFolder.orElseThrow(() -> new IllegalStateException("Root folder not found"));
+        } else {
+            //root folder is undefined, create it as a file and a preference
             String msId = createMonkeySyncId(ROOT_FOLDER);
             rootFolder = new EntityFile()
                     .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), msId))
                     .setType(FileType.folder)
                     .setName(ROOT_FOLDER);
             repositoryFile.save(rootFolder);
-
-            //also save it as root in prefs
             preferencesService.setInputFolderId(msId);
-
-        } else {
-            rootFolder = optRootFolder.get();
         }
 
         String[] folders = path.split("/");
@@ -226,11 +228,8 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
 
             EntityFile entityFileFolder = findOrCreateFolder(createMonkeySyncId(currentFolderPath), currentFolderPath, parentId);
             parentId = entityFileFolder.getIdFile().getFileId();
-
         }
-
         return parentId;
-
     }
     private EntityFile findOrCreateFolder(String id, String path, String parentId) {
 

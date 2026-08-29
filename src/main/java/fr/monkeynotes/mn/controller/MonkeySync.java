@@ -3,7 +3,9 @@ package fr.monkeynotes.mn.controller;
 import fr.monkeynotes.mn.data.MonkeyFileEvent;
 import fr.monkeynotes.mn.data.SyncEventResponse;
 import fr.monkeynotes.mn.data.entity.EntityTranscript;
+import fr.monkeynotes.mn.data.entity.IdFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
+import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.MonkeySyncService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,12 @@ public class MonkeySync {
 
     @Autowired
     private MonkeySyncService monkeySyncService;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private RepositoryTranscript repositoryTranscript;
 
     @PostMapping(value = "/sync/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SyncEventResponse> syncPdf(
@@ -54,15 +62,15 @@ public class MonkeySync {
 
     }
 
-    @Autowired
-    private RepositoryTranscript repositoryTranscript;
 
     @GetMapping(value = "/sync/status/{msId}")
     public ResponseEntity<String> syncUpdate(@PathVariable String msId) {
 
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), msId);
+
         LOG.info("request update for {}", msId);
 
-        Optional<EntityTranscript> optionalEntityTranscript = repositoryTranscript.findAllByIdFile_FileId(msId);
+        Optional<EntityTranscript> optionalEntityTranscript = repositoryTranscript.findById(idFile);
 
         if(optionalEntityTranscript.isPresent()) {
             return ResponseEntity.ok("processed");
@@ -73,8 +81,9 @@ public class MonkeySync {
 
     @GetMapping(value = "/sync/delete/{msId}")
     public ResponseEntity<String> syncDelete(@PathVariable String msId) {
+        IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), msId);
 
-        return ResponseEntity.ok("ok");
+        return ResponseEntity.badRequest().body("not yet implemented");
     }
 
 }

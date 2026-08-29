@@ -13,6 +13,7 @@ import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
 import fr.monkeynotes.mn.monitoring.SupplyAsync;
 import fr.monkeynotes.mn.service.*;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,17 +203,14 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
         if(optInputFolderId.isPresent()) {
             //root folder is defined as a parameter, just retrieve the correponding file
             Optional<EntityFile> optRootFolder = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), optInputFolderId.get()));
-            //todo better error management / global error management
-            rootFolder = optRootFolder.orElseThrow(() -> new IllegalStateException("Root folder not found"));
+            if(optRootFolder.isEmpty()) {
+                rootFolder = createRootFolder();
+            } else {
+                rootFolder = optRootFolder.get();
+            }
         } else {
             //root folder is undefined, create it as a file and a preference
-            String msId = createMonkeySyncId(ROOT_FOLDER);
-            rootFolder = new EntityFile()
-                    .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), msId))
-                    .setType(FileType.folder)
-                    .setName(ROOT_FOLDER);
-            repositoryFile.save(rootFolder);
-            preferencesService.setInputFolderId(msId);
+            rootFolder = createRootFolder();
         }
 
         String[] folders = path.split("/");
@@ -231,6 +229,20 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
         }
         return parentId;
     }
+
+    @NotNull
+    private EntityFile createRootFolder() {
+        EntityFile rootFolder;
+        String msId = createMonkeySyncId(ROOT_FOLDER);
+        rootFolder = new EntityFile()
+                .setIdFile(IdFile.createIdFile(authService.getUsernameFromContext(), msId))
+                .setType(FileType.folder)
+                .setName(ROOT_FOLDER);
+        repositoryFile.save(rootFolder);
+        preferencesService.setInputFolderId(msId);
+        return rootFolder;
+    }
+
     private EntityFile findOrCreateFolder(String id, String path, String parentId) {
 
         IdFile idFile = IdFile.createIdFile(authService.getUsernameFromContext(), id);

@@ -203,7 +203,7 @@ public class MonkeySyncServiceImpl implements MonkeySyncService {
         if(optInputFolderId.isPresent()) {
             //root folder is defined as a parameter, just retrieve the correponding file
             Optional<EntityFile> optRootFolder = repositoryFile.findById(IdFile.createIdFile(authService.getUsernameFromContext(), optInputFolderId.get()));
-            if(optInputFolderId.isEmpty()) {
+            if(optRootFolder.isEmpty()) {
                 rootFolder = createRootFolder();
             } else {
                 rootFolder = optRootFolder.get();

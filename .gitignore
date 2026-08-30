@@ -62,20 +62,22 @@ node_modules
 /ui/env.js
 /ui/index.html
 /ui/dist/
-/docker/nginx-dist/dist/
+/docker-legacy/nginx-dist/dist/
 
-/docker/api/mn-api.jar
-/docker/compose/data/nginx/www-ui
-/docker/compose/data/postgres
-/docker/compose/data/logs
-/docker/compose/data/mn_data
+/docker-legacy/api/mn-api.jar
+/docker-legacy/compose/data/nginx/www-ui
+/docker-legacy/compose/data/postgres
+/docker-legacy/compose/data/logs
+/docker-legacy/compose/data/mn_data
 /docker/compose/data/traefik/certs/*.pem
 /docker/compose/data/traefik/certs/*.key
 
 
+/docker/compose/.env-monkey-dist
+/docker/api/app.jar
+/docker-legacy/compose/docker-compose.yml.dev
+/docker-legacy/vite-server/ui/
 
+/docker-legacy/compose/.env-vps-mn
 
-/docker/compose/docker-compose.yml.dev
-/docker/vite-server/ui/
-
-/docker/compose/.env-vps-mn
+.gradle-docker

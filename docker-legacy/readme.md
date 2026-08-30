@@ -1,14 +1,3 @@
-TODO : adapt to buildV3
-
-# deploy
-
-* copy compose / edit
-* set proper profile (dist at least)
-* update .env
-* copy certs (cloudflare origin)
-* update nginx/app-run.conf
-* update env.js
-
 # config
 
 ## env.js

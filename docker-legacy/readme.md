@@ -1,19 +1,9 @@
-TODO : adapt to buildV3
-
-# deploy
-
-* copy compose / edit
-* set proper profile (dist at least)
-* update .env
-* copy certs (cloudflare origin)
-
 # config
 
 ## env.js
 
 local dev : ui/public/env.js
 dist server (nginx) : compose mounted volume docker/compose/data/nginx/env.js
-  no longer needs editing - API_URL is the relative '/api/', same origin via traefik
 non-dist server (vite) : TODO mount env.js instead of modifying /ui/public/env.js
 
 # containers
@@ -37,8 +27,8 @@ nginx container to run vue ui  (server usage with compose)
 using ui dist/ version
 
 - Dockerfile
-- app-run.conf : nginx config file, no values to set up
-  - no server_name : sole server block = default server, traefik already routed by Host
+- app-run.conf : nginx config file with values to setup
+  - server_name <<YOUR_DOMAIN>>;
 - dist/ : ui dist version (copied by script)
 
 

@@ -1,3 +1,5 @@
 window._env_ = {
-    API_URL: 'https://<<YOUR_DOMAIN>>/api/',
+    // Same origin: Traefik routes ${HOST}/api to the api service,
+    // so no hostname needs substituting at deploy time.
+    API_URL: '/api/',
 };

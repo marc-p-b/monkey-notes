@@ -38,8 +38,8 @@ app:
   paths:
     user_data: /mn_data
   url:
-    frontend: ${YOUR_DOMAIN}
-    self: ${YOUR_DOMAIN_API} #NOTE THE TRAILING API (nginx proxying)
+    frontend: ${DOMAIN}
+    self: ${DOMAIN_API} #NOTE THE TRAILING API (nginx proxying)
   notify:
     path: /notify
   oauth-callback:

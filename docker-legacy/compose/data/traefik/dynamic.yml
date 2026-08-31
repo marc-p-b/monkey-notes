@@ -1,4 +1,0 @@
-tls:
-  certificates:
-    - certFile: /etc/traefik/certs/cloudflare-origin.pem
-      keyFile: /etc/traefik/certs/cloudflare-origin.key

@@ -5,6 +5,7 @@ import fr.monkeynotes.mn.data.AuthRequest;
 import fr.monkeynotes.mn.data.AuthResponse;
 import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.data.entity.EntityUser;
+import fr.monkeynotes.mn.data.event.UserCreatedEvent;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import fr.monkeynotes.mn.service.UserService;
 import org.slf4j.Logger;
@@ -17,7 +18,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +36,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -155,6 +161,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
+    @Transactional
     public String createNewUser(DtoUser dtoUser) {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(dtoUser.getUsername());
         if(optionalEntityUser.isPresent() == true) {
@@ -172,6 +179,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
                 .setRoles(roles);
         repositoryUser.save(u);
+
+        //seeds default preferences ; an event keeps the bean graph acyclic (see UserCreatedEvent)
+        //@Transactional above means the user and those preferences commit together
+        eventPublisher.publishEvent(new UserCreatedEvent(u.getUsername()));
+
         return rndPassword;
     }
 }

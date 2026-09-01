@@ -13,7 +13,9 @@ public interface PreferencesService {
     void setPreference(DtoPreferences prefs);
     void resetPreference();
     boolean isParametersSet();
+    boolean isParametersSet(String username);
     boolean isParametersNotSet();
+    void initPreferencesIfMissing(String username);
     String getPreference(PreferenceKey configKey) throws ServiceException;
     Optional<String> getPreferenceOpt(PreferenceKey configKey);
     boolean getPreferenceAsBoolean(PreferenceKey configKey) throws ServiceException;

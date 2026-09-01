@@ -6,6 +6,7 @@ import fr.monkeynotes.mn.data.entity.EntityPreferences;
 import fr.monkeynotes.mn.data.entity.EntityPreferencesId;
 import fr.monkeynotes.mn.data.enums.PreferenceKey;
 import fr.monkeynotes.mn.data.enums.SyncOption;
+import fr.monkeynotes.mn.data.event.UserCreatedEvent;
 import fr.monkeynotes.mn.data.repository.RepositoryConfig;
 import fr.monkeynotes.mn.service.AuthService;
 import fr.monkeynotes.mn.service.PreferencesService;
@@ -14,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -151,9 +153,39 @@ public class PreferencesServiceImpl implements PreferencesService {
     }
 
     public boolean isParametersSet() {
-        EntityPreferencesId entityConfigId = new EntityPreferencesId(authService.getUsernameFromContext(), PreferenceKey.set);
+        return isParametersSet(authService.getUsernameFromContext());
+    }
+
+    @Override
+    public boolean isParametersSet(String username) {
+        EntityPreferencesId entityConfigId = new EntityPreferencesId(username, PreferenceKey.set);
         Optional<EntityPreferences> optEntity = repositoryConfig.findByConfigId(entityConfigId);
         return optEntity.isPresent();
+    }
+
+    /**
+     * Seeds the default preferences for a freshly created account.
+     *
+     * Guarded rather than unconditional: initPreferences() ends in a saveAll() that
+     * overwrites by primary key, so an unguarded re-run would silently reset a user
+     * who had already configured themselves.
+     *
+     * Deliberately takes the username as a parameter and never touches
+     * authService.getUsernameFromContext() - the caller is either an admin creating
+     * someone else's account, or the startup bootstrap where no security context exists.
+     */
+    @Override
+    public void initPreferencesIfMissing(String username) {
+        if (isParametersSet(username)) {
+            return;
+        }
+        LOGGER.info("Seeding default preferences for user {}", username);
+        initPreferences(username);
+    }
+
+    @EventListener
+    public void onUserCreated(UserCreatedEvent event) {
+        initPreferencesIfMissing(event.username());
     }
 
     public boolean isParametersNotSet() {

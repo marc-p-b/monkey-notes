@@ -1,5 +1,7 @@
 package fr.monkeynotes.mn.service.impl;
 
+import fr.monkeynotes.mn.data.event.UserCreatedEvent;
+
 import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.EntityUser;
 import fr.monkeynotes.mn.data.entity.IdFile;
@@ -11,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -72,6 +75,9 @@ public class UtilsServiceImpl implements UtilsService {
     @Autowired
     private RepositoryConfig repositoryConfig;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     @EventListener(ApplicationReadyEvent.class)
     public void initUsers() {
         String envInitUser = environment.getProperty("INIT_USERS");
@@ -93,6 +99,11 @@ public class UtilsServiceImpl implements UtilsService {
                     .setPassword(new BCryptPasswordEncoder().encode(rndPassword))
                     .setRoles("USER,ADMIN");
             repositoryUser.save(u1);
+
+            //same seeding path as a normal account creation ; note this runs on
+            //ApplicationReadyEvent where there is no security context, which is why
+            //the seeding is username-parameterised rather than context-bound
+            eventPublisher.publishEvent(new UserCreatedEvent(u1.getUsername()));
         }
     }
 

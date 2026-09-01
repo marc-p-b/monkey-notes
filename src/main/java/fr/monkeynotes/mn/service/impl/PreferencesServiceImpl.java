@@ -31,6 +31,9 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Autowired
     private RepositoryConfig repositoryConfig;
 
+    @Value("${app.defaults.sync-option}")
+    private SyncOption dftSyncOption;
+
     @Value("${app.defaults.qwen.prompt}")
     private String dftOCRPrompt;
 
@@ -163,7 +166,7 @@ public class PreferencesServiceImpl implements PreferencesService {
 
         DtoPreferences dtoprefs = new DtoPreferences()
                 .setInputFolderId("")
-                .setSyncOption(SyncOption.none)
+                .setSyncOption(dftSyncOption)
                 .setQwenConnectTimeout(dftQwenConnectTimeout)
                 .setQwenReadTimeout(dftQwenReadTimeout)
                 .setOcrMaxTokens(dftQwenMaxTokens)

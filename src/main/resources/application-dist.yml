@@ -45,6 +45,9 @@ app:
   oauth-callback:
     path: /grant-callback
   defaults:
+    # Sync method a user's preferences are seeded with on first use.
+    # One of the SyncOption enum constants: none | gdrive | monkey
+    sync-option: monkey
     image:
       resize:
         max:

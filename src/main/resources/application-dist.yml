@@ -6,7 +6,7 @@ spring:
     password: ${DB_PASSWORD}
     hikari.auto-commit: false
   jpa:
-    hibernate.ddl-auto: update
+    hibernate.ddl-auto: ${DDL_AUTO}
     properties.hibernate.jdbc.time_zone: UTC
   servlet:
     multipart:

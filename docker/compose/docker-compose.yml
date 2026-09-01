@@ -96,6 +96,7 @@ services:
       - DB_URL=${DB_URL}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - DDL_AUTO=${DDL_AUTO}
       - EMAIL_ENABLE=${EMAIL_ENABLE}
       - EMAIL_SENDER=${EMAIL_SENDER}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

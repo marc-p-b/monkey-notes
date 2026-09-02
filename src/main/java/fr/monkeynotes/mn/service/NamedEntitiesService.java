@@ -1,10 +1,75 @@
 package fr.monkeynotes.mn.service;
 
 import fr.monkeynotes.mn.data.CompletionResponse;
+import fr.monkeynotes.mn.data.dto.DtoNamedEntity;
+import fr.monkeynotes.mn.data.entity.EntityNamedEntity;
+import fr.monkeynotes.mn.data.entity.EntityNamedEntityIndex;
+import fr.monkeynotes.mn.data.entity.IdNamedEntityIndex;
+import fr.monkeynotes.mn.data.repository.RepositoryNamedEntity;
+import fr.monkeynotes.mn.data.repository.RepositoryNamedEntityIndex;
+import fr.monkeynotes.mn.utils.TranscriptUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-public interface NamedEntitiesService {
-    void saveNamedEntities(String fileId, List<CompletionResponse> listCompletionResponse);
-    void saveNamedEntitiesFromContent(String fileId, int pageNumber, String content);
+@Service
+public class NamedEntitiesService {
+    private Logger LOG = LoggerFactory.getLogger(NamedEntitiesService.class);
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private RepositoryNamedEntity repositoryNamedEntity;
+
+    @Autowired
+    private RepositoryNamedEntityIndex repositoryNamedEntityIndex;
+
+    public void saveNamedEntities(String fileId, List<CompletionResponse> listCompletionResponse) {
+
+        List<EntityNamedEntity> namedEntities = new ArrayList<>();
+        for (CompletionResponse completionResponse : listCompletionResponse) {
+            saveNamedEntitiesFromContent(completionResponse.getFileId(), completionResponse.getPageNumber(), completionResponse.getTranscript());
+        }
+        repositoryNamedEntity.saveAll(namedEntities);
+    }
+
+    public void saveNamedEntitiesFromContent(String fileId, int pageNumber, String content) {
+        List<EntityNamedEntity> namedEntities = new ArrayList<>();
+        //remove namedEntities associated to this page
+        repositoryNamedEntity.delete(authService.getUsernameFromContext(), fileId, pageNumber);
+
+        List<DtoNamedEntity> listNE = new ArrayList<>();
+        listNE.addAll(TranscriptUtils.identifyNamedIdentities(content));
+        listNE.addAll(TranscriptUtils.identifyTitles(content));
+
+        for (DtoNamedEntity namedEntity : listNE) {
+            LOG.info("Pages {} namedentity {}", pageNumber, namedEntity);
+            namedEntities.add(namedEntity.toEntity(authService.getUsernameFromContext(), fileId, pageNumber));
+            indexNamedEntity(namedEntity);
+        }
+
+        repositoryNamedEntity.saveAll(namedEntities);
+    }
+
+    private void indexNamedEntity(DtoNamedEntity dtoNamedEntity) {
+        if(dtoNamedEntity.getVerb().isIndexable() == false) {
+            return;
+        }
+        IdNamedEntityIndex idNamedEntityIndex = new IdNamedEntityIndex()
+                .setUsername(authService.getUsernameFromContext())
+                .setVerb(dtoNamedEntity.getVerb())
+                .setValue(dtoNamedEntity.getValue());
+
+        //orElseGet, not orElse: orElse's argument is evaluated unconditionally, so the save ran on
+        //every call and reset createdAt to now() even for an entity that already existed
+        repositoryNamedEntityIndex.findById(idNamedEntityIndex)
+                .orElseGet(() -> repositoryNamedEntityIndex.save(new EntityNamedEntityIndex()
+                        .setIdNamedEntityIndex(idNamedEntityIndex).setCreatedAt(OffsetDateTime.now())));
+    }
 }

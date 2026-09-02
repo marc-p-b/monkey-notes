@@ -594,3 +594,60 @@ Not changed, same defect one endpoint away: `UtilsServiceImpl.deleteAllData()` (
 `deleteAll()` on seven repositories and wipes every account. It can now reuse the same
 `deleteAllBy…_Username` methods; left alone because that endpoint's intended scope (per-user vs
 admin-wide) wasn't part of this task.
+
+## Collapsed 18 of the 21 one-to-one service interfaces
+
+Every interface in `service/` had exactly one implementation in `service/impl/` and no external
+implementer, and none of them was technically required: Boot defaults to
+`spring.aop.proxy-target-class=true`, so `@Transactional`, `@Async`, `@Scheduled`, the
+`ctx.getBean(X.class)` calls in `tasks/*` and both `@annotation(...)` aspects in `monitoring/` all
+work on plain classes. Evidence the split had already stopped being a contract: `AuthService`
+imported its own implementation (`AuthServiceImpl.UserData` as a return type), and 7 impls carried
+public methods the interface never declared — mostly `@EventListener` / `@PreDestroy` / `@Scheduled`
+methods Spring calls directly, i.e. the load-bearing parts were outside the "contract" anyway.
+
+- **18 collapsed, the Drive trio kept.** `DriveService`, `DriveUtilsService` and
+  `DriveChangeManagerService` stay interfaces to mark the boundary of the deactivable Drive module
+  (`app.drive.enabled` in the upgrade list above); their impls stay in `service/impl/` alongside
+  `SecurityConfig`, so no empty package is left behind. Note an interface is *not* what that toggle
+  needs — `@ConditionalOnProperty` breaks injection either way; the real seam there is a future
+  `SyncSourceStrategy` with two implementations, which is a new interface, not one of these.
+- **The class reuses the interface's exact fully-qualified name.** `service/impl/ExportServiceImpl`
+  became `service/ExportService`, so every `import fr.monkeynotes.mn.service.ExportService` and every
+  `@Autowired private ExportService` in `controller/`, `tasks/`, `interceptor/` and the surviving
+  Drive impls is untouched. Bean types, bean names and the injection graph are identical, so the
+  `AuthService -> UserService -> PreferencesService` cycle documented in
+  `src/main/java/fr/monkeynotes/mn/CLAUDE.md` is neither fixed nor worsened. Per file: package line,
+  class declaration, ~94 now-meaningless `@Override`s, the `getLogger(...Impl.class)` argument, and
+  the imports that now resolve to the class's own package.
+- **Consequence of reusing the FQN, worth knowing before you `git log`:** the new `service/X.java` is
+  a heavy modification of the *interface's* history, and `service/impl/XImpl.java` shows as a plain
+  delete — git can't pair them as a rename because the destination path already existed. The impl's
+  history stops at its old path; `git log --follow src/.../service/ExportService.java` traces the
+  interface, not the implementation.
+
+### Four things that would have broken silently
+
+- **`QuickNoteService.QUICKNOTE_PAGE_NUMBER` was declared on the interface**, therefore implicitly
+  `public static final`, and referenced *bare* four times inside the impl (inherited) plus qualified
+  from `NamedEntityController:109`. Deleting the interface would have deleted the constant. It is now
+  `public static final int` on the class, keeping both reference styles working.
+- **`AuthServiceImpl.UserData`** (nested record) is now `AuthService.UserData` — the only call-site
+  churn in the sweep, three lines in `AuthController` (import + `:45` + `:46`).
+- **`UserServiceImpl implements UserService, UserDetailsService`** — the Spring Security interface
+  stays, so `loadUserByUsername` keeps its `@Override` while the other 7 in that file were stripped.
+- **Javadoc only ever lived on two interfaces** (`QuickNoteService`, `SearchService`) and would have
+  been thrown away with them; carried onto the class and its methods.
+
+Also renamed in prose: the bean-graph javadoc on `data/event/UserCreatedEvent`, and a `SecurityConfig`
+comment pointing at `QwenServiceImpl`. The backlog and older entries in this file still use the old
+`XServiceImpl` names — left as written, since they are a record; read `XServiceImpl` as `XService`.
+
+**Verification — read this before trusting it: the build was NOT run.** The change was made and
+checked statically only, at the user's instruction. What was verified: 21 `@Service` beans under
+`service/` before and after (a dropped annotation is the one error that compiles and then fails at
+startup); zero remaining references to any of the 18 `*Impl` names in Java sources; zero
+`import fr.monkeynotes.mn.service.impl` anywhere; every file's declared type matches its filename;
+exactly one `@Override` left in the 18 files (`UserService.loadUserByUsername`); no string literal
+touched by the token rename; brace balance unchanged from `HEAD` per file. **Still to do: `mvn clean
+package`, then start the stack (`docker/compose`) and confirm no `UnsatisfiedDependencyException`.**

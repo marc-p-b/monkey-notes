@@ -1,9 +1,148 @@
 package fr.monkeynotes.mn.service;
 
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.CompletionResponse;
+import fr.monkeynotes.mn.data.enums.PreferenceKey;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.URL;
+import java.util.Arrays;
 
-public interface QwenService {
-    CompletionResponse analyzeImage(String fileId, URL imageURL);
+@Service
+public class QwenService {
+    private Logger LOG = LoggerFactory.getLogger(QwenService.class);
+
+    @Value("${app.qwen.url}")
+    private String qwenApiUrl;
+
+    @Value("${app.qwen.key}")
+    private String qwenApiKey;
+
+    @Value("${app.dry-run:false}")
+    private boolean dryRun;
+
+    @Autowired
+    private PreferencesService preferencesService;
+
+    @Autowired
+    private ImageService imageService;
+
+    private CompletionResponse analyzeImage(String fileId, URL imageURL, String model, String prompt) {
+        LOG.info("Qwen request analyse model {} prompt [{}] image {}", model, prompt, imageURL);
+
+        if(dryRun) {
+            LOG.warn("Qwen request dry run");
+            return new CompletionResponse(fileId, 0, "dryrun", 0, 0, "transcript from " + imageURL + "(dry-run)");
+        }
+
+        int maxTokens = 0;
+        try {
+            maxTokens = preferencesService.getPreferenceAsInt(PreferenceKey.qwenMaxTokens);
+        } catch (ServiceException e) {
+            LOG.warn("ModelMaxTokens not set", e);
+        }
+
+        CompletionResponse completionResponse = new CompletionResponse(fileId);
+        long start = System.currentTimeMillis();
+        try {
+            JSONObject content1_url = new JSONObject();
+
+            content1_url.put("url", imageURL);
+
+            JSONObject content1 = new JSONObject();
+            content1.put("type", "image_url");
+            // if using api url image, mimage must be public, see SecurityConfig)
+            //content1.put("image_url", content1_url);
+            content1.put("image_url", "data:image/png;base64," + imageService.imageAsBase64(imageURL));
+
+            JSONObject content2 = new JSONObject();
+            content2.put("type", "text");
+            content2.put("text", prompt);
+
+            JSONObject messages = new JSONObject();
+            messages.put("role", "user");
+            messages.put("content", Arrays.asList(content1, content2));
+
+            JSONObject requestBody = new JSONObject();
+
+            requestBody.put("model", model);
+            requestBody.put("messages", Arrays.asList(messages));
+
+            requestBody.put("max_tokens", maxTokens);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + qwenApiKey);
+
+            String respBody = "";
+            HttpEntity<String> requestEntity = new HttpEntity<>(requestBody.toString(), headers);
+            ResponseEntity<String> response = null;
+            try {
+                response = createRestTemplate().exchange(qwenApiUrl, HttpMethod.POST, requestEntity, String.class);
+                respBody = response.getBody();
+            } catch (RuntimeException e) {
+                if(response.getStatusCode().equals(HttpStatus.UNAUTHORIZED)) {
+                    //probably caused by bad/expired token
+                }
+                throw new ServiceException("Failed to execute Qwen API http status : " + response.getStatusCode(), e);
+            }
+            long took = System.currentTimeMillis() - start;
+
+            DocumentContext context = JsonPath.parse( respBody);
+
+            String content = context.read("$.choices[0].message.content");
+            String usedModel = context.read("$.model");
+            int completion_tokens = context.read("$.usage.completion_tokens");
+            int prompt_tokens = context.read("$.usage.prompt_tokens");
+
+            completionResponse = new CompletionResponse(fileId, took, usedModel, prompt_tokens, completion_tokens, content);
+
+        } catch (Exception e) {
+            LOG.error("Failed request model", e);
+            completionResponse = completionResponse.failed(fileId, e.getMessage())
+                    .setAiModel(model)
+                    .setTranscriptTook(System.currentTimeMillis() - start);
+        }
+        return completionResponse;
+    }
+
+    public RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+
+        try {
+            factory.setConnectTimeout(preferencesService.getPreferenceAsInt(PreferenceKey.qwenConnectTimeout)); // milliseconds
+        } catch (ServiceException e) {
+            LOG.warn("AiConnectTimeout not set", e);
+        }
+        try {
+            factory.setReadTimeout(preferencesService.getPreferenceAsInt(PreferenceKey.qwenReadTimeout)); // milliseconds
+        } catch (ServiceException e) {
+            LOG.warn("AiReadTimeout not set", e);
+        }
+
+        return new RestTemplate(factory);
+    }
+
+    public CompletionResponse analyzeImage(String fileId, URL imageURL) {
+        String model2use = null;
+        String prompt2use = null;
+        try {
+            model2use = preferencesService.getPreference(PreferenceKey.selectedOcrModel);
+            prompt2use = preferencesService.getPreference(PreferenceKey.ocrPrompt);
+        } catch (ServiceException e) {
+            LOG.warn("Model / Prompt not set", e);
+        }
+        return analyzeImage(fileId, imageURL, model2use, prompt2use);
+
+    }
 }

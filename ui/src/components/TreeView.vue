@@ -1,5 +1,15 @@
 <template>
-  <ul class="tree-root">
+  <div v-if="error" class="empty-state">
+    <i class="pi pi-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <div v-else-if="!loading && sortedNodes.length === 0" class="empty-state">
+    <i class="pi pi-info-circle"></i>
+    No documents yet — notes synced from your tablet appear here once processed
+  </div>
+
+  <ul v-else class="tree-root">
     <TreeNode
         v-for="node in sortedNodes"
         :key="node.dtoFile.fileId"
@@ -43,6 +53,9 @@ const props = withDefaults(defineProps<{
 
 const nodes = ref<Node[]>([])
 const error = ref<string | null>(null)
+//starts true because a root fetch always fires on mount: without it the empty state renders for
+//one frame before the first response lands
+const loading = ref(true)
 
 const sortedNodes = computed(() => sortNodes(nodes.value, props.orderBy, props.orderDir))
 
@@ -59,7 +72,12 @@ const handleTranscriptClick = (fileId: string | number) => {
 };
 
 async function fetchFolder(node: Node | null) {
+  const isRoot = node === null
   emit("loading-status", true);
+  if (isRoot) {
+    loading.value = true
+    error.value = null
+  }
   try {
     const url = node ? "transcript/folder/list/" + node.dtoFile.fileId : "transcript/folder/list"
     const response = await authFetch(url);
@@ -71,8 +89,15 @@ async function fetchFolder(node: Node | null) {
     }
   } catch (err: any) {
     console.error(err);
-    error.value = "Failed to load transcripts.";
+    //only a failed root fetch replaces the panel — a subfolder that fails to expand must not
+    //blank out the tree that is already on screen
+    if (isRoot) {
+      error.value = "Failed to load documents.";
+    }
   } finally {
+    if (isRoot) {
+      loading.value = false
+    }
     emit("loading-status", false);
   }
 }
@@ -87,5 +112,15 @@ onMounted(() => {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* same declaration as QuickNotesView.vue / NamedEntitiesView.vue, which each keep their own copy */
+.empty-state {
+  color: var(--p-surface-400);
+  font-size: 0.875rem;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>

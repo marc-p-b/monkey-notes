@@ -651,3 +651,39 @@ startup); zero remaining references to any of the 18 `*Impl` names in Java sourc
 exactly one `@Override` left in the 18 files (`UserService.loadUserByUsername`); no string literal
 touched by the token rename; brace balance unchanged from `HEAD` per file. **Still to do: `mvn clean
 package`, then start the stack (`docker/compose`) and confirm no `UnsatisfiedDependencyException`.**
+
+## Empty document tree is an empty state, not an error
+
+`ViewService.listRootLevel()` logged `ERROR ... Failed to list root level` with a full stack trace
+(`ServiceException: Folder not found id `, note the blank id) on **every** root listing for an
+account that had never synced, then returned an empty list — so the endpoint answered `200 []` and
+the UI drew an empty panel with no explanation. Two separate defects: a normal state reported as a
+failure, and no empty state in the tree.
+
+- `getRootFolder()` threw for three different non-exceptional conditions (preferences never
+  initialised, `inputFolderId` set but blank, id pointing at a folder no longer in the database) and
+  both callers immediately caught and discarded it. Replaced by `findRootFolder()` returning
+  `Optional<EntityFile>`, built on the existing `PreferencesService.getPreferenceOpt()` rather than
+  `getPreference()` + try/catch — which is what removes the throw at the source rather than moving
+  the catch. `listAllNodes()`/`listRootLevel()` are now `findRootFolder().map(...).orElseGet(...)`,
+  and the ERROR log is gone entirely; there is nothing left to report.
+- `TreeView.vue` grew the `.empty-state` block the other views use: *"No documents yet — notes synced
+  from your tablet appear here once processed"*, worded to be true for all three causes above since
+  the frontend can't distinguish them (the endpoint returns a bare list). Distinguishing them would
+  need a richer payload than `List<FileNode>`, which the message avoids needing.
+- **The component already had an `error` ref that was set on a failed fetch and never rendered
+  anywhere** — dead state since it was written. Now displayed, with `pi-exclamation-triangle`, so a
+  genuine load failure is visually distinct from an empty account instead of both showing nothing.
+- Error handling is now scoped to the root fetch (`isRoot`): `fetchFolder()` is shared between the
+  root listing and subfolder expansion, and surfacing a child's failure through the same `error` ref
+  would blank out the tree already on screen. A failed expansion still only logs to the console, as
+  before.
+- `loading` starts `true` because a root fetch always fires on mount — otherwise the empty state
+  renders for one frame before the first response lands. TreeView keeps no spinner of its own; it
+  still reports upward through `loading-status` to Home's global one.
+
+Verified statically only, not built (`mvn` not run, per instruction): types checked by hand against
+`getPreferenceOpt` → `Optional<String>`, `idFile(String)` → `IdFile`,
+`repositoryFile.findById(IdFile)` → `Optional<EntityFile>`; `LOG` still has 6 other uses in the file;
+`java.util.*` already covers `Collections`/`Optional`. **Still to do: rebuild, then load Home on an
+account with no synced documents and confirm the message replaces the silent empty panel.**

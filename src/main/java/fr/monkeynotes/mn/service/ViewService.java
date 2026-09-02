@@ -149,32 +149,30 @@ public class ViewService {
         return files;
     }
 
-    EntityFile getRootFolder() throws ServiceException {
-        String inboundFolderId = preferencesService.getPreference(PreferenceKey.inputFolderId);
-
-        Optional<EntityFile> optFolder = repositoryFile.findById(idFile(inboundFolderId));
-        if(optFolder.isEmpty()) {
-            throw new ServiceException("Folder not found id " + inboundFolderId);
-        }
-
-        return optFolder.get();
+    /**
+     * Empty whenever the account has no usable input folder: preferences never initialised, no
+     * inputFolderId set yet (a fresh account that has never synced), or an id pointing at a folder
+     * that is no longer in the database. None of those is a failure — the callers turn it into an
+     * empty listing and the UI renders its "no documents yet" state — so this deliberately does not
+     * throw. It used to, which logged an ERROR with a stack trace on every root listing for any
+     * account that had not synced yet.
+     */
+    Optional<EntityFile> findRootFolder() {
+        return preferencesService.getPreferenceOpt(PreferenceKey.inputFolderId)
+                .filter(inboundFolderId -> inboundFolderId.isBlank() == false)
+                .flatMap(inboundFolderId -> repositoryFile.findById(idFile(inboundFolderId)));
     }
 
     public List<FileNode> listAllNodes() {
-        try {
-            return listFileNodesRecurs(getRootFolder());
-        } catch (ServiceException e) {
-            return Collections.emptyList();
-        }
+        return findRootFolder()
+                .map(rootFolder -> listFileNodesRecurs(rootFolder))
+                .orElseGet(Collections::emptyList);
     }
 
     public List<FileNode> listRootLevel() {
-        try {
-            return listLevel(getRootFolder().getIdFile().getFileId());
-        } catch (ServiceException e) {
-            LOG.error("Failed to list root level", e);
-        }
-        return Collections.emptyList();
+        return findRootFolder()
+                .map(rootFolder -> listLevel(rootFolder.getIdFile().getFileId()))
+                .orElseGet(Collections::emptyList);
     }
 
     public List<FileNode> listLevel(String folderId) {

@@ -5,12 +5,12 @@ import fr.monkeynotes.mn.data.AuthRequest;
 import fr.monkeynotes.mn.data.AuthResponse;
 import fr.monkeynotes.mn.data.dto.DtoUser;
 import fr.monkeynotes.mn.data.entity.EntityUser;
+import fr.monkeynotes.mn.data.enums.LogOperation;
 import fr.monkeynotes.mn.data.event.UserCreatedEvent;
 import fr.monkeynotes.mn.data.repository.RepositoryUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -38,6 +38,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private LogService logService;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -73,10 +76,12 @@ public class UserService implements UserDetailsService {
 
         if (ud != null && passwordEncoder.matches(request.getPassword(), ud.getPassword())) {
             LOG.info("Login username {} granted", request.getUsername());
+            logService.success(LogOperation.login);
             String token = jwtUtil.generateToken(ud);
             return Optional.of(new AuthResponse(token));
         }
         LOG.warn("Login username {} refused", request.getUsername());
+        logService.failure(LogOperation.login);
         return Optional.empty();
     }
 
@@ -121,22 +126,21 @@ public class UserService implements UserDetailsService {
     }
 
     public void setUserPassowrd(String username, String password) {
-
-
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(username);
         if(optionalEntityUser.isPresent() == false) {
+            logService.failure(LogOperation.passwordChanged, "Unknown user ");
             throw new UsernameNotFoundException("Unknown user "+ username);
         }
-
         EntityUser userEntity = optionalEntityUser.get();
-
         userEntity.setPassword(passwordEncoder.encode(password));
         repositoryUser.save(userEntity);
+        logService.success(LogOperation.passwordChanged);
     }
 
     public Set<String> setUserAsAdmin(String username) {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(username);
         if(optionalEntityUser.isPresent() == false) {
+            logService.failure(LogOperation.promoteAdmin, "Unknown user ");
             throw new UsernameNotFoundException("Unknown user "+ username);
         }
 
@@ -150,6 +154,7 @@ public class UserService implements UserDetailsService {
             userEntity.setRoles(ROLE_ADMIN + "," + ROLE_USER);
         }
         repositoryUser.save(userEntity);
+        logService.success(LogOperation.promoteAdmin);
         return rolesSet;
     }
 
@@ -158,11 +163,11 @@ public class UserService implements UserDetailsService {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(dtoUser.getUsername());
         if(optionalEntityUser.isPresent() == true) {
             LOG.warn("User {} already exists", dtoUser.getUsername());
-            throw new UsernameNotFoundException("User already exists" );
+            logService.failure(LogOperation.createUser, "User already exists");
+            throw new UsernameNotFoundException("User already exists");
         }
 
         String rndPassword = UUID.randomUUID().toString();
-
         String roles = ROLE_USER + (dtoUser.isAdmin() ? "," + ROLE_ADMIN : "");
 
         EntityUser u = new EntityUser()
@@ -175,6 +180,8 @@ public class UserService implements UserDetailsService {
         //seeds default preferences ; an event keeps the bean graph acyclic (see UserCreatedEvent)
         //@Transactional above means the user and those preferences commit together
         eventPublisher.publishEvent(new UserCreatedEvent(u.getUsername()));
+
+        logService.success(LogOperation.createUser);
 
         return rndPassword;
     }

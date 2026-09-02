@@ -24,13 +24,13 @@ public class LogService {
     @Autowired
     private AuthService authService;
 
-    public void log(LogOperation operation, Map<String, String> message) {
+    public void log(LogOperation operation, Map<String, Object> keyValues) {
 
         ObjectMapper mapper = new ObjectMapper();
         String jsonValue = "{}";
 
         try {
-            jsonValue = mapper.writeValueAsString(message);
+            jsonValue = mapper.writeValueAsString(keyValues);
         } catch (JsonProcessingException e) {
             LOG.error("Failed to convert message items to json", e);
         }
@@ -46,5 +46,29 @@ public class LogService {
 
     public void log(LogOperation operation) {
         log(operation, new HashMap());
+    }
+
+    public void success(LogOperation operation) {
+        log(operation, Map.of("status", "success"));
+    }
+
+    public void success(LogOperation operation, String message) {
+        log(operation, Map.of("status", "success", "message", message));
+    }
+
+    public void warn(LogOperation operation) {
+        log(operation, Map.of("status", "warning"));
+    }
+
+    public void warn(LogOperation operation, String message) {
+        log(operation, Map.of("status", "warning", "message", message));
+    }
+
+    public void failure(LogOperation operation) {
+        log(operation, Map.of("status", "failure"));
+    }
+
+    public void failure(LogOperation operation, String message) {
+        log(operation, Map.of("status", "failure", "message", message));
     }
 }

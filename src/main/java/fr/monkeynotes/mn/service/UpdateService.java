@@ -98,6 +98,8 @@ public class UpdateService {
     @Autowired
     private ThreadPoolTaskScheduler taskScheduler;
 
+    @Autowired
+    private LogService logService;
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {

@@ -39,5 +39,10 @@ public interface RepositoryNamedEntity extends JpaRepository<EntityNamedEntity, 
 
     //TODO add username
     long countByValue(String value);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM named_entity n where n.idNamedEntity.username = :username")
+    void deleteAllByIdNamedEntity_Username(@Param("username") String username);
 }
 

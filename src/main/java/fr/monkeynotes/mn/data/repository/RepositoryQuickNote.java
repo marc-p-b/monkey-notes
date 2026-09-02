@@ -3,7 +3,11 @@ package fr.monkeynotes.mn.data.repository;
 import fr.monkeynotes.mn.data.entity.EntityQuickNote;
 import fr.monkeynotes.mn.data.entity.IdQuickNote;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +15,8 @@ import java.util.UUID;
 
 @Repository
 public interface RepositoryQuickNote extends JpaRepository<EntityQuickNote, IdQuickNote> {
+
+    List<EntityQuickNote> findAllByIdQuickNote_Username(String username);
 
     /**
      * The feed order: newest first, tombstones excluded.
@@ -29,4 +35,9 @@ public interface RepositoryQuickNote extends JpaRepository<EntityQuickNote, IdQu
      */
     List<EntityQuickNote> findByIdQuickNote_UsernameAndIdQuickNote_UuidInAndDeletedAtIsNull(
             String username, Collection<UUID> uuids);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM quicknote q where q.idQuickNote.username = :username")
+    void deleteAllByIdQuickNote_Username(@Param("username") String username);
 }

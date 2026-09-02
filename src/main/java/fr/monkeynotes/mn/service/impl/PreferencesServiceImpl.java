@@ -259,7 +259,7 @@ public class PreferencesServiceImpl implements PreferencesService {
     @Override
     @Transactional
     public void resetPreference() {
-        repositoryConfig.deleteByConfigId_Username(authService.getUsernameFromContext());
+        repositoryConfig.deleteAllByConfigId_Username(authService.getUsernameFromContext());
     }
 
 

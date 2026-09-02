@@ -2,6 +2,7 @@ package fr.monkeynotes.mn.data.dto;
 
 import fr.monkeynotes.mn.data.entity.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DtoExport {
@@ -12,6 +13,9 @@ public class DtoExport {
     private List<EntityNamedEntity> namedEntities;
     private List<EntityNamedEntityIndex> namedEntityIndexes;
     private List<EntityPreferences> preferences;
+    //defaulted, not left null: an export taken before quicknotes existed has no such key and
+    //Jackson leaves the field untouched, which the import then iterates over
+    private List<EntityQuickNote> quickNotes = new ArrayList<>();
 
     public List<EntityFile> getFiles() {
         return files;
@@ -73,6 +77,15 @@ public class DtoExport {
 
     public DtoExport setPreferences(List<EntityPreferences> preferences) {
         this.preferences = preferences;
+        return this;
+    }
+
+    public List<EntityQuickNote> getQuickNotes() {
+        return quickNotes;
+    }
+
+    public DtoExport setQuickNotes(List<EntityQuickNote> quickNotes) {
+        this.quickNotes = quickNotes;
         return this;
     }
 }

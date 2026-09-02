@@ -4,9 +4,11 @@ import fr.monkeynotes.mn.data.entity.EntityTranscript;
 import fr.monkeynotes.mn.data.entity.IdFile;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +22,9 @@ public interface RepositoryTranscript extends JpaRepository<EntityTranscript, Id
 
     @Query("SELECT t FROM transcript t where t.idFile.username = :username ORDER BY t.transcripted_at DESC")
     List<EntityTranscript> findRecentByIdFile_Username(@Param("username") String username, Pageable pageable);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM transcript t where t.idFile.username = :username")
+    void deleteAllByIdFile_Username(@Param("username") String username);
 }

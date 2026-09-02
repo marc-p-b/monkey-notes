@@ -551,3 +551,46 @@ The feed renders note bodies through `v-html`, exactly as `TranscriptPage.vue` h
 - Frontend needed no change: `Preferences.vue` renders whatever the API returns. Its local `syncOptions` array (`:233`) still duplicates the `SyncOption` enum's labels — pre-existing, left alone.
 - Part 2 of the plan (seeding preferences at account creation, so a new user has them before ever opening the Preferences page) was NOT implemented — only part 1 was requested. Without it, `getPreference()` still throws `ServiceException("Preferences not set")` for a never-visited user, which `MonkeySyncServiceImpl.java:77` absorbs via catch-as-control-flow.
 - Verified with `mvn compile` and by parsing both yaml files to confirm the key lands at `app.defaults.sync-option` with its siblings intact.
+
+## Import: drop the connected account's data only, not the whole database
+
+`ExportServiceImpl.dbLoad()` rewrote every imported id to the connected username and then called
+`deleteAll()` on eight repositories before saving. On a multi-user instance that wiped *every*
+account's transcripts, pages, diffs, named entities, quicknotes and preferences — a single user
+restoring a backup destroyed everyone else's library. Same defect the quicknote line added on top
+(`repositoryQuickNote.deleteAll()`).
+
+- The drop is now `dropUserData(connectedUsername)`, one `deleteAllBy…_Username` per repository, in
+  the same order as before (index → entities → diffs → pages → transcripts → files → quicknotes →
+  preferences). Kept as a private helper rather than inlined so the username scoping is stated once
+  and the `LOG.info` reports whose data went.
+- Each new delete is `@Modifying @Transactional @Query("DELETE FROM … where …username = :username")`,
+  matching the existing `RepositoryNamedEntity.delete(...)`. **Bulk JPQL rather than a derived
+  `deleteAllBy…` on purpose**: a derived delete loads the rows and queues `em.remove` calls, and
+  Hibernate's `ActionQueue` flushes inserts *before* deletes — so wrapping drop-then-save in one
+  transaction (or joining an outer one) would replay the account's own rows as PK collisions. The
+  bulk statement is issued when called, which is also why `importUserData` was deliberately *not*
+  made `@Transactional`: the import is still drop-commit-then-load, exactly as `deleteAll()` was.
+- `RepositoryConfig.deleteByConfigId_Username` was folded into the new
+  `deleteAllByConfigId_Username` (one method, one meaning); `PreferencesServiceImpl.resetPreference`
+  follows. Its `@Transactional` is now redundant but harmless.
+
+### Three bugs in the WIP quicknote export that this uncovered
+
+- `RepositoryQuickNote.findAllByIdFile_Username` was copy-pasted from a transcript repository —
+  `EntityQuickNote` has no `idFile`, so Spring Data would have failed the context at startup, not at
+  call time. Renamed to `findAllByIdQuickNote_Username`.
+- The import stamped `UUID.randomUUID()` into each note's id. **The uuid is the `fileId` its named
+  entities are keyed on** (`QuickNoteService.QUICKNOTE_PAGE_NUMBER` rows in `named_entity`), so
+  randomising it orphaned every imported note's tags/people while the entities themselves imported
+  fine — silent, and invisible until someone opened the tag view. Now keeps the original uuid, which
+  is also what makes a re-import idempotent now that the drop is scoped to the same account.
+- `DtoExport.quickNotes` defaults to an empty list. Any export taken before quicknotes existed has
+  no such key, Jackson leaves the field null, and `dbLoad` iterates it — i.e. every pre-existing
+  backup would have NPE'd on import.
+
+Not changed, same defect one endpoint away: `UtilsServiceImpl.deleteAllData()` (behind
+`DELETE /data/wipe`, the "Wipe all data" button on the per-user Preferences page) still calls
+`deleteAll()` on seven repositories and wipes every account. It can now reuse the same
+`deleteAllBy…_Username` methods; left alone because that endpoint's intended scope (per-user vs
+admin-wide) wasn't part of this task.

@@ -61,6 +61,9 @@ public class ExportServiceImpl implements ExportService {
     @Autowired
     private UtilsService utilsService;
 
+    @Autowired
+    private RepositoryQuickNote repositoryQuickNote;
+
     @Override
     public void export(OutputStream outputStream) throws IOException {
 
@@ -79,6 +82,8 @@ public class ExportServiceImpl implements ExportService {
                 .setPageDiffs(repositoryTranscriptPageDiff.findAllByIdTranscriptPageDiff_Username(username))
                 .setNamedEntities(repositoryNamedEntity.findAllByIdNamedEntity_Username(username))
                 .setNamedEntityIndexes(repositoryNamedEntityIndex.findAllByIdNamedEntityIndex_Username(username))
+
+                .setQuickNotes(repositoryQuickNote.findAllByIdQuickNote_Username(username))
 
                 .setPreferences(repositoryConfig.findAllByConfigId_Username(username));
 
@@ -205,20 +210,21 @@ public class ExportServiceImpl implements ExportService {
                                 f.getIdNamedEntityIndex().getVerb(),
                                 f.getIdNamedEntityIndex().getValue()));
                     });
+
+            dtoExport.getQuickNotes()
+                    .forEach(f -> {
+                        //the uuid is kept: it is the fileId the note's named entities are keyed on
+                        f.setIdQuickNote(IdQuickNote.createIdQuickNote(
+                                connectedUsername,
+                                f.getIdQuickNote().getUuid()));
+                    });
+
             dtoExport.getPreferences()
                     .forEach(f -> {
                         f.setConfigId(EntityPreferencesId.createConfigId(connectedUsername, f.getConfigId().getKey()));
                     });
 
-            repositoryNamedEntityIndex.deleteAll();
-            repositoryNamedEntity.deleteAll();
-            repositoryTranscriptPageDiff.deleteAll();
-            repositoryTranscriptPage.deleteAll();
-            repositoryTranscript.deleteAll();
-            repositoryFile.deleteAll();
-            repositoryConfig.deleteAll();
-
-            LOG.info("dropped all data");
+            dropUserData(connectedUsername);
 
             repositoryConfig.saveAll(dtoExport.getPreferences());
             repositoryFile.saveAll(dtoExport.getFiles());
@@ -227,18 +233,36 @@ public class ExportServiceImpl implements ExportService {
             repositoryTranscriptPageDiff.saveAll(dtoExport.getPageDiffs());
             repositoryNamedEntity.saveAll(dtoExport.getNamedEntities());
             repositoryNamedEntityIndex.saveAll(dtoExport.getNamedEntityIndexes());
+            repositoryQuickNote.saveAll(dtoExport.getQuickNotes());
 
-            LOG.info("loaded all data files {} transcripts {} pages {} pageDiffs {} namedEntity {} namedEntityIndexes {}",
+            LOG.info("loaded all data files {} transcripts {} pages {} pageDiffs {} namedEntity {} namedEntityIndexes {} quicknotes {}",
                     dtoExport.getFiles().size(),
                     dtoExport.getTranscripts().size(),
                     dtoExport.getPages().size(),
                     dtoExport.getPageDiffs().size(),
                     dtoExport.getNamedEntities().size(),
-                    dtoExport.getNamedEntityIndexes().size());
+                    dtoExport.getNamedEntityIndexes().size(),
+                    dtoExport.getQuickNotes().size());
 
         } catch (JsonParseException e) {
             LOG.error("Json Parse Exception", e);
         }
     }
 
+    /**
+     * An import replaces the content of the connected account only — a deleteAll() here would take
+     * every other account on the instance with it.
+     */
+    private void dropUserData(String username) {
+        repositoryNamedEntityIndex.deleteAllByIdNamedEntityIndex_Username(username);
+        repositoryNamedEntity.deleteAllByIdNamedEntity_Username(username);
+        repositoryTranscriptPageDiff.deleteAllByIdTranscriptPageDiff_Username(username);
+        repositoryTranscriptPage.deleteAllByIdTranscriptPage_Username(username);
+        repositoryTranscript.deleteAllByIdFile_Username(username);
+        repositoryFile.deleteAllByIdFile_Username(username);
+        repositoryQuickNote.deleteAllByIdQuickNote_Username(username);
+        repositoryConfig.deleteAllByConfigId_Username(username);
+
+        LOG.info("dropped all data of {}", username);
+    }
 }

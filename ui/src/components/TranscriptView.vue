@@ -18,6 +18,15 @@
           <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
           <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
           <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
+          <Button
+              :label="copyLabel"
+              :icon="copyIcon"
+              :severity="copyState === 'failed' ? 'danger' : 'secondary'"
+              size="small"
+              outlined
+              @click="(e) => copyMenu?.toggle(e)"
+          />
+          <Menu ref="copyMenu" :model="copyActionItems" popup />
         </div>
       </div>
 
@@ -126,7 +135,7 @@
 
 
 <script lang="ts" setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { authFetch } from "@/requests.ts";
 import TranscriptPage from "./TranscriptPage.vue";
 import { useRouter, useRoute } from 'vue-router'
@@ -151,6 +160,28 @@ const allImagesShown = ref(false)
 
 const stateEditIcon = ref<string>()
 const stateEditSeverity = ref<string>()
+
+const copyMenu = ref()
+const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
+let copyStateTimer: ReturnType<typeof setTimeout> | undefined
+
+//labels are static, so a plain array rather than a computed
+const copyActionItems = [
+  { label: 'Copy raw', icon: 'pi pi-align-left', command: copyRaw },
+  { label: 'Copy as MD', icon: 'pi pi-hashtag', command: copyAsMarkdown },
+]
+
+const copyLabel = computed(() => {
+  if (copyState.value === 'copied') return 'Copied'
+  if (copyState.value === 'failed') return 'Copy failed'
+  return 'Copy'
+})
+
+const copyIcon = computed(() => {
+  if (copyState.value === 'copied') return 'pi pi-check'
+  if (copyState.value === 'failed') return 'pi pi-times'
+  return 'pi pi-copy'
+})
 
 enum PageDiagram {
   none = 'none',
@@ -261,6 +292,50 @@ const downloadFile = async (fileId: string) => {
     console.error('Download failed:', err)
   }
 }
+
+/**
+ * The transcript as it was stored, pages in order behind a marker line. page.transcript is the
+ * unrendered text, so the named entity syntax (<T : tag> and friends) is copied verbatim and none
+ * of renderNamedEntities' HTML is involved — that difference is what "Copy as MD" will cover.
+ * Pages still being OCR'd have no text yet and are skipped rather than pasted as a bare marker;
+ * the marker numbering makes the gap visible.
+ */
+function rawTranscript(): string {
+  return transcript.value.pages
+      .filter(page => page.transcript && page.transcript.trim().length > 0)
+      //pageNumber is 0-based server side, displayed +1 everywhere else in this view
+      .map(page => `--- page ${page.pageNumber + 1} ---\n${page.transcript}`)
+      .join('\n\n')
+}
+
+async function copyRaw() {
+  await copyToClipboard(rawTranscript())
+}
+
+function copyAsMarkdown() {
+  //TODO render the markdown flavour: named entity syntax to markdown, headings from the h2/h3 verbs
+}
+
+async function copyToClipboard(text: string) {
+  try {
+    //undefined outside a secure context (a plain-http tunnel), which throws here rather than
+    //rejecting — either way it lands in the catch and shows as a failed copy
+    await navigator.clipboard.writeText(text)
+    flashCopyState('copied')
+  } catch (err) {
+    console.error('Copy failed:', err)
+    flashCopyState('failed')
+  }
+}
+
+//the button is the only feedback channel: this view's error ref is never rendered
+function flashCopyState(state: 'copied' | 'failed') {
+  copyState.value = state
+  clearTimeout(copyStateTimer)
+  copyStateTimer = setTimeout(() => (copyState.value = 'idle'), state === 'failed' ? 2500 : 1500)
+}
+
+onUnmounted(() => clearTimeout(copyStateTimer))
 
 function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })

@@ -687,3 +687,40 @@ Verified statically only, not built (`mvn` not run, per instruction): types chec
 `repositoryFile.findById(IdFile)` → `Optional<EntityFile>`; `LOG` still has 6 other uses in the file;
 `java.util.*` already covers `Collections`/`Optional`. **Still to do: rebuild, then load Home on an
 account with no synced documents and confirm the message replaces the silent empty panel.**
+
+## Transcript view: Copy menu (raw now, markdown later)
+
+The action row could only get a document out as a PDF blob; there was no way to get the *text*.
+Added a **Copy** button next to PDF opening a popup `Menu` with **Copy raw** and **Copy as MD**, the
+latter registered but deliberately inert — the menu shape is settled now so the markdown renderer
+can land later without re-touching the layout. All in `TranscriptView.vue`; `<Menu>` needs no import
+because `vite.config.js` runs `unplugin-vue-components` with `PrimeVueResolver`. Same popup pattern
+as `Home.vue`'s bulk "Actions" button, `<Menu>` kept inside the flex `.action-row` as it is there.
+
+- **Raw means the stored text, not the rendered DOM.** `page.transcript` is unrendered, so the named
+  entity syntax (`<T : tag>` and friends) is copied verbatim and none of `renderNamedEntities`' HTML
+  is involved. That difference is the whole reason "Copy as MD" exists as a separate option.
+- Pages are joined by a `--- page N ---` marker line, `pageNumber + 1` to match the `p. N` display
+  convention used by the tag links in the same view. **Pages with no text are skipped** rather than
+  pasted as a bare marker — a transcript still being OCR'd is the common case — and the gap stays
+  visible in the marker numbering, so nothing is silently dropped.
+- `copyActionItems` binds `command:` to hoisted `function` declarations, not `const` arrows. The
+  array is built at setup time, above where those functions appear in the file; arrows would be in
+  the temporal dead zone and throw a ReferenceError on mount.
+- **Feedback goes on the button** (`Copied` + `pi-check`, or `Copy failed` + `pi-times`, reverting
+  after 1.5s/2.5s) rather than through this view's `error` ref, because that ref is set in three
+  places (load failure, update failure) and **is never rendered anywhere in the template** — dead
+  state, same as the one found in `TreeView.vue`. Registering PrimeVue's `ToastService` was the
+  alternative and was rejected as infrastructure this task doesn't need; `main.ts` currently
+  registers only `ConfirmationService`. The reset timer is cleared in `onUnmounted` so it cannot
+  write to a ref after teardown.
+- `navigator.clipboard` is `undefined` outside a secure context, so over a plain-http dev tunnel the
+  call throws rather than rejects — it lands in the same `catch` and degrades to the failed state.
+  No deprecated `execCommand` fallback.
+
+Verified statically only — **this project has no type checking at all**: there is no `tsc`/`vue-tsc`
+in `node_modules` and `npm run build` is a bare `vite build`, which strips TS types via esbuild
+without checking them, so the annotations here are decoration. A build was also deliberately not run
+because it overwrites `ui/dist/`, a deployment artifact. Checked by hand: no duplicate identifiers,
+every new template identifier declared, `computed`/`onUnmounted` added to the `vue` import, both
+menu commands hoisted. **Still to do: `npm run dev`, then copy a multi-page transcript and paste it.**

@@ -39,8 +39,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Autowired
-    private LogService logService;
+    //TODO find a way to log actions (circular dependance)
+//    @Autowired
+//    private LogService logService;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -76,12 +77,12 @@ public class UserService implements UserDetailsService {
 
         if (ud != null && passwordEncoder.matches(request.getPassword(), ud.getPassword())) {
             LOG.info("Login username {} granted", request.getUsername());
-            logService.success(LogOperation.login);
+            //logService.success(LogOperation.login);
             String token = jwtUtil.generateToken(ud);
             return Optional.of(new AuthResponse(token));
         }
         LOG.warn("Login username {} refused", request.getUsername());
-        logService.failure(LogOperation.login);
+        //logService.failure(LogOperation.login);
         return Optional.empty();
     }
 
@@ -128,19 +129,19 @@ public class UserService implements UserDetailsService {
     public void setUserPassowrd(String username, String password) {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(username);
         if(optionalEntityUser.isPresent() == false) {
-            logService.failure(LogOperation.passwordChanged, "Unknown user ");
+            //logService.failure(LogOperation.passwordChanged, "Unknown user ");
             throw new UsernameNotFoundException("Unknown user "+ username);
         }
         EntityUser userEntity = optionalEntityUser.get();
         userEntity.setPassword(passwordEncoder.encode(password));
         repositoryUser.save(userEntity);
-        logService.success(LogOperation.passwordChanged);
+        //logService.success(LogOperation.passwordChanged);
     }
 
     public Set<String> setUserAsAdmin(String username) {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(username);
         if(optionalEntityUser.isPresent() == false) {
-            logService.failure(LogOperation.promoteAdmin, "Unknown user ");
+            //logService.failure(LogOperation.promoteAdmin, "Unknown user ");
             throw new UsernameNotFoundException("Unknown user "+ username);
         }
 
@@ -154,7 +155,7 @@ public class UserService implements UserDetailsService {
             userEntity.setRoles(ROLE_ADMIN + "," + ROLE_USER);
         }
         repositoryUser.save(userEntity);
-        logService.success(LogOperation.promoteAdmin);
+        //logService.success(LogOperation.promoteAdmin);
         return rolesSet;
     }
 
@@ -163,7 +164,7 @@ public class UserService implements UserDetailsService {
         Optional<EntityUser> optionalEntityUser = repositoryUser.findByUsernameEquals(dtoUser.getUsername());
         if(optionalEntityUser.isPresent() == true) {
             LOG.warn("User {} already exists", dtoUser.getUsername());
-            logService.failure(LogOperation.createUser, "User already exists");
+           // logService.failure(LogOperation.createUser, "User already exists");
             throw new UsernameNotFoundException("User already exists");
         }
 
@@ -181,7 +182,7 @@ public class UserService implements UserDetailsService {
         //@Transactional above means the user and those preferences commit together
         eventPublisher.publishEvent(new UserCreatedEvent(u.getUsername()));
 
-        logService.success(LogOperation.createUser);
+        //logService.success(LogOperation.createUser);
 
         return rndPassword;
     }

@@ -288,7 +288,8 @@ public class UpdateService {
             // Clean text
             // --------------------------------------
             //TODO put an option on this
-            String content = completionResponse.getTranscript().replaceAll("[ \\t]+", " ");
+
+            String content = completionResponse.getTranscript() != null ? completionResponse.getTranscript().replaceAll("[ \\t]+", " ") : "";
 
             IdTranscriptPage idTranscriptPage = IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), fileId, completionResponse.getPageNumber());
             Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(idTranscriptPage);

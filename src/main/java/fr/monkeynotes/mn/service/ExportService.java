@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.monkeynotes.mn.data.dto.DtoExport;
 import fr.monkeynotes.mn.data.entity.*;
+import fr.monkeynotes.mn.data.enums.LogOperation;
 import fr.monkeynotes.mn.data.repository.*;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
@@ -59,6 +60,9 @@ public class ExportService {
     private UtilsService utilsService;
 
     @Autowired
+    private LogService logService;
+
+    @Autowired
     private RepositoryQuickNote repositoryQuickNote;
 
     public void export(OutputStream outputStream) throws IOException {
@@ -98,6 +102,7 @@ public class ExportService {
 
             zipOut.finish();
         }
+        logService.success(LogOperation.exportBackup);
     }
 
     private void addImage(String fileId, int pageNumber, ZipOutputStream zipOut) throws IOException {
@@ -155,8 +160,10 @@ public class ExportService {
             }
             dbLoad(databaseBytes);
         } catch (IOException e) {
+            logService.failure(LogOperation.importBackup);
             LOG.error("Error while importing user data", e);
         }
+        logService.success(LogOperation.importBackup);
     }
 
     private void dbLoad(byte[] databaseBytes) throws IOException {
@@ -241,6 +248,7 @@ public class ExportService {
                     dtoExport.getQuickNotes().size());
 
         } catch (JsonParseException e) {
+            logService.failure(LogOperation.importBackup);
             LOG.error("Json Parse Exception", e);
         }
     }

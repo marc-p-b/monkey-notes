@@ -8,5 +8,5 @@ public enum LogOperation {
     ocr,
     createTranscript,
     updateTranscript,
-    other
+    passwordChanged, promoteAdmin, userNotFound, createUser, exportBackup, importBackup, sync, other
 }

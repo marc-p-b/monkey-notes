@@ -20,6 +20,8 @@ public class EntityLog {
 
     private String message;
 
+    private String monitoringId;
+
     public long getId() {
         return id;
     }
@@ -62,6 +64,15 @@ public class EntityLog {
 
     public EntityLog setMessage(String message) {
         this.message = message;
+        return this;
+    }
+
+    public String getMonitoringId() {
+        return monitoringId;
+    }
+
+    public EntityLog setMonitoringId(String monitoringId) {
+        this.monitoringId = monitoringId;
         return this;
     }
 }

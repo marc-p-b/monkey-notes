@@ -4,10 +4,7 @@ import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
 import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.IdFile;
-import fr.monkeynotes.mn.data.enums.AsyncProcessName;
-import fr.monkeynotes.mn.data.enums.FileType;
-import fr.monkeynotes.mn.data.enums.PreferenceKey;
-import fr.monkeynotes.mn.data.enums.SyncOption;
+import fr.monkeynotes.mn.data.enums.*;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.monitoring.AsyncResult;
 import fr.monkeynotes.mn.monitoring.MonitoringService;
@@ -53,6 +50,9 @@ public class MonkeySyncService {
     @Autowired
     private RepositoryFile repositoryFile;
 
+    @Autowired
+    private LogService logService;
+
     private ConcurrentHashMap<String, Set<File2Process>> mapScheduled = new ConcurrentHashMap<>();
 
     public static final String MONKEYSYNC_ID_PREFIX = "ms";
@@ -77,15 +77,18 @@ public class MonkeySyncService {
             //todo is this the best way ?
             preferencesService.setRemoteRootFolderPath(remoteFolderPath);
             currentRemoteFolderPath = remoteFolderPath;
+            logService.success(LogOperation.sync,"set root folder " + currentRemoteFolderPath);
         }
 
         if(currentRemoteFolderPath == null) {
             preferencesService.setRemoteRootFolderPath(remoteFolderPath);
+            logService.success(LogOperation.sync,"set root folder " + currentRemoteFolderPath);
         }
 
         if(currentRemoteFolderPath != null && currentRemoteFolderPath.equals(remoteFolderPath) == false) {
             LOG.error("Sync for file {} : remote root folder has changed and cannot be used : {} current folder is : {}",
                     monkeyFileEvent.getFileName(), remoteFolderPath, currentRemoteFolderPath);
+            logService.failure(LogOperation.sync, "change remote root folder");
             return SyncEventResponse.refusedSyncEventResponse("remote root folder has changed");
         }
 
@@ -101,17 +104,9 @@ public class MonkeySyncService {
         Path downloadDir = utilsService.downloadDir(monkeyFolderId );
         Path targetFilePath = Paths.get(downloadDir.toString(), msId);
 
-        System.out.println("------------------------------");
-        System.out.println("monkeyFileEvent.filePath: " + monkeyFileEvent.getFilePath());
-        System.out.println("monkeyFileEvent.fileName: " + monkeyFileEvent.getFileName());
-        System.out.println("monkeyFileEvent.rootFolderPath: " + monkeyFileEvent.getRootFolderPath());
-        System.out.println("currentRemoteFolderPath: " + currentRemoteFolderPath);
-        System.out.println("basePath: " + basePath);
-        System.out.println("filename: " + filename);
-        System.out.println("virtualPath: " + virtualPath);
-        System.out.println("msId: " + msId);
-        System.out.println("targetFilePath: " + targetFilePath);
-        System.out.println("------------------------------");
+        LOG.info("Monkey Sync Event {}", monkeyFileEvent);
+        LOG.info("msId {}", msId);
+        LOG.info("virtualPath {}", virtualPath);
 
         try {
             Files.write(targetFilePath, fileContent);
@@ -140,6 +135,7 @@ public class MonkeySyncService {
             mapScheduled.get(username).add(f2p);
         }
 
+        logService.success(LogOperation.sync, msId, "accept sync for file " + filename);
         return SyncEventResponse.acceptedSyncEventResponse(msId);
     }
 

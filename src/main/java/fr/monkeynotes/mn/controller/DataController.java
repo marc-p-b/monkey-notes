@@ -1,6 +1,7 @@
 package fr.monkeynotes.mn.controller;
 
 import fr.monkeynotes.mn.service.ExportService;
+import fr.monkeynotes.mn.service.LogService;
 import fr.monkeynotes.mn.service.UtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

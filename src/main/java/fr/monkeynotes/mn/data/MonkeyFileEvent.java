@@ -77,4 +77,18 @@ public class MonkeyFileEvent {
         this.rootFolderPath = rootFolderPath;
         return this;
     }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("MonkeyFileEvent{");
+        sb.append("filePath='").append(filePath).append('\'');
+        sb.append(", fileName='").append(fileName).append('\'');
+        sb.append(", eventType=").append(eventType);
+        sb.append(", timestamp='").append(timestamp).append('\'');
+        sb.append(", fileSize=").append(fileSize);
+        sb.append(", content='").append(content).append('\'');
+        sb.append(", rootFolderPath='").append(rootFolderPath).append('\'');
+        sb.append('}');
+        return sb.toString();
+    }
 }

@@ -5,10 +5,7 @@ import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
 import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
 import fr.monkeynotes.mn.data.entity.*;
-import fr.monkeynotes.mn.data.enums.AsyncProcessName;
-import fr.monkeynotes.mn.data.enums.FileType;
-import fr.monkeynotes.mn.data.enums.PreferenceKey;
-import fr.monkeynotes.mn.data.enums.SyncOption;
+import fr.monkeynotes.mn.data.enums.*;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscript;
 import fr.monkeynotes.mn.data.repository.RepositoryTranscriptPage;
@@ -237,7 +234,10 @@ public class UpdateService {
                 // Identify named entities
                 // --------------------------------------
                 namedEntitiesService.saveNamedEntities(file2Process.getFileId(), listCompletionResponse);
+
+                logService.success(LogOperation.sync, file2Process.getFileId(), "file processed");
             }
+
         }
         createFileEntities(files2Process);
 

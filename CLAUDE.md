@@ -772,3 +772,38 @@ new template identifier is declared in `setup`, `computed` was already imported 
 the emit/prop names match at both ends of the `DateView` ↔ `Home` boundary. **Still to do:
 `npm run dev`, switch to the calendar view, and confirm the current year opens with its notes and
 older years stay folded.**
+
+## Home: force refresh when Home is clicked
+
+Home never refreshed. Two independent causes, both needed fixing — one alone would have left half
+the cases still stale:
+
+- **`<KeepAlive include="Home">` in `App.vue`.** Home is cached, so `onMounted` runs once per
+  session; navigating to a transcript and back re-showed the data fetched the first time. Fixed with
+  `onActivated`, which fires on every return — *including* the initial mount, where `onMounted`
+  already fetched, so the first activation is skipped via an `initialActivation` flag rather than
+  moving the fetches into `onActivated` wholesale (children mount before the parent's activated hook
+  runs, so a refresh there would double-fetch on first load).
+- **Clicking Home while already on Home is a router no-op**, so there is no activation to hook: Vue
+  Router 4 resolves a push to the identical route without remounting or emitting anything (the same
+  root cause as the "Search reset bug" entry above). Added `homeRefreshKey` + `refreshHome()` to the
+  Pinia store; `App.vue`'s Home menu item now branches on `route.name === 'home'` — bump the counter,
+  otherwise push — and Home watches the counter. A counter rather than a boolean flag so consecutive
+  clicks each trigger a watch; a boolean would need resetting and would swallow the second click.
+
+`Home.refresh()` also has to reload the active panel, which it cannot do by touching its own state:
+`TreeView` and `DateView` each own their data and their own request. Both now `defineExpose({ refresh })`
+and Home holds a template ref per panel, calling whichever is non-null (they are `v-if`/`v-else`, so
+exactly one is mounted). Consequences worth knowing: `TreeView.refresh()` re-fetches the root, which
+replaces `nodes` and therefore collapses any expanded subfolder — intended, since a child's cached
+`children` array would otherwise stay stale; `DateView.refresh()` deliberately keeps `expandedYears`,
+because which years are open is the user's state, not server data.
+
+Not done: no manual refresh button in the page header (the `pi-refresh` icon `UsersView`/`ProcessesView`
+have) — only the Home-click trigger was asked for. Verified statically only: **there is no usable
+`node` on this machine**, same as the "Home: by date listing" entry, and the project has no type
+checking regardless. Checked by hand that both template refs match a declared `ref` of the same name
+in `<script setup>` (the pattern `Menu ref="actionsMenu"` in this same file already relies on),
+`onActivated` added to the `vue` import, and `defineExpose` called at setup top level in both panels.
+**Still to do: `npm run dev`, then click Home from another view and click Home again while on Home,
+confirming both refetch.**

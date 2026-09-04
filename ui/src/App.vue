@@ -23,17 +23,20 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref, watch} from "vue"
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUiStore } from '@/composables/store.js'
 
 const router = useRouter()
+const route = useRoute()
 const store = useUiStore()
 
 const menuItems = computed(() => [
   {
     label: 'Home',
     icon: 'pi pi-home',
-    command: () => router.push('/')
+    //Home is kept alive, so navigating back to it does not remount it, and clicking Home while
+    //already there is a router no-op. Both cases need an explicit refresh signal.
+    command: () => route.name === 'home' ? store.refreshHome() : router.push('/')
   },
   {
     label: 'Quicknotes',

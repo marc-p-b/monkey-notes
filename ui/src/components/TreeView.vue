@@ -105,6 +105,10 @@ async function fetchFolder(node: Node | null) {
 onMounted(() => {
   fetchFolder(null);
 });
+
+//re-fetching the root replaces `nodes`, so any expanded subfolder collapses — intended for a
+//forced refresh: a child's cached `children` array would otherwise stay stale
+defineExpose({ refresh: () => fetchFolder(null) });
 </script>
 
 <style scoped>

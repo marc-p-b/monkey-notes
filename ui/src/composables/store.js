@@ -9,11 +9,17 @@ export const useUiStore = defineStore('ui', {
         search: '',
         srPages: [],
         isConnected: isTokenValid(localStorage.getItem("token")),
-        userData: null
+        userData: null,
+        //bumped when Home is clicked while already on Home: router.push('/') is a no-op there, so
+        //there is no navigation for the view to react to. Home watches this counter instead.
+        homeRefreshKey: 0
     }),
     actions: {
         setLoading(value) {
             this.loading = value
+        },
+        refreshHome() {
+            this.homeRefreshKey++
         },
         setSearch(value) {
             this.search = value

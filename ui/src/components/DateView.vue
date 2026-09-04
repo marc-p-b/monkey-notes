@@ -169,6 +169,10 @@ async function fetchTranscripts() {
 onMounted(() => {
   fetchTranscripts();
 });
+
+//expandedYears is deliberately kept across a refresh — the user's open/closed years are their
+//own state, not server data
+defineExpose({ refresh: fetchTranscripts });
 </script>
 
 <style scoped>

@@ -69,6 +69,7 @@
       <div class="tree-panel">
         <TreeView
             v-if="viewMode === 'folders'"
+            ref="treeView"
             @loading-status="loadingStatus"
             :select-mode="selectMode"
             :order-by="orderBy"
@@ -76,6 +77,7 @@
         />
         <DateView
             v-else
+            ref="dateView"
             @loading-status="loadingStatus"
             @transcript-clicked="clickedTranscript"
             :select-mode="selectMode"
@@ -91,7 +93,7 @@
 defineOptions({ name: 'Home' });
 import TreeView from "@/components/TreeView.vue";
 import DateView from "@/components/DateView.vue";
-import { ref, reactive, computed, provide, watch, onMounted } from "vue";
+import { ref, reactive, computed, provide, watch, onMounted, onActivated } from "vue";
 import { authFetch } from "@/requests";
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -133,6 +135,10 @@ const orderOptions = [
   { label: 'Name', value: 'name' },
   { label: 'Date', value: 'date' },
 ]
+
+//only one panel is rendered at a time (v-if/v-else), so exactly one of these holds a component
+const treeView = ref<{ refresh: () => void } | null>(null)
+const dateView = ref<{ refresh: () => void } | null>(null)
 
 const actionsMenu = ref()
 const selectedIds = reactive(new Set<string>())
@@ -201,10 +207,34 @@ function homeLoading() {
   store.setLoading(foldersLoading || recentLoading)
 }
 
+//refetches everything on screen, including the active panel — the panels own their data and
+//their own request, so Home can't reload them by touching its own state
+function refresh() {
+  fetchRecentTranscripts();
+  fetchCounts();
+  treeView.value?.refresh();
+  dateView.value?.refresh();
+}
+
 onMounted(() => {
   fetchRecentTranscripts();
   fetchCounts();
 });
+
+//Home lives inside <KeepAlive> in App.vue, so onMounted runs once for the whole session and
+//navigating back here shows whatever was fetched the first time. onActivated fires on every return
+//— including the initial mount, which onMounted already covered, hence the skip.
+let initialActivation = true
+onActivated(() => {
+  if (initialActivation) {
+    initialActivation = false
+    return
+  }
+  refresh()
+})
+
+//clicking Home while already on Home: no navigation happens, so there is no activation either
+watch(() => store.homeRefreshKey, () => refresh())
 </script>
 
 <style scoped>

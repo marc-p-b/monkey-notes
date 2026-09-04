@@ -76,31 +76,49 @@ public class ViewService {
     //TODO make Specialized id objects
 
     public List<DtoTranscriptDetails> listRecentTranscripts(int from, int to) {
-        List<EntityTranscript> list = repositoryTranscript.findRecentByIdFile_Username(authService.getUsernameFromContext(), PageRequest.of(from,to));
+        return toTranscriptDetails(repositoryTranscript.findRecentByIdFile_Username(
+                authService.getUsernameFromContext(), PageRequest.of(from, to)));
+    }
 
-        //idFile -> idParent
-        Map<IdFile, String> map = repositoryFile.findAllById(list.stream().map(EntityTranscript::getIdFile).collect(Collectors.toList())).stream()
-                .collect(Collectors.toMap(f->f.getIdFile(), f->f.getParentFolderId()));
+    /**
+     * Every transcript of the account, unordered — backs the home "by date" listing, which groups
+     * the whole corpus by year client-side rather than paging through it.
+     */
+    public List<DtoTranscriptDetails> listAllTranscripts() {
+        return toTranscriptDetails(repositoryTranscript.findAllByIdFile_Username(authService.getUsernameFromContext()));
+    }
 
+    /**
+     * A transcript row carries no date of its own for the file-level "discovered" timestamp and no
+     * parent name, so both come from the matching file rows here. A transcript whose file row is
+     * gone is dropped; one whose parent folder is gone is kept with a null parent, so a document
+     * orphaned by a half-finished delete still shows up in a listing.
+     */
+    private List<DtoTranscriptDetails> toTranscriptDetails(List<EntityTranscript> transcripts) {
+        String username = authService.getUsernameFromContext();
 
-        List<DtoTranscriptDetails> listDtoRecent = new ArrayList<>();
-        for (EntityTranscript entityTranscript : list) {
-            DtoTranscriptDetails dtoTranscriptDetails = null;
+        Map<IdFile, EntityFile> files = repositoryFile.findAllById(
+                        transcripts.stream().map(EntityTranscript::getIdFile).toList()).stream()
+                .collect(Collectors.toMap(EntityFile::getIdFile, f -> f));
 
-
-            if(map.containsKey(entityTranscript.getIdFile())) {
-                IdFile parentIdFile =IdFile.createIdFile(authService.getUsernameFromContext(), map.get(entityTranscript.getIdFile()));
-                Optional<EntityFile> parentFile = repositoryFile.findById(parentIdFile);
-                if(parentFile.isPresent()) {
-                    dtoTranscriptDetails = new DtoTranscriptDetails(
-                            DtoTranscript.fromEntity(entityTranscript),
-                            DtoFile.fromEntity(parentFile.get()));
-
-                    listDtoRecent.add(dtoTranscriptDetails);
-                }
+        List<DtoTranscriptDetails> listDetails = new ArrayList<>();
+        for (EntityTranscript entityTranscript : transcripts) {
+            EntityFile file = files.get(entityTranscript.getIdFile());
+            if (file == null) {
+                LOG.warn("No file found for transcript {}", entityTranscript.getIdFile());
+                continue;
             }
+
+            DtoFile parent = Optional.ofNullable(file.getParentFolderId())
+                    .flatMap(parentFolderId -> repositoryFile.findById(IdFile.createIdFile(username, parentFolderId)))
+                    .map(DtoFile::fromEntity)
+                    .orElse(null);
+
+            listDetails.add(new DtoTranscriptDetails(
+                    DtoTranscript.fromEntity(entityTranscript).setDiscovered_at(file.getDiscovered_at()),
+                    parent));
         }
-        return listDtoRecent;
+        return listDetails;
     }
 
     public DtoCounts countFiles() {

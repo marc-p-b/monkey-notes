@@ -64,6 +64,11 @@ public class TranscriptController {
         return ResponseEntity.ok().body(viewService.listRecentTranscripts(0, 10));
     }
 
+    @GetMapping("/transcript/list/all")
+    public ResponseEntity<List<DtoTranscriptDetails>> viewAllTranscripts() throws IOException {
+        return ResponseEntity.ok().body(viewService.listAllTranscripts());
+    }
+
     @GetMapping("/transcript/count")
     public ResponseEntity<DtoCounts> countFiles() {
         return ResponseEntity.ok().body(viewService.countFiles());

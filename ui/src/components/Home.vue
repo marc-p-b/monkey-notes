@@ -9,6 +9,19 @@
     </div>
 
     <div class="action-row">
+      <SelectButton
+          v-model="viewMode"
+          :options="viewOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          size="small"
+          dataKey="value"
+      >
+        <template #option="slotProps">
+          <i :class="slotProps.option.icon" v-tooltip.top="slotProps.option.label"></i>
+        </template>
+      </SelectButton>
       <Button
           :label="selectMode ? 'Exit Select' : 'Select'"
           :icon="selectMode ? 'pi pi-times' : 'pi pi-check-square'"
@@ -17,14 +30,14 @@
           outlined
           @click="selectMode = !selectMode"
       />
-      <Select v-model="orderBy" :options="orderOptions" optionLabel="label" optionValue="value" size="small" />
+      <Select v-if="viewMode === 'folders'" v-model="orderBy" :options="orderOptions" optionLabel="label" optionValue="value" size="small" />
       <Button
-          :icon="orderDir === 'asc' ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'"
+          :icon="activeOrderDir === 'asc' ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'"
           size="small"
           outlined
           severity="secondary"
-          @click="orderDir = orderDir === 'asc' ? 'desc' : 'asc'"
-          v-tooltip.top="orderDir === 'asc' ? 'Ascending' : 'Descending'"
+          @click="activeOrderDir = activeOrderDir === 'asc' ? 'desc' : 'asc'"
+          v-tooltip.top="activeOrderDir === 'asc' ? 'Ascending' : 'Descending'"
       />
       <Button
           v-if="selectMode && selectedIds.size > 0"
@@ -54,7 +67,20 @@
       </div>
 
       <div class="tree-panel">
-        <TreeView @loading-status="loadingStatus" :select-mode="selectMode" :order-by="orderBy" :order-dir="orderDir" />
+        <TreeView
+            v-if="viewMode === 'folders'"
+            @loading-status="loadingStatus"
+            :select-mode="selectMode"
+            :order-by="orderBy"
+            :order-dir="orderDir"
+        />
+        <DateView
+            v-else
+            @loading-status="loadingStatus"
+            @transcript-clicked="clickedTranscript"
+            :select-mode="selectMode"
+            :order-dir="dateOrderDir"
+        />
       </div>
 
     </div>
@@ -64,6 +90,7 @@
 <script lang="ts" setup>
 defineOptions({ name: 'Home' });
 import TreeView from "@/components/TreeView.vue";
+import DateView from "@/components/DateView.vue";
 import { ref, reactive, computed, provide, watch, onMounted } from "vue";
 import { authFetch } from "@/requests";
 import { useRouter } from 'vue-router'
@@ -85,8 +112,23 @@ const transcripts = ref<DtoTranscript[]>([])
 const counts = ref<DtoCounts | null>(null)
 
 const selectMode = ref(false)
+const viewMode = ref<'folders' | 'date'>('folders')
+const viewOptions = [
+  { label: 'Folders', value: 'folders', icon: 'pi pi-folder' },
+  { label: 'By date', value: 'date', icon: 'pi pi-calendar' },
+]
 const orderBy = ref<'name' | 'date'>('name')
 const orderDir = ref<'asc' | 'desc'>('asc')
+//the date view keeps its own direction: A-Z is the natural default for a folder listing, newest-first
+//for a chronological one. One button drives both, each view remembers what it was last set to.
+const dateOrderDir = ref<'asc' | 'desc'>('desc')
+const activeOrderDir = computed<'asc' | 'desc'>({
+  get: () => viewMode.value === 'folders' ? orderDir.value : dateOrderDir.value,
+  set: (dir) => {
+    if (viewMode.value === 'folders') orderDir.value = dir
+    else dateOrderDir.value = dir
+  },
+})
 const orderOptions = [
   { label: 'Name', value: 'name' },
   { label: 'Date', value: 'date' },
@@ -106,6 +148,10 @@ provide('toggleSelectedId', toggleSelectedId)
 watch(selectMode, (on) => {
   if (!on) selectedIds.clear()
 })
+
+//the two panels don't list the same rows (folders are selectable, years aren't), so a selection made
+//in one is meaningless in the other
+watch(viewMode, () => selectedIds.clear())
 
 function askAgent() {
   router.push({ name: 'agent', query: { ids: Array.from(selectedIds).join(',') } })

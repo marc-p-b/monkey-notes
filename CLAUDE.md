@@ -724,3 +724,51 @@ without checking them, so the annotations here are decoration. A build was also 
 because it overwrites `ui/dist/`, a deployment artifact. Checked by hand: no duplicate identifiers,
 every new template identifier declared, `computed`/`onUnmounted` added to the `vue` import, both
 menu commands hoisted. **Still to do: `npm run dev`, then copy a multi-page transcript and paste it.**
+
+## Home: "by date" listing, foldable by year
+
+Second panel for the home document list, switched by an icon `SelectButton` (folder / calendar) at
+the head of the action row: the existing folder tree, or a flat chronological listing grouped into
+foldable years with the current year open on load.
+
+- **New `GET /transcript/list/all`** returning `List<DtoTranscriptDetails>`, the same shape
+  `/transcript/recent` already returns — the date view needs every transcript at once (it groups the
+  whole corpus client-side) and the tree endpoints can't provide that: `/transcript/folder/list` is
+  one level per request and deliberately lazy. Reusing the recent-list DTO means the frontend has
+  one interface for both home fetches.
+- `listRecentTranscripts` and the new `listAllTranscripts` now share a private
+  `toTranscriptDetails(List<EntityTranscript>)`. Extracting it fixed two things in the recent path
+  as a side effect: it no longer drops a transcript whose parent folder row is missing (parent is
+  just null now — a document orphaned by a half-finished delete still appears), and it stamps
+  `discovered_at` onto the DTO from the file row. `DtoTranscript.fromEntity()` can't do that itself
+  — the column lives on `EntityFile`, which is why `buildDtoTranscript` sets it separately — and
+  without it the date view would have had a `documented_at`-or-nothing fallback chain.
+- **Which date a note is filed under, in order: `documented_at`, then `discovered_at`, then
+  `transcripted_at`.** `documented_at` is the date written on the note itself (parsed out of the
+  title by the OCR pipeline) and is the only one that means "when is this note from"; the other two
+  are when the server first saw the file and when OCR last ran, i.e. facts about the pipeline, not
+  the note. A transcript with none of the three groups under an "Undated" pseudo-year, which always
+  sorts last regardless of direction rather than being silently hidden.
+- `DateView.vue` mirrors `TreeNode.vue`'s row markup and CSS so both panels read as one list, and
+  reuses Home's `provide('selectedIds')`/`provide('toggleSelectedId')` — so select mode and the bulk
+  "Ask Agent" action work unchanged in the date view. Only documents carry checkboxes (a year header
+  is a grouping, not a selectable entity, unlike a folder row which the backend expands into its
+  transcripts). Switching view mode clears the selection, since the two panels don't list the same
+  set of selectable rows.
+- **The sort-direction button now drives a different ref per view** (`orderDir` for folders,
+  `dateOrderDir` for dates, proxied through a writable `activeOrderDir` computed). A-Z is the right
+  default for a folder listing and newest-first for a chronological one; a single shared ref would
+  have opened the date view on the oldest year with the current — expanded — year scrolled off the
+  bottom. Each view remembers what it was last set to. The order-by `Select` (Name/Date) is hidden
+  in date view, where it has no meaning.
+- Expanded years live in a `reactive(new Set<string>())` seeded with the current year *after* the
+  fetch resolves, not at setup — nothing to expand before the groups exist.
+
+Verified: `mvn compile` clean. **The frontend was not built — there is no usable `node` on this
+machine** (`npx` is absent; the only `node` binary found is Firebase's wrapped runtime, which
+rejects arbitrary scripts), on top of the project having no type checking at all as noted in the
+Copy-menu entry above. Checked by hand instead: both SFC templates parse with balanced tags, every
+new template identifier is declared in `setup`, `computed` was already imported in `Home.vue`, and
+the emit/prop names match at both ends of the `DateView` ↔ `Home` boundary. **Still to do:
+`npm run dev`, switch to the calendar view, and confirm the current year opens with its notes and
+older years stay folded.**

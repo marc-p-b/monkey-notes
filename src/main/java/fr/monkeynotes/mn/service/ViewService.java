@@ -246,24 +246,24 @@ public class ViewService {
                 .toList();
     }
 
-    public String getContent(DtoTranscript dtoTranscript) throws ServiceException {
-        if(dtoTranscript == null) {
-            throw new ServiceException("dtoTranscript is null");
-        }
-        StringBuilder sbContent = new StringBuilder();
-
-        for(int n = 0; n < dtoTranscript.getPageCount(); n++) {
-            Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
-                    IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), dtoTranscript.getFileId(), n));
-
-            if (optPage.isPresent()) {
-                DtoTranscriptPage dtoTranscriptPage = DtoTranscriptPage.fromEntity(optPage.get());
-                dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
-                sbContent.append(dtoTranscriptPage.getTranscript());
-            }
-        }
-        return sbContent.toString();
-    }
+//    public String getContent(DtoTranscript dtoTranscript) throws ServiceException {
+//        if(dtoTranscript == null) {
+//            throw new ServiceException("dtoTranscript is null");
+//        }
+//        StringBuilder sbContent = new StringBuilder();
+//
+//        for(int n = 0; n < dtoTranscript.getPageCount(); n++) {
+//            Optional<EntityTranscriptPage> optPage = repositoryTranscriptPage.findById(
+//                    IdTranscriptPage.createIdTranscriptPage(authService.getUsernameFromContext(), dtoTranscript.getFileId(), n));
+//
+//            if (optPage.isPresent()) {
+//                DtoTranscriptPage dtoTranscriptPage = DtoTranscriptPage.fromEntity(optPage.get());
+//                dtoTranscriptPage = editService.applyPatch(dtoTranscriptPage);
+//                sbContent.append(dtoTranscriptPage.getTranscript());
+//            }
+//        }
+//        return sbContent.toString();
+//    }
 
     private DtoTranscript buildDtoTranscript(EntityTranscript t, EntityFile file, ViewOptions viewOptions) {
         //todo optimize ? include in all requests ? // remove n ?

@@ -113,6 +113,12 @@ public class TranscriptController {
         return ResponseEntity.ok().body("Folder update is requested");
     }
 
+    @GetMapping("/transcript/postprocess/{fileId}")
+    public ResponseEntity<String> postProcessTranscript(@PathVariable String fileId) {
+        updateService.postProcess(List.of(fileId));
+        return ResponseEntity.ok().body("Post processing is requested");
+    }
+
     @GetMapping("/transcript/update/{fileId}/{pageNumber}")
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
         updateService.forcePageUpdate(fileId, pageNumber);

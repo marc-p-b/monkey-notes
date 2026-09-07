@@ -5,5 +5,6 @@ public enum AsyncProcessName {
         flushMonkeySyncs,
         updateFolder,
         forcePageUpdate,
-        forceTranscriptUpdate;
+        forceTranscriptUpdate,
+        postProcess;
     }

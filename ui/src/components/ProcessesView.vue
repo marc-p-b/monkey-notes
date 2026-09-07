@@ -78,6 +78,7 @@ const PROCESS_LABELS: Record<string, string> = {
   updateFolder: "Update folder",
   forcePageUpdate: "Force page update",
   forceTranscriptUpdate: "Force transcript update",
+  postProcess: "Post processing",
 }
 
 const PROCESS_ICONS: Record<string, string> = {
@@ -86,6 +87,7 @@ const PROCESS_ICONS: Record<string, string> = {
   updateFolder: "pi-folder",
   forcePageUpdate: "pi-file-edit",
   forceTranscriptUpdate: "pi-file-edit",
+  postProcess: "pi-sparkles",
 }
 
 function processLabel(name: string): string {

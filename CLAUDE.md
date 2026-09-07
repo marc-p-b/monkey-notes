@@ -931,3 +931,97 @@ negative set (`<T>`, `<P>`, `<>`, `<VV>`, an unterminated `<V`, `[y]`, `<V :>`) 
 entity from either function. Spans were printed and checked against the source text, and the
 bare/valued overlap assertion did not fire. **Same caveat as the glyph entry: existing pages keep
 the entities extracted at the time, and only pick this up on a forced page update.**
+
+## Post-OCR processing as its own async pass
+
+`GET /transcript/postprocess/{fileId}` re-runs everything that *derives* data from a transcript
+without re-running OCR. Today that is named-entity extraction only. Aimed at documents transcribed
+before a change to the extraction rules — the `<✓>` glyphs and valueless checkboxes added above are
+exactly the case: without this, a note only picks up new syntax when its page is force-updated,
+which pays for a full OCR call per page to re-derive something that is pure text processing.
+
+- **Two halves, like every other async feature in `UpdateService`.** `postProcess(List<String>)` is
+  the launcher (`SupplyAsyncAuthenticated` + `registerSyncProcess` + `supplyAsync` +
+  `registerSyncProcessFuture`, modelled on `forceTranscriptUpdate`); `runListAsyncPostProcess` is the
+  worker body, the counterpart of `runListAsyncProcess`. Worth stating because the names mislead:
+  `runListAsyncProcess` is *not* itself async, it is what runs inside the supplier. The launcher is
+  load-bearing rather than ceremony — every step downstream resolves its owner through
+  `authService.getUsernameFromContext()`, and a bare `CompletableFuture` thread has no security
+  context. (`SupplyAsync` + `NoAuthContextHolder` is the other option, used by the MonkeySync flush
+  because it fires from a scheduler where there is no `Authentication` to copy.)
+- **Keyed on file ids, not `List<File2Process>`.** Nothing in that object applies once OCR is done —
+  no PDF to read, no md5 to compare, no `SyncOption` to branch on. Building one just to carry an id
+  is what makes `asyncForceTranscriptUpdate` 25 lines of Drive/Monkey branching before it can call
+  the pipeline.
+- **It cannot reuse `namedEntitiesService.saveNamedEntities(fileId, listCompletionResponse)`** — that
+  signature needs `CompletionResponse` objects, which exist only during an OCR run. The pass reads
+  `EntityTranscriptPage` rows instead and calls `saveNamedEntitiesFromContent` per page. That method
+  deletes a page's prior entities before re-extracting, which is what makes the pass idempotent and
+  safe to re-run.
+- **Reading from the database is also a fix, not just a necessity.** `saveTranscriptPages` stores the
+  transcript with `[ \t]+` collapsed to a single space, while the inline extraction in
+  `runListAsyncProcess` reads the *raw* `CompletionResponse`. Entity `start`/`end` are absolute
+  offsets into the string the frontend renders, so every collapsed run shifts each later entity by
+  the characters removed — visible as `renderNamedEntities`' `lFix` walk cutting an entity at the
+  wrong place. This pass extracts from the stored text, so running it over a document repairs that
+  document's offsets. The inline call is untouched (per instruction), so new documents still land
+  with the drift.
+- **Not chained onto the end of the OCR pipeline**, for the same reason: the inline extraction stays,
+  so an automatic chain would do the work twice on every sync.
+- **New `RepositoryTranscriptPage.findByIdTranscriptPage_UsernameAndIdTranscriptPage_FileId`, added
+  rather than reusing the existing `findByIdTranscriptPage_FileId`** (which carries its own
+  `//TODO add username`, left as the user marked it). Not a style preference: `MonkeySyncService`
+  derives a file id as `createMonkeySyncId(virtualPath)`, hashing the virtual path with **no username
+  in the input**, so two users with the same tablet folder layout genuinely hold the same fileId. The
+  composite primary keys keep the rows apart, but the unscoped finder returns both users' pages, and
+  `saveNamedEntitiesFromContent` would then write another user's page content under the caller's name.
+- `AsyncProcessName.postProcess` + its entry in `ProcessesView.vue`'s `PROCESS_LABELS`/`PROCESS_ICONS`
+  (`pi-sparkles`, verified present in the installed primeicons). Both maps fall back to the raw enum
+  name and `pi-cog`, so a missing entry degrades rather than breaks — but the card would have read
+  `postProcess`. The pass reports per-file through `attachFileEvent` and per-step through
+  `updateProcess`, so it shows up in the process list like any other, cancel button included.
+
+Not done, deliberately: **no UI entry point** — the endpoint is reachable only by URL for now, since
+the plan scoped the frontend to the process-list label. A "Post process" item in `TranscriptView`'s
+action row (or a library-wide variant next to "Update Search Index" in Preferences) is the obvious
+follow-up.
+
+Verified: `mvn compile` clean. **Not run against a live context** — no test sources exist and starting
+the stack needs the database. The one failure mode that compiles and then fails at startup is a
+derived query that doesn't resolve, so the property path was checked by hand instead:
+`IdTranscriptPage` declares `username`, `fileId` and `pageNumber`, and the two existing finders on the
+same embedded id (`findByIdTranscriptPage_Username`, `findByIdTranscriptPage_FileId`) establish the
+`_` path style. **Still to do: start the stack, call the endpoint on a transcript, and confirm the
+process appears in /processes and the entities are re-extracted.**
+
+## TranscriptView: Update becomes a two-way menu
+
+The Update button now opens a popup `Menu` with **Post process only** and **Update including OCR**,
+giving the `/transcript/postprocess/{fileId}` endpoint added above its UI entry point (the gap that
+entry flagged as the obvious follow-up).
+
+- Same shape as the Copy menu two buttons along — trigger `Button` + `<Menu popup>`, static item
+  array, `props.fileId` read inside the commands rather than passed from the template. `<Menu>` needs
+  no import (`unplugin-vue-components` + `PrimeVueResolver`). The items are arrows over hoisted
+  `function` declarations, so the array can still be built above them.
+- The two entries are not the same operation at different strengths: **post process re-derives from
+  the stored transcript and never calls the OCR model**, so it is free, safe to repeat, and cannot
+  return a worse transcription — it is what picks up a change to the named entity rules. Update runs
+  the OCR again and everything after it. Labelled to say so rather than "Update"/"Force update".
+- **`loading` is no longer toggled around either request**, which is a deliberate behaviour change
+  rather than an oversight in the rewrite. Both endpoints only queue an async process and return at
+  once, so blanking the transcript behind the spinner claimed the work was finished when the response
+  landed. Feedback moved onto the button — `Requested` + `pi-check`, or `Update failed` + `pi-times`,
+  reverting after 1.5s/2.5s — reusing the Copy menu's pattern and for the same reason: this view's
+  `error` ref is set in four places and rendered in none. Real progress lives in /processes, which is
+  where the process now shows up with its own label.
+- Both timers are cleared in `onUnmounted` so neither can write to a ref after teardown.
+- `pi-sparkles` for post-process here and in `ProcessesView`'s icon map, so the action and the process
+  it spawns look like the same thing.
+
+Verified statically — **no usable `node` on this machine** and the project has no type checking, as
+recorded in the earlier frontend entries. Checked by hand: every new template identifier is declared
+in `<script setup>`, script brackets balance, and the template's tag balance is identical to the
+committed version (compared against `git show HEAD:` with quoted attribute values masked, since a
+`>` inside `@click="(e) => …"` fools a naive tag scan — HEAD has the same construct).
+**Still to do: `npm run dev`, then run each menu entry and confirm the process appears in /processes.**

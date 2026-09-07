@@ -16,7 +16,15 @@
           <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
           <Button @click.prevent="toggleAllImages()" :label="allImagesShown ? 'Hide Images' : 'Show Images'" icon="pi pi-image" :severity="allImagesShown ? 'primary' : 'secondary'" size="small" outlined />
           <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
-          <Button @click.prevent="updateTranscript(transcript.fileId)" label="Update" icon="pi pi-refresh" size="small" outlined severity="secondary" />
+          <Button
+              :label="updateLabel"
+              :icon="updateIcon"
+              :severity="updateState === 'failed' ? 'danger' : 'secondary'"
+              size="small"
+              outlined
+              @click="(e) => updateMenu?.toggle(e)"
+          />
+          <Menu ref="updateMenu" :model="updateActionItems" popup />
           <Button @click.prevent="downloadFile(transcript.fileId)" label="PDF" icon="pi pi-download" size="small" outlined severity="secondary" />
           <Button
               :label="copyLabel"
@@ -171,6 +179,29 @@ const copyActionItems = [
   { label: 'Copy as MD', icon: 'pi pi-hashtag', command: copyAsMarkdown },
 ]
 
+const updateMenu = ref()
+const updateState = ref<'idle' | 'requested' | 'failed'>('idle')
+let updateStateTimer: ReturnType<typeof setTimeout> | undefined
+
+//same as copyActionItems: static labels, and the commands are arrows over hoisted function
+//declarations, so the array can be built here above them
+const updateActionItems = [
+  { label: 'Post process only', icon: 'pi pi-sparkles', command: () => postProcessTranscript(props.fileId) },
+  { label: 'Update including OCR', icon: 'pi pi-refresh', command: () => updateTranscript(props.fileId) },
+]
+
+const updateLabel = computed(() => {
+  if (updateState.value === 'requested') return 'Requested'
+  if (updateState.value === 'failed') return 'Update failed'
+  return 'Update'
+})
+
+const updateIcon = computed(() => {
+  if (updateState.value === 'requested') return 'pi pi-check'
+  if (updateState.value === 'failed') return 'pi pi-times'
+  return 'pi pi-refresh'
+})
+
 const copyLabel = computed(() => {
   if (copyState.value === 'copied') return 'Copied'
   if (copyState.value === 'failed') return 'Copy failed'
@@ -252,19 +283,40 @@ async function fetchTranscript() {
   }
 }
 
-async function updateTranscript(fileId) {
-  loading.value = true;
-  error.value = null;
+//re-runs the OCR itself, then everything derived from it
+async function updateTranscript(fileId: string) {
+  await requestProcess("transcript/update/" + fileId, "Failed to update transcript.")
+}
+
+//re-derives from the stored transcript only — no OCR call, so no cost and no risk of a worse
+//transcription; this is what picks up a change to the named entity rules
+async function postProcessTranscript(fileId: string) {
+  await requestProcess("transcript/postprocess/" + fileId, "Failed to post process transcript.")
+}
+
+/**
+ * Both endpoints only queue an async process and return immediately, so `loading` is deliberately
+ * not toggled here — blanking the view behind the spinner would say the work is done when the
+ * response lands, and it isn't. The button reports instead, the way the Copy menu does, since this
+ * view's `error` ref is never rendered anywhere. Progress belongs to /processes.
+ */
+async function requestProcess(url: string, failureMessage: string) {
+  error.value = null
   try {
-    const response = await authFetch("transcript/update/" + fileId);
-    if (!response.ok) throw new Error("Network response was not ok");
-    //console.log(response)
+    const response = await authFetch(url)
+    if (!response.ok) throw new Error("Network response was not ok")
+    flashUpdateState('requested')
   } catch (err: any) {
-    //console.error(err);
-    error.value = "Failed to update transcript.";
-  } finally {
-    loading.value = false;
+    console.error(err)
+    error.value = failureMessage
+    flashUpdateState('failed')
   }
+}
+
+function flashUpdateState(state: 'requested' | 'failed') {
+  updateState.value = state
+  clearTimeout(updateStateTimer)
+  updateStateTimer = setTimeout(() => (updateState.value = 'idle'), state === 'failed' ? 2500 : 1500)
 }
 
 const downloadFile = async (fileId: string) => {
@@ -335,7 +387,10 @@ function flashCopyState(state: 'copied' | 'failed') {
   copyStateTimer = setTimeout(() => (copyState.value = 'idle'), state === 'failed' ? 2500 : 1500)
 }
 
-onUnmounted(() => clearTimeout(copyStateTimer))
+onUnmounted(() => {
+  clearTimeout(copyStateTimer)
+  clearTimeout(updateStateTimer)
+})
 
 function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })

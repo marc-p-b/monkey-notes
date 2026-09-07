@@ -248,6 +248,104 @@ public class UpdateService {
         LOG.info("Done processing files {}", files2Process.size());
     }
 
+    /**
+     * Launches {@link #runListAsyncPostProcess} on a worker thread. Same two-half shape as
+     * {@link #forceTranscriptUpdate}: this half runs on the caller's thread and only sets up the
+     * process, the worker runs on the CompletableFuture thread. The launch is what carries the
+     * caller's Authentication across — every step down the chain resolves the owner through
+     * authService.getUsernameFromContext(), which is empty on a bare async thread.
+     */
+    public void postProcess(List<String> fileIds) {
+        LOG.info("Prepare Async (Post process {} file(s))", fileIds.size());
+
+        Optional<Authentication> optAuth = authService.getLoggedAuthentication();
+        if(optAuth.isEmpty()) {
+            LOG.error("No authentication found");
+            return;
+        }
+
+        SupplyAsyncAuthenticated sa = new SupplyAsyncAuthenticated(monitoringService, monitoringService.getCurrentMonitoringData(),
+                optAuth.get(),
+                () -> runListAsyncPostProcess(fileIds));
+
+        String description = fileIds.size() == 1
+                ? "post process " + utilsService.getLocalFileName(fileIds.get(0))
+                : "post process (" + fileIds.size() + " files)";
+        processService.registerSyncProcess(authService.getUsernameFromContext(), AsyncProcessName.postProcess,
+                monitoringService.getCurrentMonitoringData(), description);
+
+        CompletableFuture<AsyncResult> future = CompletableFuture.supplyAsync(sa);
+        processService.registerSyncProcessFuture(monitoringService.getCurrentMonitoringData(), future);
+    }
+
+    /**
+     * Everything that derives data from a transcript once the OCR itself is done — today only the
+     * named entities. The counterpart of {@link #runListAsyncProcess}, and like it this is the
+     * worker body, not the launcher: it expects to run inside a SupplyAsync* with a security
+     * context already set, and reports through the process id of the monitoring data it inherits.
+     * <p>
+     * Keyed on file ids rather than File2Process because none of that object is relevant here —
+     * there is no PDF to read, no md5 to compare and no sync source to branch on; the input is a
+     * transcript that already exists in the database.
+     * <p>
+     * Deliberately not chained onto the end of the OCR pipeline: {@link #runListAsyncProcess} still
+     * extracts entities inline, and running both would do the same work twice. This pass is for
+     * documents that were transcribed before a change to the extraction rules — a new named entity
+     * verb, say — and it is safe to re-run over the same document any number of times, because
+     * saveNamedEntitiesFromContent deletes a page's previous entities before re-extracting.
+     */
+    public void runListAsyncPostProcess(List<String> fileIds) {
+
+        final String processId = monitoringService.getCurrentMonitoringData().getId();
+
+        processService.updateProcess(processId, "files to post process : " + fileIds.size());
+
+        for(String fileId : fileIds) {
+
+            LOG.info("Post processing file id {}", fileId);
+
+            AsyncProcessFileEvent fileEvent = new AsyncProcessFileEvent(fileId, utilsService.getLocalFileName(fileId), null);
+            processService.attachFileEvent(processId, fileEvent);
+
+            //the user-scoped finder, never findByIdTranscriptPage_FileId : see its javadoc
+            List<EntityTranscriptPage> pages = repositoryTranscriptPage
+                    .findByIdTranscriptPage_UsernameAndIdTranscriptPage_FileId(authService.getUsernameFromContext(), fileId);
+
+            if(pages.isEmpty()) {
+                LOG.warn("No transcript page to post process for file {}", fileId);
+                processService.updateProcess(processId, "no transcript page for fileId " + fileId);
+                //next file, not return : aborting the batch on one empty document is the bug this
+                //loop's counterpart in runListAsyncProcess used to have
+                continue;
+            }
+
+            fileEvent.setTotalPages(pages.size()).setModifiedPages(pages.size());
+
+            postProcessNamedEntities(processId, fileId, pages);
+
+            logService.success(LogOperation.updateTranscript, fileId, "file post processed");
+        }
+
+        LOG.info("Done post processing files {}", fileIds.size());
+    }
+
+    /**
+     * Re-extracts the named entities of every page from the transcript as stored, which is not the
+     * same string the OCR pipeline extracts from: saveTranscriptPages collapses runs of spaces and
+     * tabs before saving, while the inline extraction in runListAsyncProcess reads the raw
+     * CompletionResponse. Entity offsets are absolute positions into the text the frontend renders,
+     * so the inline pass drifts by one character per collapsed run. Running this repairs that for
+     * the documents it covers.
+     */
+    private void postProcessNamedEntities(String processId, String fileId, List<EntityTranscriptPage> pages) {
+        for(EntityTranscriptPage page : pages) {
+            namedEntitiesService.saveNamedEntitiesFromContent(
+                    fileId, page.getIdTranscriptPage().getPageNumber(), page.getTranscript());
+        }
+        processService.updateProcess(processId,
+                "named entities extracted fileId " + fileId + " (" + pages.size() + " pages)");
+    }
+
     private String saveTranscript(String fileId, List<CompletionResponse> listCompletionResponse, int transcriptTotalPageCount) {
 
         Optional<EntityTranscript> optDoc = repositoryTranscript.findById(IdFile.createIdFile(authService.getUsernameFromContext(), fileId));

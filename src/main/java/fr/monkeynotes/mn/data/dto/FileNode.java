@@ -5,7 +5,8 @@ import java.util.List;
 
 public class FileNode {
     private DtoFile dtoFile;
-    private DtoTranscript dtoTranscript;
+    //null for a folder, and for a transcript row whose transcript is missing from the database
+    private DtoTranscriptDetails transcriptDetails;
     private List<FileNode> children;
     private String name;
     private boolean folder;
@@ -17,12 +18,12 @@ public class FileNode {
         this.folder = dtoFile.isFolder();
     }
 
-    public DtoTranscript getDtoTranscript() {
-        return dtoTranscript;
+    public DtoTranscriptDetails getTranscriptDetails() {
+        return transcriptDetails;
     }
 
-    public FileNode setDtoTranscript(DtoTranscript dtoTranscript) {
-        this.dtoTranscript = dtoTranscript;
+    public FileNode setTranscriptDetails(DtoTranscriptDetails transcriptDetails) {
+        this.transcriptDetails = transcriptDetails;
         return this;
     }
 

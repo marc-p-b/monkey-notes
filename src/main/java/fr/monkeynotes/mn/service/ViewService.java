@@ -128,23 +128,35 @@ public class ViewService {
                 .setTranscripts(repositoryFile.countByIdFile_UsernameAndType(username, FileType.transcript));
     }
 
+    /**
+     * The transcript half of a listing row, built exactly as the "by date" listing builds it
+     * ({@link DtoTranscript#fromEntity(EntityTranscript)} plus the file row's discovered_at), and
+     * deliberately NOT via {@link #buildDtoTranscript} — a listing only needs the title and the
+     * dates, while buildDtoTranscript reads every page and every page's named entities and applies
+     * every stored diff. That is several queries per page per document just to draw one row, and it
+     * lets a single unappliable diff (EditService.applyPatch rethrows as an unchecked exception)
+     * fail the whole folder listing instead of one transcript view.
+     */
+    private DtoTranscriptDetails transcriptDetails(EntityFile file, DtoFile parent) {
+        Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(file.getIdFile());
+        if (optTranscript.isEmpty()) {
+            LOG.warn("No transcript found for id {}", file.getIdFile());
+            return null;
+        }
+        return new DtoTranscriptDetails(
+                DtoTranscript.fromEntity(optTranscript.get()).setDiscovered_at(file.getDiscovered_at()),
+                parent);
+    }
+
     private List<FileNode> listFileNodesRecurs(EntityFile dir) {
         DtoFile directory = DtoFile.fromEntity(dir);
         List<FileNode> fileNodes = new ArrayList<>();
         List<EntityFile> children = repositoryFile.findAllByIdFile_UsernameAndParentFolderId(authService.getUsernameFromContext(), directory.getFileId());
         for (EntityFile child : children) {
-            DtoTranscript dtoTranscript = null;
-            if (child.getType() == FileType.transcript) {
-                Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(child.getIdFile());
-                if(optTranscript.isPresent()) {
-                    dtoTranscript = buildDtoTranscript(optTranscript.get(), child, ViewOptions.all());
-                } else {
-                    LOG.warn("No transcript found for id {}", child.getIdFile());
-                    //todo NO transcript / error
-                }
-            }
             FileNode node = new FileNode(DtoFile.fromEntity(child));
-            node.setDtoTranscript(dtoTranscript);
+            if (child.getType() == FileType.transcript) {
+                node.setTranscriptDetails(transcriptDetails(child, directory));
+            }
             if (child.getType() == FileType.folder) {
                 node.setChildren(listFileNodesRecurs(child));
             } //HERE
@@ -194,12 +206,14 @@ public class ViewService {
     }
 
     public List<FileNode> listLevel(String folderId) {
+        //resolved once for the whole level rather than per child: every row here has the same parent
+        DtoFile parent = repositoryFile.findById(idFile(folderId)).map(DtoFile::fromEntity).orElse(null);
+
         return repositoryFile.findAllByIdFile_UsernameAndParentFolderId(authService.getUsernameFromContext(), folderId).stream()
                 .map(f -> {
                     FileNode node = new FileNode(DtoFile.fromEntity(f));
-                    Optional<EntityTranscript> optTranscript = repositoryTranscript.findById(f.getIdFile());
-                    if(optTranscript.isPresent()) {
-                        node.setDtoTranscript(buildDtoTranscript(optTranscript.get(), f, ViewOptions.all()));
+                    if (f.getType() == FileType.transcript) {
+                        node.setTranscriptDetails(transcriptDetails(f, parent));
                     }
                     return node;
                 })

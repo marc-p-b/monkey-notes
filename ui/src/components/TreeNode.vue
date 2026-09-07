@@ -34,7 +34,7 @@
         <Checkbox v-if="selectMode" v-model="checked" binary @click.stop />
         <span v-else class="chevron-space"></span>
         <i class="pi pi-file-edit file-icon"></i>
-        <span class="node-name">{{ node.name }}</span>
+        <span class="node-name">{{ nodeLabel(node) }}</span>
       </div>
     </template>
   </li>
@@ -44,7 +44,7 @@
 import TreeNode from "./TreeNode.vue";
 import { authFetch } from "@/requests";
 import { ref, computed, inject } from "vue";
-import { sortNodes } from "@/utils/treeSort";
+import { sortNodes, nodeLabel } from "@/utils/treeSort";
 
 const error = ref<string | null>(null)
 const expanded = ref(false)
@@ -59,6 +59,12 @@ interface Node {
     fileId: string | number;
     discovered_at?: string;
   };
+  //FileNode.transcriptDetails — same shape the date view reads, null on a folder row
+  transcriptDetails?: {
+    transcript?: {
+      title?: string;
+    };
+  } | null;
   children?: Node[];
 }
 

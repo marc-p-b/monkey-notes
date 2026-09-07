@@ -38,6 +38,12 @@ interface Node {
     fileId: string | number;
     discovered_at?: string;
   };
+  //FileNode.transcriptDetails — same shape the date view reads, null on a folder row
+  transcriptDetails?: {
+    transcript?: {
+      title?: string;
+    };
+  } | null;
   children?: Node[];
 }
 

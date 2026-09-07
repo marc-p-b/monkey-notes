@@ -807,3 +807,40 @@ in `<script setup>` (the pattern `Menu ref="actionsMenu"` in this same file alre
 `onActivated` added to the `vue` import, and `defineExpose` called at setup top level in both panels.
 **Still to do: `npm run dev`, then click Home from another view and click Home again while on Home,
 confirming both refetch.**
+
+## Home "by names": rows show the title, and stop building a full transcript per row
+
+The folder tree labelled every row with `FileNode.name`, i.e. the PDF file name (`260121-yasser.pdf`),
+while the date view already showed the title parsed from the note. Same document, two different
+names depending on which panel was open.
+
+- **`FileNode.dtoTranscript` (a `DtoTranscript`) became `transcriptDetails` (a `DtoTranscriptDetails`)**
+  — the same DTO `/transcript/recent` and `/transcript/list/all` return, so both home panels now read
+  one shape. Nothing consumed the old field: no Java caller outside `ViewService`, and no `.vue` file
+  ever touched `dtoTranscript`, so the whole per-row transcript payload was being built and serialised
+  for nobody.
+- **The row DTO is now built by a new private `transcriptDetails(file, parent)`, deliberately not by
+  `buildDtoTranscript(..., ViewOptions.all())`** as both node paths did before. That call reads every
+  page of every transcript in the level, then every page's named entities, then applies every stored
+  diff, then computes diagram chaining, tags and TOC — several queries per page per document just to
+  draw a list row. It also meant a single unappliable diff took the whole folder listing down with it
+  (`EditService.applyPatch` rethrows as unchecked, backlog flaw #4), not just one transcript view.
+  `DtoTranscript.fromEntity(t)` + the file row's `discovered_at` is exactly what
+  `toTranscriptDetails` already does for the date view.
+- `listLevel` resolves the parent `DtoFile` once for the level instead of per child — every row in a
+  level has the same parent, unlike `toTranscriptDetails`, which works on an arbitrary set of
+  transcripts and has to look each parent up.
+- `listFileNodesRecurs` (behind the commented-out `/folder/list` mapping, `TranscriptController:159`)
+  got the same treatment rather than being left on the old path — it is dormant, not dead, and would
+  have been the more expensive of the two since it recurses the whole tree in one request.
+- **Frontend: `nodeLabel()` in `utils/treeSort.ts`, used both for display and for name-sorting.** The
+  sort has to agree with the label or an alphabetical listing of titles reads as unsorted — that is
+  why it lives next to `sortNodes` rather than inline in the template. No title fallback is needed on
+  this side: `DtoTranscript.fromEntity` already substitutes the file name for an empty title. Folder
+  rows keep `node.name` explicitly.
+
+Verified: `mvn compile` clean. **Frontend not built — still no usable `node` on this machine** (same
+as the "Home: by date listing" and "Home: force refresh" entries), and the project has no type
+checking regardless. Checked by hand that the `Node` interface, the imports and the template
+identifier line up in both `TreeView.vue` and `TreeNode.vue`. **Still to do: `npm run dev`, open Home
+in folder view, and confirm rows read as titles and sort alphabetically by them.**

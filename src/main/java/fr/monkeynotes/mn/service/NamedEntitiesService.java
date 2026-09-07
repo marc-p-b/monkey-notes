@@ -32,11 +32,11 @@ public class NamedEntitiesService {
 
     public void saveNamedEntities(String fileId, List<CompletionResponse> listCompletionResponse) {
 
-        List<EntityNamedEntity> namedEntities = new ArrayList<>();
+        //List<EntityNamedEntity> namedEntities = new ArrayList<>();
         for (CompletionResponse completionResponse : listCompletionResponse) {
             saveNamedEntitiesFromContent(completionResponse.getFileId(), completionResponse.getPageNumber(), completionResponse.getTranscript());
         }
-        repositoryNamedEntity.saveAll(namedEntities);
+        //repositoryNamedEntity.saveAll(namedEntities);
     }
 
     public void saveNamedEntitiesFromContent(String fileId, int pageNumber, String content) {

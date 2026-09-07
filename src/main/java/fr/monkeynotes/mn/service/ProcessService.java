@@ -112,6 +112,7 @@ public class ProcessService {
         });
     }
 
+    //fixme  The concurrentProcessFull() guard at :109. It is dead: ProcessService:116 compares p.getName() (an AsyncProcessName) with .equals(AsyncProcessName.flushChanges.name()) (a String) — always false, so the count is always 0. Copying it would look like a guard and be none.
     public boolean concurrentProcessFull() {
         long count = mapAsyncProcess.values().stream()
                 .filter(p -> p.getName().equals(AsyncProcessName.flushChanges.name()))

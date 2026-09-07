@@ -166,7 +166,9 @@ public class UpdateService {
 
                 if (modifiedOrNewImages.isEmpty()) {
                     LOG.info("No new or modified images, exiting from update process");
-                    return;
+                    //next file instead of abort : return replaced by continue !
+                    //return;
+                    continue;
                 }
 
                 // --------------------------------------

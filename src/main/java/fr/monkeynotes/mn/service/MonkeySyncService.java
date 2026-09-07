@@ -167,6 +167,7 @@ public class MonkeySyncService {
         updateService.runListAsyncProcess(files2Process);
     }
 
+    //fixme add username is sha
     public String createMonkeySyncId(String input) {
         MessageDigest digest = null;
         try {

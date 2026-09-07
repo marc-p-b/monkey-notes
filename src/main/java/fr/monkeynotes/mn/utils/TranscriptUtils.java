@@ -143,7 +143,7 @@ public class TranscriptUtils {
         return identities;
     }
 
-    public static List<DtoNamedEntity> identifyTitles(String text) {
+    public static List<DtoNamedEntity> identifyHashTitles(String text) {
         if(text == null || text.isEmpty()) {
             return new ArrayList<>();
         }

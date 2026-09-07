@@ -46,7 +46,7 @@ public class NamedEntitiesService {
 
         List<DtoNamedEntity> listNE = new ArrayList<>();
         listNE.addAll(TranscriptUtils.identifyNamedIdentities(content));
-        listNE.addAll(TranscriptUtils.identifyTitles(content));
+        listNE.addAll(TranscriptUtils.identifyHashTitles(content));
 
         for (DtoNamedEntity namedEntity : listNE) {
             LOG.info("Pages {} namedentity {}", pageNumber, namedEntity);

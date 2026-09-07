@@ -187,7 +187,7 @@ public class QuickNoteService {
             return null;
         }
 
-        List<DtoNamedEntity> titles = TranscriptUtils.identifyTitles(body);
+        List<DtoNamedEntity> titles = TranscriptUtils.identifyHashTitles(body);
         String title = titles.stream()
                 .map(DtoNamedEntity::getValue)
                 .filter(v -> v != null && !v.isBlank())

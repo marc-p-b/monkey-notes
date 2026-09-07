@@ -46,6 +46,7 @@ public class NamedEntitiesService {
 
         List<DtoNamedEntity> listNE = new ArrayList<>();
         listNE.addAll(TranscriptUtils.identifyNamedIdentities(content));
+        listNE.addAll(TranscriptUtils.identifyBareCheckboxes(content));
         listNE.addAll(TranscriptUtils.identifyHashTitles(content));
 
         for (DtoNamedEntity namedEntity : listNE) {

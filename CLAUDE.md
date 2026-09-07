@@ -192,6 +192,9 @@ The OCR system recognizes these patterns in handwritten notes:
 - ( VERB : VALUE )
 - [ VERB : VALUE ]
 
+The checkbox verbs (V / X only) are also recognized on their own, with no value — `<V>`, `[x]`,
+`(√)` — in which case the task text simply follows the marker as ordinary text.
+
 - DG : diagram current page
 - DGN : diagram next page
 - DT : date (DD/MM/YY)
@@ -886,3 +889,45 @@ unlisted glyph produced no entity. **Not re-run over existing data: notes alread
 the entities extracted at the time.** Named entities are re-extracted on OCR re-run
 (`NamedEntitiesService.saveNamedEntitiesFromContent` deletes and re-extracts per page), so a note
 with a tick only picks this up when its page is force-updated.
+
+## Valueless checkboxes: `<V>` / `<x>` with no value
+
+`<V> buy milk` now produces a `checked` entity spanning just `<V>`, so the marker renders as a
+checkbox and the task text stays ordinary text after it. Previously only `<V : buy milk>` was
+recognised and a bare marker stayed inline as literal characters.
+
+- **A second pattern and a second function (`identifyBareCheckboxes`), not an optional value group
+  on `NAMED_ENTITY_PATTERN`.** That group is what distinguishes a verb from ordinary prose: making
+  it optional would turn every `<T>`, `<P>` or `<L>` written in a note into a valueless entity. It
+  also keeps the two mutually exclusive by construction — the bare pattern requires the closing
+  bracket immediately after the verb, the valued one requires a `:` or `;` there, so no span can
+  match both. Verified rather than assumed: the check below asserts no overlap.
+- Modelled on `identifyHashTitles` (its own pattern, its own function, appended to the same list in
+  `NamedEntitiesService.saveNamedEntitiesFromContent`) since that is the existing shape for "a second
+  syntax over the same text". The three sources produce entities in per-source order, so the combined
+  list is not globally sorted by `start` — that was already true before this and the read paths
+  (`buildDtoTranscript`, `QuickNoteService.sortedByStart`) sort, which the renderer's `lFix` walk
+  depends on.
+- **Only the checkbox verbs, and only their own alias glyphs.** `NamedEntityVerb` gained an instance
+  `aliases()` next to the static `aliasChars()`; the bare pattern uses
+  `checked.aliases() + unchecked.aliases()` rather than the all-verbs version, so an alias added to
+  some future verb cannot silently make a bare `<glyph>` a checkbox. A bare `<T>` still means
+  nothing, which is the point — an unticked box drawn on a line is a complete statement by itself, a
+  tag with no value is not.
+- **The value is `""`, never null.** It goes straight into the entity's value column and into the
+  renderer's `<label>`, so null would only convert a missing string into an NPE somewhere
+  downstream. No frontend change was needed: the existing `checked`/`unchecked` branches emit
+  `<input type=checkbox><label>value</label>`, which with an empty value is just the checkbox.
+  Nothing reaches `named_entity_index` either — both verbs are non-indexable, so no empty-valued
+  index row is created.
+- Known trade-off, same one the syntax already makes elsewhere: `(v)` or `[x]` written for some
+  other reason now becomes a checkbox. `[x]` is markdown's own task syntax so that reads correctly;
+  a French `(v)` abbreviation would not. Narrowing to `<>` only would avoid it at the cost of being
+  inconsistent with every other verb.
+
+Verified: `mvn compile` clean, plus a throwaway main over both functions covering all three bracket
+pairs, all 12 glyphs, mixed valued/valueless on one page, internal spacing and lower case — and a
+negative set (`<T>`, `<P>`, `<>`, `<VV>`, an unterminated `<V`, `[y]`, `<V :>`) which produced no
+entity from either function. Spans were printed and checked against the source text, and the
+bare/valued overlap assertion did not fire. **Same caveat as the glyph entry: existing pages keep
+the entities extracted at the time, and only pick this up on a forced page update.**

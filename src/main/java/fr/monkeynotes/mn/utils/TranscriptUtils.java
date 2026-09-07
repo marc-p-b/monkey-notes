@@ -35,6 +35,25 @@ public class TranscriptUtils {
             Pattern.CASE_INSENSITIVE
     );
 
+    /**
+     * A checkbox written on its own, with nothing after it: {@code <V>}, {@code [x]}, {@code (\u221A)}.
+     * Deliberately a second pattern rather than making the value optional in
+     * {@link #NAMED_ENTITY_PATTERN} — that one's value group is what separates a verb from ordinary
+     * text, and making it optional would let every {@code <T>} or {@code <P>} in a note become a
+     * valueless entity. The two cannot both match the same span: this one requires the closing
+     * bracket right after the verb, the other requires a {@code :} or {@code ;} there.
+     * <p>
+     * Only the checkbox verbs, and only their own alias glyphs — a bare {@code <T>} means nothing,
+     * whereas an unticked box drawn on a line is a complete statement by itself.
+     */
+    private static final Pattern BARE_CHECKBOX_PATTERN = Pattern.compile(
+            "(?<open>[<(\\[])\\s*(?<verb>[VX\\Q"
+                    + NamedEntityVerb.checked.aliases()
+                    + NamedEntityVerb.unchecked.aliases()
+                    + "\\E])\\s*(?<close>[>)\\]])",
+            Pattern.CASE_INSENSITIVE
+    );
+
     public record TranscriptTitle(String title, Optional<OffsetDateTime> documentTitleDate) {}
 
     public static TranscriptTitle identifyTitleDates(File2Process f2p) {
@@ -139,6 +158,31 @@ public class TranscriptUtils {
 
             }
             identities.add(new DtoNamedEntity(verb, value, m.start(), m.end()));
+        }
+        return identities;
+    }
+
+    /**
+     * The valueless checkboxes of {@link #BARE_CHECKBOX_PATTERN}, as {@code checked} /
+     * {@code unchecked} entities with an empty value. Same verbs and same glyphs as the
+     * {@code <V : task>} form, so a page can mix both — the difference is only whether the task
+     * text sits inside the brackets or follows them as ordinary text.
+     * <p>
+     * The value is {@code ""} and never null: it is written straight to the entity's value column,
+     * and the renderer puts it in a label, so a null would only turn a missing string into an NPE
+     * somewhere downstream. Nothing indexes it either way — both verbs are non-indexable, so no
+     * empty-valued row reaches named_entity_index.
+     */
+    public static List<DtoNamedEntity> identifyBareCheckboxes(String text) {
+        if(text == null || text.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Matcher m = BARE_CHECKBOX_PATTERN.matcher(text);
+        List<DtoNamedEntity> identities = new ArrayList<>();
+        while (m.find()) {
+            NamedEntityVerb verb = NamedEntityVerb.fromString(m.group("verb"));
+            identities.add(new DtoNamedEntity(verb, "", m.start(), m.end()));
         }
         return identities;
     }

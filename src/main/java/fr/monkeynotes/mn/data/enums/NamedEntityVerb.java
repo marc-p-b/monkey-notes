@@ -95,6 +95,15 @@ public enum NamedEntityVerb {
     }
 
     /**
+     * This verb's alias glyphs, concatenated — the body of a regex character class, same contract
+     * as {@link #aliasChars()}. Use this rather than the all-verbs version whenever a pattern is
+     * about specific verbs, or it will silently start accepting an alias added to an unrelated one.
+     */
+    public String aliases() {
+        return aliases;
+    }
+
+    /**
      * Every alias glyph of every verb, meant as the body of a regex character class so the
      * transcript pattern is built from this enum instead of repeating the list. Callers must wrap
      * it in \Q...\E (legal inside a character class in java.util.regex): none of the glyphs is

@@ -4,6 +4,7 @@ import com.google.api.services.drive.model.File;
 import fr.monkeynotes.mn.ServiceException;
 import fr.monkeynotes.mn.data.*;
 import fr.monkeynotes.mn.data.dto.AsyncProcessFileEvent;
+import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
 import fr.monkeynotes.mn.data.entity.*;
 import fr.monkeynotes.mn.data.enums.*;
 import fr.monkeynotes.mn.data.repository.RepositoryFile;
@@ -88,6 +89,9 @@ public class UpdateService {
 
     @Autowired
     private NamedEntitiesService namedEntitiesService;
+
+    @Autowired
+    private EditService editService;
 
     @Autowired
     private ApplicationContext ctx;
@@ -340,10 +344,35 @@ public class UpdateService {
     private void postProcessNamedEntities(String processId, String fileId, List<EntityTranscriptPage> pages) {
         for(EntityTranscriptPage page : pages) {
             namedEntitiesService.saveNamedEntitiesFromContent(
-                    fileId, page.getIdTranscriptPage().getPageNumber(), page.getTranscript());
+                    fileId, page.getIdTranscriptPage().getPageNumber(), displayedTranscript(page));
         }
         processService.updateProcess(processId,
                 "named entities extracted fileId " + fileId + " (" + pages.size() + " pages)");
+    }
+
+    /**
+     * The page text as the transcript view renders it: the stored OCR transcript with the user's
+     * manual edit applied on top, the same thing buildDtoTranscript and SearchService.initLucene
+     * read. Extracting from the raw column instead would replace a manually corrected page's
+     * entities with entities read from the pre-edit text — TranscriptController's edit endpoint
+     * extracts from the edited content, so the offsets stored for that page index into the patched
+     * string, which is the only one the frontend ever renders.
+     * <p>
+     * A diff that no longer applies is logged and skipped rather than propagated: applyPatch
+     * rethrows PatchFailedException unchecked, and one page orphaned by an OCR re-run (its diff is
+     * keyed to the previous page version) would otherwise abort the whole batch. Falling back to the
+     * OCR text is also the right answer in that case — with the diff unappliable, that text is what
+     * the view shows too.
+     */
+    private String displayedTranscript(EntityTranscriptPage page) {
+        try {
+            return editService.applyPatch(DtoTranscriptPage.fromEntity(page)).getTranscript();
+        } catch (RuntimeException e) {
+            LOG.warn("Failed to apply the stored edit of fileId {} page {}, extracting from the OCR text instead",
+                    page.getIdTranscriptPage().getFileId(), page.getIdTranscriptPage().getPageNumber(), e);
+            //the entity's own column, untouched by the partially applied patch above
+            return page.getTranscript();
+        }
     }
 
     private String saveTranscript(String fileId, List<CompletionResponse> listCompletionResponse, int transcriptTotalPageCount) {

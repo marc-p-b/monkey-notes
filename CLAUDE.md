@@ -1025,3 +1025,36 @@ in `<script setup>`, script brackets balance, and the template's tag balance is 
 committed version (compared against `git show HEAD:` with quoted attribute values masked, since a
 `>` inside `@click="(e) => …"` fools a naive tag scan — HEAD has the same construct).
 **Still to do: `npm run dev`, then run each menu entry and confirm the process appears in /processes.**
+
+## Fix: post processing was extracting entities from the pre-edit text
+
+The post-process pass read `EntityTranscriptPage.getTranscript()` — the OCR column, with no stored
+edit applied. On a manually corrected page that silently undid the entity half of the correction:
+`TranscriptController.formEditTranscriptPage` extracts from the **submitted edited content**, so the
+offsets stored for that page index into the patched string, which is the only one the frontend ever
+renders (`buildDtoTranscript` runs every page through `editService.applyPatch` before returning it).
+Re-extracting from the raw column replaced those with entities whose values and offsets belong to a
+string nobody sees.
+
+- New private `displayedTranscript(page)` in `UpdateService`: `DtoTranscriptPage.fromEntity` →
+  `editService.applyPatch` → `getTranscript()`, i.e. exactly what `buildDtoTranscript` and
+  `SearchService.initLucene` already do before using page text. `UpdateService` gained an
+  `EditService` dependency for it; checked for a cycle first (`EditService` reaches
+  `AuthService` and two repositories, and cannot reach `UpdateService`) — Boot 3 rejects circular
+  references outright, so this is a startup failure, not an untidiness, when it goes wrong.
+- **An unappliable diff is logged and skipped, not propagated.** `applyPatch` rethrows
+  `PatchFailedException` as an unchecked `RuntimeException` (backlog flaw #4), and a page orphaned by
+  an OCR re-run — its diff is keyed to the previous page version — would abort the entire batch. The
+  fallback returns the entity's own column, which is also what the view shows for that page, since
+  the diff does not apply there either.
+- Note the fallback reads `page.getTranscript()` and not the DTO's: `applyPatch` mutates the DTO it
+  is handed, so a patch that fails midway leaves that object partially rewritten.
+
+The inline extraction in `runListAsyncProcess` has the same shape of mismatch and is left alone
+(instructed): it extracts from the raw `CompletionResponse` while the stored column is whitespace-
+collapsed. Different cause, same class of bug — the offsets and the rendered string come from two
+different versions of the text.
+
+Verified: `mvn compile` clean, and the injection graph re-parsed (30 `@Autowired` beans, 0 cycles).
+**Still to do, and this is the case that matters: edit a page, run "Post process only" on it, and
+confirm the entities still line up with the edited text.**

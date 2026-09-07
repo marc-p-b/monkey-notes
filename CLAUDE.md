@@ -200,8 +200,8 @@ The OCR system recognizes these patterns in handwritten notes:
 - P : person
 - @ : email
 - L : link
-- V : checked checkbox
-- X : unchecked checkbox
+- V : checked checkbox — or a tick glyph: ✓ ✔ ☑ ✅ √
+- X : unchecked checkbox — or a cross/empty-box glyph: ✗ ✘ ✕ ✖ ☒ ❌ ☐
 
 ## External Services
 
@@ -844,3 +844,45 @@ as the "Home: by date listing" and "Home: force refresh" entries), and the proje
 checking regardless. Checked by hand that the `Node` interface, the imports and the template
 identifier line up in both `TreeView.vue` and `TreeNode.vue`. **Still to do: `npm run dev`, open Home
 in folder view, and confirm rows read as titles and sort alphabetically by them.**
+
+## Named entity syntax: checkbox verbs accept a tick/cross glyph as well as V/X
+
+`<V : task>` / `<X : task>` now also read as `<✓ : task>` / `<✗ : task>`. OCR of a handwritten tick
+comes back as a symbol far more often than as the letter, and every such note was silently losing
+its checkbox — the pattern didn't match, so the text stayed inline with no entity at all.
+
+- **They are aliases of the existing verbs, not new verbs.** `NamedEntityVerb.checked`/`unchecked`
+  gained an `aliases` string (a third, optional constructor arg; the 2-arg constructor delegates, so
+  no other constant changed), and `fromString` falls back to a single-char alias lookup after the
+  exact-name pass. Everything downstream switches on the verb name — the Lucene indexer,
+  `namedEntityRender.ts`, `isIndexable` — so none of it needed to know which form was written.
+  Accepted: `✓ ✔ ☑ ✅ √` for checked, `✗ ✘ ✕ ✖ ☒ ❌ ☐` for unchecked. The empty ballot box is in the
+  unchecked list because an unticked box is exactly what `X` means in this syntax, and `√`
+  (U+221A, square root) in the checked one because that is what OCR commonly returns for a
+  handwritten tick, whatever Unicode calls it.
+- **The glyphs live in a nested `Aliases` holder class, and after the constant list, for two separate
+  language reasons**: an enum constant's constructor may not reference a static field *of its own
+  enum* (hence the holder), and the constant list must be the first thing in an enum body (hence the
+  position). Written as `\uXXXX` escapes because neither `pom.xml` nor `build.gradle` sets a source
+  encoding — a literal glyph in the source would depend on the build machine's platform default.
+- **The regex is built from `NamedEntityVerb.aliasChars()` rather than repeating the glyph list**, so
+  the pattern and the enum cannot drift into accepting different sets. It is wrapped in `\Q…\E`
+  (legal inside a character class in `java.util.regex`) — none of today's glyphs is a metacharacter,
+  but `[` or `^` as a future alias would silently corrupt the class otherwise.
+- Also hoisted the pattern out of `identifyNamedIdentities` into a `static final` — it was recompiled
+  on every call, and now does a string concat too. Same for nothing else in that method:
+  `patternDate` is still compiled inside the match loop, left alone as out of scope.
+- **Offsets are unaffected**, which is what matters for the frontend: every accepted glyph is a
+  single BMP char, so `m.start()`/`m.end()` stay in step with the JS string indices that
+  `renderNamedEntities`' `lFix` walk depends on. An astral-plane emoji alias would break that and
+  would need checking before being added.
+- A glyph that is *not* in the list (say `☠`) doesn't match the pattern at all, so it stays plain
+  text rather than becoming an `unknown` entity — the existing behaviour for any unrecognised verb.
+
+Verified: `mvn compile` clean, plus a throwaway main against `identifyNamedIdentities` over all 12
+glyphs, both letters, and a control set (`T`, `DGN`, `P`, an unlisted glyph) — every glyph resolved
+to the right verb with the right value and span, the letters and other verbs were unchanged, and the
+unlisted glyph produced no entity. **Not re-run over existing data: notes already transcribed keep
+the entities extracted at the time.** Named entities are re-extracted on OCR re-run
+(`NamedEntitiesService.saveNamedEntitiesFromContent` deletes and re-extracts per page), so a note
+with a tick only picks this up when its page is force-updated.

@@ -21,6 +21,20 @@ public class TranscriptUtils {
     private static final Set<NamedEntityVerb> NO_SPACE = Set.of(
             NamedEntityVerb.tag, NamedEntityVerb.email, NamedEntityVerb.link);
 
+    /**
+     * A verb is either its letter(s) or, for the checkbox verbs, one of the glyphs a handwritten
+     * tick or cross comes back as — {@code <\u2713 : done>} reads exactly like {@code <V : done>},
+     * and {@code fromString} maps both onto the same verb. The glyph class is built from
+     * {@link NamedEntityVerb#aliasChars()} rather than spelled out here so the pattern and the enum
+     * cannot drift apart; \Q...\E because a future alias could be a regex metacharacter.
+     */
+    private static final Pattern NAMED_ENTITY_PATTERN = Pattern.compile(
+            "(?<open>[<(\\[])\\s*(?<verb>(?:DG|DGN|T|DT|DE|DU|P|@|L|V|X|[1-6]|[\\Q"
+                    + NamedEntityVerb.aliasChars()
+                    + "\\E]))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
+            Pattern.CASE_INSENSITIVE
+    );
+
     public record TranscriptTitle(String title, Optional<OffsetDateTime> documentTitleDate) {}
 
     public static TranscriptTitle identifyTitleDates(File2Process f2p) {
@@ -69,13 +83,7 @@ public class TranscriptUtils {
             return new ArrayList<>();
         }
 
-        Pattern p = Pattern.compile(
-                "(?<open>[<(\\[])\\s*(?<verb>(?:DG|DGN|T|DT|DE|DU|P|@|L|V|X|[1-6]))\\s*[:;]\\s*(?<value>(?:[^>)\\]]+?))\\s*(?<close>[>)\\]])",
-                Pattern.CASE_INSENSITIVE
-        );
-
-
-        Matcher m = p.matcher(text);
+        Matcher m = NAMED_ENTITY_PATTERN.matcher(text);
         List<DtoNamedEntity> identities = new ArrayList<>();
         while (m.find()) {
 

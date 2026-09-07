@@ -20,7 +20,7 @@ public interface RepositoryTranscript extends JpaRepository<EntityTranscript, Id
     List<EntityTranscript> findAllByIdFile_Username(String username);
     Optional<EntityTranscript> findAllByIdFile_FileId(String id);
 
-    @Query("SELECT t FROM transcript t where t.idFile.username = :username ORDER BY t.transcripted_at DESC")
+    @Query("SELECT t FROM transcript t where t.idFile.username = :username ORDER BY t.documented_at DESC")
     List<EntityTranscript> findRecentByIdFile_Username(@Param("username") String username, Pageable pageable);
 
     @Modifying

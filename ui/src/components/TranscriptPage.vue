@@ -11,14 +11,14 @@
 
   <div v-else-if="editMode===false && showImages" class="flex-row view-image-row">
     <div class="view-left">
-      <p v-html="text" @click.prevent="switchEdit(page)"></p>
+      <p v-html="text" @dblclick.prevent="switchEdit(page)"></p>
     </div>
     <div class="view-right">
       <img v-if="imgSrc" :src="imgSrc" alt="preview" class="preview-img view-preview-img"/>
       <p v-else class="image-loading">Loading image...</p>
     </div>
   </div>
-  <p v-else-if="editMode===false" v-html="text" @click.prevent="switchEdit(page)"></p>
+  <p v-else-if="editMode===false" v-html="text" @dblclick.prevent="switchEdit(page)"></p>
   <div v-else class="edit-container">
     <div class="flex-row">
       <div class="left">
@@ -59,8 +59,6 @@ import {ref, defineProps, defineEmits, onMounted, watch} from "vue";
 import {authFetch} from "@/requests";
 import {renderNamedEntities} from "@/utils/namedEntityRender";
 
-import { useUiStore } from '@/composables/store.js'
-const store = useUiStore()
 
 interface NamedEntity {
   uuid: string
@@ -138,10 +136,10 @@ async function updatePage(page) {
   }
 }
 
+//reached from the page's own pencil button and from a double click on the text. A single click is
+//deliberately not a trigger: the rendered text carries live checkboxes and links, and with no
+//view-wide edit mode left to gate it, one stray click would swap the page out from under the reader
 const switchEdit = async (page) => {
-  if(store.transcript_edit_mode === false) {
-    return
-  }
   emit('requestEdit', page.pageNumber, false)
   downloadImage(page)
   editMode.value = true

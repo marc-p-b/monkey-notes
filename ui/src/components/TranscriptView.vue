@@ -13,7 +13,6 @@
           <span class="transcript-subtitle">{{ transcript.pages.length }} pages &middot; created {{ formatDate(transcript.documented_at) }}</span>
         </div>
         <div class="action-row">
-          <Button @click.prevent="toggleEditModeRequest()" :label="store.transcript_edit_mode ? 'Lock' : 'Edit'" :icon="stateEditIcon" :severity="stateEditSeverity" size="small" outlined />
           <Button @click.prevent="toggleAllImages()" :label="allImagesShown ? 'Hide Images' : 'Show Images'" icon="pi pi-image" :severity="allImagesShown ? 'primary' : 'secondary'" size="small" outlined />
           <Button @click.prevent="agent(transcript.fileId)" label="Agent" icon="pi pi-bolt" size="small" outlined severity="secondary" />
           <Button
@@ -48,6 +47,13 @@
           <TabPanels>
             <TabPanel value="0">
               <div class="properties-grid">
+                <div class="property-row">
+                  <i class="pi pi-file property-icon"></i>
+                  <span class="property-label">Name</span>
+                  <!-- the file as it arrived from the tablet; the h1 above shows the parsed title,
+                       which is usually not the same string -->
+                  <span class="property-value">{{ transcript.name }}</span>
+                </div>
                 <div class="property-row">
                   <i class="pi pi-clock property-icon"></i>
                   <span class="property-label">Transcribed</span>
@@ -122,7 +128,6 @@
               v-tooltip.top="pageShowImages[page.pageNumber] ? 'Hide image' : 'Show image'"
             />
             <Button
-              v-if="store.transcript_edit_mode"
               icon="pi pi-pencil"
               text
               size="small"
@@ -150,8 +155,6 @@ import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 
-import { useUiStore } from '@/composables/store.js'
-const store = useUiStore()
 
 const props = defineProps<{
   fileId: string
@@ -165,9 +168,6 @@ const transcript = ref<DtoTranscript>(null)
 const activeEditPageNumber = ref<number | null>(null)
 const pageShowImages = ref<Record<number, boolean>>({})
 const allImagesShown = ref(false)
-
-const stateEditIcon = ref<string>()
-const stateEditSeverity = ref<string>()
 
 const copyMenu = ref()
 const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
@@ -396,21 +396,6 @@ function agent(fileId) {
   router.push({ name: 'agent', params: { fileId } })
 }
 
-function syncEditButtonState() {
-  stateEditIcon.value = store.transcript_edit_mode ? "pi pi-lock-open" : "pi pi-lock"
-  stateEditSeverity.value = store.transcript_edit_mode ? "warn" : "secondary"
-}
-
-function toggleEditModeRequest() {
-  if (store.transcript_edit_mode) {
-    store.transcriptViewMode()
-    activeEditPageNumber.value = null
-  } else {
-    store.transcriptEditMode()
-  }
-  syncEditButtonState()
-}
-
 function togglePageImage(pageNumber: number) {
   pageShowImages.value[pageNumber] = !pageShowImages.value[pageNumber]
 }
@@ -448,8 +433,6 @@ function handlePageReady() {
 
 onMounted(async () => {
   await fetchTranscript()
-  store.transcriptViewMode()
-  syncEditButtonState()
   expectedReadyPages = transcript.value.pages.filter(p => p.pageDiagram !== PageDiagram.inline).length
   if (expectedReadyPages === 0) {
     scrollToHashAnchor()

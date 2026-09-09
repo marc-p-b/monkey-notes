@@ -1242,3 +1242,35 @@ Verified statically only — **no usable `node` on this machine**, no type check
 Checked by hand: the new util's exports match both import sites, `DateView` no longer declares the
 three functions it now imports, and the tree's `Node` interface change is additive. **Still to do:
 `npm run dev`, open Home in folder view, and confirm file rows show the age and date.**
+
+## Transcript view: editing is per page, no view-wide edit mode
+
+The global Edit/Lock button is gone. The per-page pencil is always available, a double click on a
+page's text opens that page's editor, and the properties tab gained the original file name.
+
+- **`store.transcript_edit_mode` and its two actions were deleted, not left dangling.** With the
+  button gone nothing could ever set the flag, and `TranscriptPage.switchEdit()` opened with
+  `if (store.transcript_edit_mode === false) return` — so leaving the flag in place would have made
+  both the pencil *and* the double click permanently dead, which is the kind of leftover that reads
+  as a bug in the new feature rather than a remnant of the old one. `TranscriptView` and
+  `TranscriptPage` no longer import the store at all; the other four `useUiStore` consumers are
+  untouched.
+- **Double click, not single.** The `@click` handler that was already on the two `v-html` paragraphs
+  became `@dblclick`. Single click had been safe only because the view-wide mode gated it; with that
+  gone, one stray click on a page would swap the rendered text — checkboxes, links and all — out from
+  under the reader. `renderNamedEntities` emits live `<input type=checkbox>` and `<a>` elements, so
+  the text is genuinely interactive and a single click legitimately belongs to them.
+- Both editor entry points still converge on the same state: the pencil goes through
+  `handleEditRequest` → `activeEditPageNumber` → the page's `watch`, while a double click calls
+  `switchEdit` locally and emits the same request upward. That watch's `!editMode.value` guard is
+  what stops the double-click path downloading the page image twice.
+- **`transcript.name` added as the first properties row**, before Transcribed. It is the file as it
+  arrived from the tablet (`260121-yasser.pdf`); the `h1` above shows `transcript.title`, the heading
+  parsed out of the note by the OCR pipeline, and the two are usually different strings — which is
+  exactly why the original name was worth surfacing rather than inferring from the title.
+
+Verified statically only — **no usable `node` on this machine**, no type checking in the project.
+Checked by hand: no reference to `stateEditIcon`/`stateEditSeverity`/`toggleEditModeRequest`/
+`syncEditButtonState` survives, `transcript_edit_mode` is gone from every file, and both components'
+templates still balance. **Still to do: `npm run dev`, then edit a page from the pencil and from a
+double click, and confirm a single click on a checkbox still just ticks it.**

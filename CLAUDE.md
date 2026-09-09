@@ -1128,3 +1128,85 @@ Was commenting out `saveNamedEntitiesFromContent` in `ecbbf75` deliberate — en
 deferred to "Post process only" — or a leftover from that refactor? If deliberate, step 1 becomes
 "the view must trigger a post-process after an edit" instead, which is much slower and reshapes
 steps 3-4.
+
+## Home "by date": rows show how old the note is
+
+Each row in `DateView.vue` now reads `Title    3 days ago, 06 Sep` instead of just the day/month.
+The date itself was already there but gave no sense of recency without doing the arithmetic —
+which is the thing you actually want from a chronological listing.
+
+- **Checked first that the listing really files notes under `documented_at`, and it does.** The
+  chain is `EntityTranscript.documented_at` → `DtoTranscript.fromEntity` → `/transcript/list/all`
+  (`ViewService.toTranscriptDetails`) → `DateView.effectiveDate`, which prefers it over
+  `discovered_at`/`transcripted_at`. Jackson serialises the getter `getDocumented_at()` as
+  `documented_at`, so the snake_case field name in the SFC's local interface is correct and not a
+  convention slip. No change was needed on that side. Worth knowing: `fromEntity` never sets
+  `discovered_at` (it lives on `EntityFile`), so the middle link of the fallback chain is only
+  populated because `toTranscriptDetails` stamps it on afterwards.
+- **`daysBetween` compares calendar days, not elapsed milliseconds.** A note written at 23:00
+  yesterday is "Yesterday" at 08:00 today, not "Today" because fewer than 24h have passed —
+  dividing the raw millisecond delta gets that wrong for exactly the notes whose age matters most.
+  Same reasoning as the day grouping in `QuickNotesView.vue`, which keys on the local date.
+- **The future case is handled rather than assumed away.** `documented_at` is parsed out of the
+  title by the OCR pipeline (`DT`/`DI` verbs), so a misread digit or a note dated ahead lands
+  tomorrow; without the negative branch the row would read `-3 days ago`.
+- Rendered as two spans so the age can carry normal text colour against the muted date, and the
+  whole thing is `v-if="document.date"` — an Undated note gets no label at all rather than a
+  fabricated one.
+- Known limitation, not worth machinery: `formatAge` reads `new Date()` at render time, so a tab
+  left open across midnight keeps yesterday's labels until something re-renders. The view already
+  refetches on every return to Home.
+
+Verified statically only — **still no usable `node` on this machine** (`node: command not found`),
+and the project has no type checking regardless, as recorded in the earlier frontend entries.
+Checked by hand: template tags balance, both new functions are declared in `<script setup>` and
+referenced only from the template, no identifier collisions. **Still to do: `npm run dev`, switch to
+the calendar view, and confirm today's notes read "Today, <date>".**
+
+### Follow-up: folder name on the row, next to the title
+
+`DateView.vue` rows now read `Title  📁 Folder-1     3 days ago, 06 Sep`. The chronological listing
+flattens the folder tree away, so a row gave no clue where the note lives — the one piece of context
+the folder panel has and this one didn't.
+
+- **No backend change: `/transcript/list/all` already returns it.** `DtoTranscriptDetails` carries
+  `parent` (a `DtoFile`) alongside the transcript, built by `ViewService.toTranscriptDetails`; the
+  SFC's local interface just never declared it. `parent` is nullable *by design* there — a document
+  whose parent folder row is gone is kept with a null parent rather than dropped (a half-finished
+  delete still shows up in the listing) — hence the `v-if` rather than an "unknown folder" label.
+- **The `flex: 1` moved off `.document-name` onto a new `.document-main` wrapper.** Left on the title
+  it would have stretched the title to fill the row and pushed the folder over to the date's edge,
+  i.e. right-aligned, which is the opposite of what was asked. With the wrapper, title and folder
+  travel together on the left and the date stays pinned right.
+- Both are `flex: 0 1 auto` with `min-width: 0`, so a long row shrinks rather than overflowing —
+  but the title is what identifies the row, so it is the folder that gives way first.
+
+Same verification caveat as the entry above: **no usable `node` on this machine**, no type checking
+in the project; template balance and identifier declarations checked by hand.
+
+### Follow-up: the folder is hidden for documents sitting in the sync root
+
+A note directly under the sync root was labelled with the root folder's own name — the same label on
+every such row, i.e. noise rather than context. Now hidden, **client-side, with no backend change**.
+
+- **The root folder row is stored with `/` as its name on both sync paths**, which is what makes this
+  a one-line test: `MonkeySyncService.createRootFolder()` saves it as `ROOT_FOLDER = "/"`, and the
+  Drive path does the same for the inbound folder (`UpdateService:576-580`, its own
+  `ROOT_FOLDER = "/"`) rather than storing the Drive folder's real name. Every other folder carries a
+  name that can't collide: MonkeySync stores the virtual path (`/Folder-1`, leading slash included,
+  which is also why a subfolder row reads as a path), Drive stores the folder's Drive name.
+- `ROOT_FOLDER_NAME` is duplicated in `DateView.vue` rather than fetched. The value is a constant in
+  two backend classes already; a third copy is the same trade the frontend makes elsewhere (e.g.
+  `Preferences.vue`'s `syncOptions` list mirroring the `SyncOption` enum). If it ever changes, it
+  changes in three places, and the failure is a redundant label — not a broken listing.
+- Rejected on the way there: an endpoint exposing `preferences.inputFolderId` so the client could
+  compare folder *ids*. It works and is authoritative, but it buys nothing over the name test here
+  and costs a request per listing. Also rejected as unsound: testing "the parent has no parent of its
+  own" — true only for MonkeySync, since `UpdateService:591` stamps the real Drive parent onto the
+  Drive root's row.
+- The decision lives in `showFolder(document)`, not in the fetch mapping, so `folder` stays the raw
+  value the API returned.
+
+Verified statically only — **no usable `node` on this machine** and the project has no type checking,
+as in the entries above. The backend is untouched, so nothing to compile. **Still to do:
+`npm run dev`, confirm a note in the sync root shows no folder and one in a subfolder still does.**

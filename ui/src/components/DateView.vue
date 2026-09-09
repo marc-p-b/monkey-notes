@@ -25,8 +25,13 @@
                       @update:modelValue="toggleSelectedId(document.fileId)" @click.stop />
             <span v-else class="chevron-space"></span>
             <i class="pi pi-file-edit file-icon"></i>
-            <span class="document-name">{{ document.title }}</span>
-            <span class="document-date">{{ formatDayMonth(document.date) }}</span>
+            <span class="document-main">
+              <span class="document-name">{{ document.title }}</span>
+              <span class="document-folder" v-if="showFolder(document)">
+                <i class="pi pi-folder"></i>{{ document.folder }}
+              </span>
+            </span>
+            <span class="document-date" v-if="document.date"><span class="document-age">{{ formatAge(document.date) }}</span>, {{ formatDayMonth(document.date) }}</span>
           </div>
         </li>
       </ul>
@@ -46,11 +51,15 @@ interface DtoTranscriptDetails {
     discovered_at?: string | null;
     transcripted_at?: string | null;
   };
+  //null for a document whose parent folder row is gone — ViewService keeps the row rather than
+  //dropping it, so the listing has to cope with a missing parent
+  parent?: { name?: string | null } | null;
 }
 
 interface DatedDocument {
   fileId: string;
   title: string;
+  folder: string | null;
   //null for a transcript that carries no usable timestamp at all — grouped under UNDATED_YEAR
   date: Date | null;
 }
@@ -62,6 +71,9 @@ interface YearGroup {
 
 //a label, not a year: sorts and renders alongside the real ones without needing a second code path
 const UNDATED_YEAR = 'Undated'
+
+//mirrors ROOT_FOLDER in MonkeySyncService/UpdateService — the name the sync root is stored under
+const ROOT_FOLDER_NAME = '/'
 
 const props = withDefaults(defineProps<{
   selectMode?: boolean;
@@ -138,9 +150,41 @@ function isChecked(fileId: string) {
   return selectedIds.has(fileId)
 }
 
+/**
+ * A document sitting directly in the sync root has no folder worth naming — every row would repeat
+ * the same label. The root folder row is stored with "/" as its name on both sync paths
+ * (MonkeySyncService.ROOT_FOLDER when the app creates it, UpdateService.ROOT_FOLDER for the Drive
+ * inbound folder), while every other folder carries its own path or Drive name, so the name alone
+ * identifies it — no extra request needed.
+ */
+function showFolder(document: DatedDocument) {
+  return document.folder !== null && document.folder !== ROOT_FOLDER_NAME
+}
+
 function formatDayMonth(date: Date | null) {
   if (!date) return ''
   return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+}
+
+//counted in calendar days, not in elapsed milliseconds: a note written late yesterday evening is
+//"1 day ago" this morning, not "0 days ago" because fewer than 24h have passed
+function daysBetween(from: Date, to: Date) {
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  return Math.round((startOfDay(to) - startOfDay(from)) / 86400000)
+}
+
+/**
+ * How old the note is, relative to today. A documented_at parsed from a title can land in the
+ * future (a note dated ahead, or a misread date), so the negative side is handled too rather than
+ * showing "-3 days ago".
+ */
+function formatAge(date: Date | null) {
+  if (!date) return ''
+  const days = daysBetween(date, new Date())
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 0) return days === -1 ? 'Tomorrow' : `in ${-days} days`
+  return `${days} days ago`
 }
 
 async function fetchTranscripts() {
@@ -154,6 +198,7 @@ async function fetchTranscripts() {
     documents.value = list.map(d => ({
       fileId: d.transcript.fileId,
       title: d.transcript.title,
+      folder: d.parent?.name ?? null,
       date: effectiveDate(d.transcript),
     }))
     expandedYears.add(currentYear)
@@ -247,18 +292,49 @@ defineExpose({ refresh: fetchTranscripts });
   flex-shrink: 0;
 }
 
-.document-name {
+/* title and folder travel together on the left; the flex:1 sits on the wrapper so the date stays
+   pinned right and the folder doesn't drift away from the title it belongs to */
+.document-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.document-name {
+  flex: 0 1 auto;
   font-size: 0.875rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* the title is what identifies the row, so the folder is the one that gives way when space runs out */
+.document-folder {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-folder i {
+  font-size: 0.7rem;
+  margin-right: 0.25rem;
+}
+
 .document-date {
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.document-age {
+  color: var(--p-text-color);
 }
 
 /* same declaration as TreeView.vue / QuickNotesView.vue, which each keep their own copy */

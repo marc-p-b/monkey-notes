@@ -35,6 +35,7 @@
         <span v-else class="chevron-space"></span>
         <i class="pi pi-file-edit file-icon"></i>
         <span class="node-name">{{ nodeLabel(node) }}</span>
+        <span class="node-date" v-if="fileDate"><span class="node-age">{{ formatAge(fileDate) }}</span>, {{ formatDayMonth(fileDate) }}</span>
       </div>
     </template>
   </li>
@@ -45,6 +46,7 @@ import TreeNode from "./TreeNode.vue";
 import { authFetch } from "@/requests";
 import { ref, computed, inject } from "vue";
 import { sortNodes, nodeLabel } from "@/utils/treeSort";
+import { effectiveDate, formatAge, formatDayMonth } from "@/utils/documentDate";
 
 const error = ref<string | null>(null)
 const expanded = ref(false)
@@ -63,6 +65,9 @@ interface Node {
   transcriptDetails?: {
     transcript?: {
       title?: string;
+      documented_at?: string | null;
+      discovered_at?: string | null;
+      transcripted_at?: string | null;
     };
   } | null;
   children?: Node[];
@@ -80,6 +85,10 @@ const props = withDefaults(defineProps<{
 });
 
 const sortedChildren = computed(() => sortNodes(props.node.children ?? [], props.orderBy, props.orderDir))
+
+//null on a folder row, and on a transcript carrying no date at all — the label is then omitted
+//rather than replaced by a placeholder, as in the date view
+const fileDate = computed(() => effectiveDate(props.node.transcriptDetails?.transcript))
 
 const checked = computed({
   get: () => selectedIds.has(String(props.node.dtoFile.fileId)),
@@ -164,6 +173,19 @@ async function updateFolder(fileId) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* same pair as .document-date/.document-age in DateView.vue, so a file reads the same in both home
+   panels; each component keeps its own copy of the rule, as the row styles already do */
+.node-date {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.node-age {
+  color: var(--p-text-color);
 }
 
 .update-btn {

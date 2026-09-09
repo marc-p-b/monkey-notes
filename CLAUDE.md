@@ -1210,3 +1210,35 @@ every such row, i.e. noise rather than context. Now hidden, **client-side, with 
 Verified statically only — **no usable `node` on this machine** and the project has no type checking,
 as in the entries above. The backend is untouched, so nothing to compile. **Still to do:
 `npm run dev`, confirm a note in the sync root shows no folder and one in a subfolder still does.**
+
+### Follow-up: the same age + date on the folder view's file rows
+
+`TreeNode.vue`'s file rows now carry the same right-aligned `3 days ago, 06 Sep` as the date view, so
+a document reads identically in both home panels.
+
+- **No backend change: the folder listing already carries all three dates.**
+  `ViewService.transcriptDetails(file, parent)` builds each row's `transcriptDetails` from
+  `DtoTranscript.fromEntity` plus the file row's `discovered_at` — the same construction
+  `toTranscriptDetails` uses for the date view — so `documented_at`/`discovered_at`/`transcripted_at`
+  were already on the wire and simply unread. That method returns null when a transcript row is
+  missing, which lands as "no date" rather than an error.
+- **`effectiveDate`, `formatAge` and `formatDayMonth` moved to `ui/src/utils/documentDate.ts`.** Both
+  panels have to agree on which of the three timestamps a note is filed under — a document showing
+  "3 days ago" in one panel and "8 days ago" in the other would read as a bug in the data, not in the
+  formatting. Same reasoning that put `nodeLabel` next to `sortNodes` in `treeSort.ts`: the moment two
+  components answer the same question about a row, the answer stops being a component detail.
+- The util takes an optional/nullable transcript (`DatedTranscript`) rather than `DateView`'s exact
+  DTO shape, because the tree's node type reaches it through `transcriptDetails?.transcript?`, which
+  is legitimately absent on a folder row.
+- Folder rows deliberately get no date. `EntityFile` has a `discovered_at` for folders, but that is
+  when the sync first saw the directory — it says nothing about the notes inside it, and the row
+  already has the refresh button in that corner.
+- The CSS is a second copy (`.node-date`/`.node-age` beside `.document-date`/`.document-age`) rather
+  than a shared class: the two components already keep parallel copies of the row/chevron/icon rules
+  (see the "rows mirror TreeNode.vue's .tree-row" comment in `DateView.vue`), and there is no shared
+  stylesheet to put it in.
+
+Verified statically only — **no usable `node` on this machine**, no type checking in the project.
+Checked by hand: the new util's exports match both import sites, `DateView` no longer declares the
+three functions it now imports, and the tree's `Node` interface change is additive. **Still to do:
+`npm run dev`, open Home in folder view, and confirm file rows show the age and date.**

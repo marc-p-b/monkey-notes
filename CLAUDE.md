@@ -1058,3 +1058,73 @@ different versions of the text.
 Verified: `mvn compile` clean, and the injection graph re-parsed (30 `@Autowired` beans, 0 cycles).
 **Still to do, and this is the case that matters: edit a page, run "Post process only" on it, and
 confirm the entities still line up with the edited text.**
+
+## PLANNED (not implemented): refreshing page text after updates / edits
+
+Analysis only — nothing below is in the code yet.
+
+### What happens today
+
+| Trigger | Endpoint | Refresh behaviour |
+| --- | --- | --- |
+| Inline page edit → `TranscriptPage.save()` (`TranscriptPage.vue:177`) | `POST transcript/edit/{fileId}/{page}` → `"OK"` | Client patches its local `transcript` and re-renders with **stale** `props.page.listNamedEntities` |
+| Page footer re-transcribe (`updatePage`, `TranscriptPage.vue:126`) | `GET transcript/update/{fileId}/{page}` | Async, fire-and-forget — **never** refreshes |
+| Header Update / Post process (`requestProcess`, `TranscriptView.vue:303`) | `GET transcript/update|postprocess/{fileId}` | Async, only a "Requested" flash — **never** refreshes |
+| Background (MonkeySync push, folder update) | — | An open transcript view goes silently stale |
+
+### Two blockers behind all of them
+
+1. **`TranscriptController.java:132` — named-entity extraction on edit is commented out.** Disabled
+   in `ecbbf75` (the "postprocess extracts from the rendered text" commit); before that it had been
+   live since `69b4267`. Entity `start`/`end` offsets therefore index into the *pre-edit* text, so
+   any refresh would faithfully re-render correct text with misplaced tags. Note `CLAUDE.md`'s
+   "Fix: post processing was extracting entities from the pre-edit text" entry and
+   `UpdateService.displayedTranscript()`'s javadoc both describe this call as live — code and docs
+   currently disagree.
+2. **`TranscriptPage.vue:123` — `let transcript = props.page.transcript`** is read once at setup.
+   Pages are keyed on `page.pageNumber` (`TranscriptView.vue:110`), which is stable, so a
+   parent-level refetch *reuses* the child components and the new text is never shown. Any
+   parent-driven refresh is a no-op until this reacts to prop changes.
+
+### Options weighed
+
+- **A — edit endpoint returns the rebuilt `DtoTranscript`.** One round trip; text, entities, TOC,
+  `tagsMap`, deltas and version all land consistent. Costs a `buildDtoTranscript` per save (N page
+  reads + N entity queries). Covers edits only.
+- **B — silent `refresh()` + refetch after every trigger.** ~10 lines and uniform, but an extra
+  request per edit, and useless on its own for the async triggers: the work is not done when the
+  response lands.
+- **C — poll `process/list` after an async request, then silently refetch.** Reuses the pattern
+  already in `ProcessesView.vue:151-159` (4 s interval, self-stopping). Needs the three request
+  endpoints to return the process id instead of a bare string, so the view watches *its own*
+  process rather than guessing by name (`DtoProcess` carries no fileId).
+- **D — SSE completion push.** The infra exists (`AgentController` `SseEmitter`, and
+  `ProcessService.getCompletedProcessesToNotify()` already groups completions per user). But that
+  method is *consuming* — it flips `notified` and evicts entries — so an SSE stream would race
+  `MailService:81` and steal its notifications. Needs a non-consuming listener API first.
+
+### Recommendation: A + C, layered
+
+1. Re-enable entity extraction on edit, moved into `EditService.edit` per the `//TODO move to
+   editService` at `TranscriptController.java:131`. Prerequisite for everything else.
+2. Make `TranscriptPage` react to `props.page` — watch it, reset `transcript` / `textEdit`, re-run
+   `loadPage()`, guarded so it does not clobber an open editor. Keying on `page.version` will *not*
+   work: `EditService.edit` never bumps the version (backlog flaw #4).
+3. Edit endpoint returns `DtoTranscript`; `save()` emits it up; `TranscriptView` swaps
+   `transcript.value` **without touching `loading`** — no spinner, no blanking, and
+   `activeEditPageNumber` / `pageShowImages` / the scroll anchor all survive.
+4. Expose a silent `refresh()` on `TranscriptView`; after Update / Post process / per-page
+   re-transcribe, poll `process/list` until that process id is gone, then call it. Endpoints return
+   `{processId}`. Also give the footer's `updatePage()` real feedback — it currently sets a
+   `loading` ref that is never rendered anywhere.
+5. Later: replace the poll with SSE once `ProcessService` grows a non-consuming listener, and reuse
+   it for `ProcessesView` and Home.
+
+Steps 1-3 are one coherent change and cover the common case (edits); step 4 is separable.
+
+### Open question, blocks step 1
+
+Was commenting out `saveNamedEntitiesFromContent` in `ecbbf75` deliberate — entity extraction
+deferred to "Post process only" — or a leftover from that refactor? If deliberate, step 1 becomes
+"the view must trigger a post-process after an edit" instead, which is much slower and reshapes
+steps 3-4.

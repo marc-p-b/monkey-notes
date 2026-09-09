@@ -1304,3 +1304,44 @@ Checked by hand: `closeEdit` and `.buttons` have no references left, `save`/`res
 above the `defineExpose` that exports them, no listener or ref from the reverted click-away version
 survives, and both templates balance. **Still to do: `npm run dev`, then edit a page and try each
 exit — Save, Reset, and the pencil.**
+
+## Page edit history: the delta badge opens a drop-up of stored versions
+
+Clicking the `N deltas` badge in a page footer now lists that page's stored edits — one entry per
+version, `v<n>` plus the date it was written, with a bin next to the newest (inert for now).
+
+- **`page.deltas` was never a version count**, which is the thing to know before reading this: it is
+  `patch.getDeltas().size()`, the number of hunks inside the *single* diff that applies to the page's
+  current version (`EditService.applyPatch` sets it). The versions themselves are separate rows in
+  `transcript_page_diff`, keyed `(username, fileId, pageNumber, version)`. So the badge count and the
+  number of entries in the panel are unrelated numbers and will routinely differ.
+- New `GET /transcript/deltas/{fileId}/{pageNumber}` → `List<DtoTranscriptPageDiff>` (version +
+  createdAt, oldest first), backed by `EditService.listPageDiffs`. **The diff payload itself is
+  deliberately not in the DTO** — a listing doesn't need it, and it is a `@Lob`.
+- **The repository finder is username-scoped**, unlike the two that were already there
+  (`findAllByIdTranscriptPageDiff_FileId`, no username). Not stylistic: MonkeySync derives a fileId by
+  hashing the virtual path with **no username in it**, so two users with the same tablet folder layout
+  genuinely share a fileId, and the unscoped finder would list another user's edit history. Same
+  reasoning as the page finder added in the post-process entry above.
+- **It opens upward.** The badge lives in the page footer, so a downward panel would cover the *next*
+  page's header rather than this page's own content. Built as a positioned div rather than a PrimeVue
+  popup `Menu`: the direction is then guaranteed instead of depending on the overlay's viewport
+  flipping, and an entry can hold a version, a date and a button without fighting the menu-item
+  template. `.page-card` clips its children, so the panel is capped at 13rem and scrolls.
+- Refetched on every open rather than cached — saving an edit writes a new row, and this panel is the
+  only place that would show it.
+- **Closes on an outside click**, which the editor deliberately does not do: nothing here is
+  committed, so dismissing costs nothing, whereas a dropdown that can only be closed by finding the
+  badge again is a trap.
+- The bin renders only on the last entry and has no handler yet, as asked. Worth knowing when it gets
+  one: deleting a diff is not cosmetic — `applyPatch` looks the diff up by the page's *current*
+  version, so removing that row silently reverts the page to its OCR text.
+- Also folded in: `TranscriptView`'s private `formatDate` (which carried a `//TODO common`) moved to
+  `utils/documentDate.ts` as `formatDateTime`, now used by both components instead of a third copy.
+
+Verified: `mvn compile` clean. Frontend static only — **no usable `node` on this machine**, no type
+checking. Checked by hand: the derived query's property path matches `IdTranscriptPageDiff`'s fields
+(`username`, `fileId`, `pageNumber`, `version`), the new route's 4 segments can't collide with
+`/transcript/{fileId}`, and `v-for` sits on its own element rather than sharing one with `v-else`.
+**Still to do: `npm run dev`, edit a page twice, and confirm both versions appear with the bin on the
+newest.**

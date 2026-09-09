@@ -15,6 +15,10 @@ import java.util.List;
 public interface RepositoryTranscriptPageDiff extends JpaRepository<EntityTranscriptPageDiff, IdTranscriptPageDiff> {
     List<EntityTranscriptPageDiff> findAllByIdTranscriptPageDiff_Username(String username);
     List<EntityTranscriptPageDiff> findAllByIdTranscriptPageDiff_FileId(String FileId);
+    //username-scoped on purpose: MonkeySync derives a fileId by hashing the virtual path with no
+    //username in it, so two users with the same tablet folder layout hold the same fileId
+    List<EntityTranscriptPageDiff> findAllByIdTranscriptPageDiff_UsernameAndIdTranscriptPageDiff_FileIdAndIdTranscriptPageDiff_PageNumber(
+            String username, String fileId, int pageNumber);
     //TODO add username parameter to delete
     void deleteByIdTranscriptPageDiff_FileId(String fileId);
 

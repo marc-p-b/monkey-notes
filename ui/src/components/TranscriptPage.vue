@@ -37,7 +37,32 @@
   </div>
   <div class="page-footer">
     <Button @click.prevent="updatePage(page)" icon="pi pi-refresh" text severity="secondary" size="small" v-tooltip.top="'Re-transcribe page'" />
-    <Badge v-if="page.deltas > 0" :value="page.deltas + (page.deltas === 1 ? ' delta' : ' deltas')" severity="secondary" />
+    <div v-if="page.deltas > 0" ref="deltaWrapper" class="delta-wrapper">
+      <Badge :value="page.deltas + (page.deltas === 1 ? ' delta' : ' deltas')" severity="secondary" class="delta-badge" @click="toggleDeltas" />
+      <!-- opens upward: the badge sits in the page footer, so a downward panel would cover the next
+           page's header instead of this page's own content -->
+      <div v-if="deltasOpen" class="delta-popup">
+        <div v-if="deltasLoading" class="delta-empty">Loading versions...</div>
+        <div v-else-if="deltaVersions.length === 0" class="delta-empty">No stored version</div>
+        <!-- v-for lives on its own element: Vue 3 resolves v-if before v-for on a single element,
+             which makes the pair a warning even when, as here, the alias isn't read by the branch -->
+        <template v-else>
+        <div v-for="(delta, index) in deltaVersions" :key="delta.version" class="delta-entry">
+          <span class="delta-version">v{{ delta.version }}</span>
+          <span class="delta-date">{{ formatDateTime(delta.createdAt) }}</span>
+          <Button
+              v-if="index === deltaVersions.length - 1"
+              icon="pi pi-trash"
+              text
+              size="small"
+              severity="secondary"
+              class="delta-delete"
+              v-tooltip.top="'Delete this version'"
+          />
+        </div>
+        </template>
+      </div>
+    </div>
     <div class="footer-stats">
       <span v-if="showStats" class="stats-info">
         <span class="stat-model">{{ page.aiModel }}</span>
@@ -50,9 +75,10 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, defineProps, defineEmits, onMounted, watch} from "vue";
+import {ref, defineProps, defineEmits, onMounted, onUnmounted, watch} from "vue";
 import {authFetch} from "@/requests";
 import {renderNamedEntities} from "@/utils/namedEntityRender";
+import {formatDateTime} from "@/utils/documentDate";
 
 
 interface NamedEntity {
@@ -190,6 +216,58 @@ const save = async () => {
   }
 }
 
+interface PageDiff {
+  version: number
+  createdAt: string
+}
+
+const deltaWrapper = ref<HTMLElement | null>(null)
+const deltasOpen = ref(false)
+const deltasLoading = ref(false)
+const deltaVersions = ref<PageDiff[]>([])
+
+/**
+ * The page's edit history — one entry per stored diff. Not the same number as page.deltas, which
+ * counts the hunks inside the diff for the page's current version, so the list can be shorter or
+ * longer than the badge. Refetched on every open rather than cached: saving an edit writes a new
+ * row, and this panel is the only place that would show it.
+ */
+async function fetchDeltaVersions() {
+  deltasLoading.value = true
+  try {
+    const response = await authFetch("transcript/deltas/" + props.page.fileId + "/" + props.page.pageNumber)
+    if (!response.ok) throw new Error("Network response was not ok")
+    deltaVersions.value = await response.json()
+  } catch (err: any) {
+    console.error(err)
+    deltaVersions.value = []
+  } finally {
+    deltasLoading.value = false
+  }
+}
+
+function toggleDeltas() {
+  deltasOpen.value = !deltasOpen.value
+  if (deltasOpen.value) fetchDeltaVersions()
+}
+
+//a dropdown the user can't dismiss by clicking away would be a trap; unlike the editor, nothing is
+//committed here, so closing on an outside click costs nothing
+function onDocumentClick(event: MouseEvent) {
+  if (!deltasOpen.value) return
+  if (!deltaWrapper.value?.contains(event.target as Node)) deltasOpen.value = false
+}
+
+//bound only while the panel is open, and post-flush so the click that opened it is already over
+watch(deltasOpen, (open) => {
+  if (open) document.addEventListener('click', onDocumentClick)
+  else document.removeEventListener('click', onDocumentClick)
+}, { flush: 'post' })
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClick)
+})
+
 //discards the edits and puts the last stored text back, staying in edit mode — with no cancel
 //button left, this is how you get out of a change you don't want before it is saved
 const reset = () => {
@@ -301,6 +379,70 @@ onMounted(async () => {
   color: var(--p-surface-400);
   font-size: 0.875rem;
   font-style: italic;
+}
+
+.delta-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.delta-badge {
+  cursor: pointer;
+}
+
+/* anchored to the badge and opening upward. .page-card clips its children, so the panel is capped
+   and scrolls rather than being cut off on a page with a long edit history */
+.delta-popup {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 10;
+  min-width: 14rem;
+  max-height: 13rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  background-color: var(--p-content-background);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.delta-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.delta-entry:hover {
+  background-color: var(--p-content-hover-background);
+}
+
+.delta-version {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.delta-date {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.delta-delete {
+  margin-left: auto;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  padding: 0 !important;
+}
+
+.delta-empty {
+  padding: 0.35rem 0.4rem;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--p-surface-400);
 }
 
 .page-footer {

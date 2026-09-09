@@ -156,6 +156,7 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { authFetch } from "@/requests.ts";
+import { formatDateTime as formatDate } from "@/utils/documentDate";
 import TranscriptPage from "./TranscriptPage.vue";
 import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
@@ -251,16 +252,6 @@ interface NamedEntity {
   pageNumber: number
   start: number
   end: number
-}
-
-//TODO common
-function formatDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(date)
 }
 
 function getIndent(verb: string): number {

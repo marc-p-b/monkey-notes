@@ -42,3 +42,10 @@ export function formatDayMonth(date: Date | null): string {
   if (!date) return ''
   return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
 }
+
+//date + time, for the timestamps shown in the transcript view (properties, edit history) — the
+//"//TODO common" that used to sit on TranscriptView's private copy
+export function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(dateStr))
+}

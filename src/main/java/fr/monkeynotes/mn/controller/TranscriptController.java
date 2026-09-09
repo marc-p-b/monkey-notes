@@ -4,6 +4,7 @@ import fr.monkeynotes.mn.data.ViewOptions;
 import fr.monkeynotes.mn.data.dto.DtoCounts;
 import fr.monkeynotes.mn.data.dto.DtoTranscript;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptDetails;
+import fr.monkeynotes.mn.data.dto.DtoTranscriptPageDiff;
 import fr.monkeynotes.mn.data.dto.FileNode;
 import fr.monkeynotes.mn.data.entity.EntityFile;
 import fr.monkeynotes.mn.data.entity.IdFile;
@@ -123,6 +124,11 @@ public class TranscriptController {
     public ResponseEntity<String> formUpdateTranscriptPage(@PathVariable String fileId, @PathVariable int pageNumber) {
         updateService.forcePageUpdate(fileId, pageNumber);
         return ResponseEntity.ok().body("OK");
+    }
+
+    @GetMapping("/transcript/deltas/{fileId}/{pageNumber}")
+    public ResponseEntity<List<DtoTranscriptPageDiff>> pageDeltas(@PathVariable String fileId, @PathVariable int pageNumber) {
+        return ResponseEntity.ok().body(editService.listPageDiffs(fileId, pageNumber));
     }
 
     @PostMapping("/transcript/edit/{fileId}/{pageNumber}")

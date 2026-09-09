@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.*;
 import fr.monkeynotes.mn.data.dto.DtoTranscriptPage;
+import fr.monkeynotes.mn.data.dto.DtoTranscriptPageDiff;
 import fr.monkeynotes.mn.data.entity.EntityTranscriptPage;
 import fr.monkeynotes.mn.data.entity.EntityTranscriptPageDiff;
 import fr.monkeynotes.mn.data.entity.IdTranscriptPage;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -72,6 +74,21 @@ public class EditService {
             }
         }
         return patch;
+    }
+
+    /**
+     * The edit history of one page: one entry per stored diff, oldest version first. Note this is a
+     * different quantity from DtoTranscriptPage.deltas, which counts the hunks inside the single
+     * diff that applies to the page's current version.
+     */
+    public List<DtoTranscriptPageDiff> listPageDiffs(String fileId, int pageNumber) {
+        return repositoryTranscriptPageDiff
+                .findAllByIdTranscriptPageDiff_UsernameAndIdTranscriptPageDiff_FileIdAndIdTranscriptPageDiff_PageNumber(
+                        authService.getUsernameFromContext(), fileId, pageNumber)
+                .stream()
+                .map(DtoTranscriptPageDiff::fromEntity)
+                .sorted(Comparator.comparingInt(DtoTranscriptPageDiff::getVersion))
+                .toList();
     }
 
     public DtoTranscriptPage applyPatch(DtoTranscriptPage page) {

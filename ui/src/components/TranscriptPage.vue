@@ -34,11 +34,6 @@
       </div>
 
     </div>
-
-    <div class="buttons">
-      <Button @click.prevent="save" label="save" />
-      <Button @click.prevent="closeEdit" label="close" />
-    </div>
   </div>
   <div class="page-footer">
     <Button @click.prevent="updatePage(page)" icon="pi pi-refresh" text severity="secondary" size="small" v-tooltip.top="'Re-transcribe page'" />
@@ -144,10 +139,6 @@ const switchEdit = async (page) => {
   downloadImage(page)
   editMode.value = true
 }
-const closeEdit = async () => {
-  emit('requestEdit', props.page.pageNumber, true)
-  editMode.value = false
-}
 
 async function downloadImage(page) {
   const path = "image/" + page.username + "/" + page.fileId + "/" + page.pageNumber
@@ -198,6 +189,15 @@ const save = async () => {
     await loadPage();
   }
 }
+
+//discards the edits and puts the last stored text back, staying in edit mode — with no cancel
+//button left, this is how you get out of a change you don't want before it is saved
+const reset = () => {
+  textEdit.value = transcript
+}
+
+//the Save and Reset buttons live in the page header, which TranscriptView owns
+defineExpose({ save, reset })
 
 const loadPage = async () => {
   if(props.page.pageDiagram == PageDiagram.full) {
@@ -301,11 +301,6 @@ onMounted(async () => {
   color: var(--p-surface-400);
   font-size: 0.875rem;
   font-style: italic;
-}
-
-.buttons {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .page-footer {

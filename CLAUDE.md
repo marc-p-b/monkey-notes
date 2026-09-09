@@ -1274,3 +1274,33 @@ Checked by hand: no reference to `stateEditIcon`/`stateEditSeverity`/`toggleEdit
 `syncEditButtonState` survives, `transcript_edit_mode` is gone from every file, and both components'
 templates still balance. **Still to do: `npm run dev`, then edit a page from the pencil and from a
 double click, and confirm a single click on a checkbox still just ticks it.**
+
+### Follow-up: edit mode is Save/Reset in the page header
+
+- **Save moved from the editor body into the page card header, left-aligned next to the page
+  number**, and stays a coloured (default primary) button; Reset next to it is outlined and
+  secondary, the same shape as the buttons in this view's own action row.
+  The right-hand `.page-header-actions` group is unchanged — the new `.page-edit-actions` group has
+  no `margin-left: auto`, which is what keeps it on the left.
+- **The header belongs to `TranscriptView`, the text being edited belongs to `TranscriptPage`**, so
+  the header needs a handle on the page it is acting for: the child `defineExpose({ save, reset })`
+  and the parent collects the components in a `pageRefs` record via a function ref. **Keyed by page
+  number, not collected as an array** — a `v-for` ref array's order is not guaranteed to match the
+  rendered order, and the wrong entry would save one page's text over another's. Vue calls a function
+  ref with null on unmount, hence the delete branch.
+- **"Close" is gone and `closeEdit()` with it** (it had exactly one caller). The pencil in the header
+  already toggles the page shut, so nothing was lost.
+- **Reset restores the last stored text and stays in edit mode**, which is what makes the pencil safe
+  to use as the discard path.
+- The three exits are therefore: Save commits and closes, the pencil closes and discards, Reset
+  reverts the text in place. A click-away-saves gesture was built and then removed at the user's
+  request — worth knowing if it is ever reconsidered: the workable version measures "outside" against
+  the whole `.page-card` (so the header's own buttons don't count as outside and fire a second save)
+  and listens on `mousedown`, since a text selection released past the textarea's edge is an inside
+  gesture that `click` would misattribute.
+
+Verified statically only — **no usable `node` on this machine**, no type checking in the project.
+Checked by hand: `closeEdit` and `.buttons` have no references left, `save`/`reset` are declared
+above the `defineExpose` that exports them, no listener or ref from the reverted click-away version
+survives, and both templates balance. **Still to do: `npm run dev`, then edit a page and try each
+exit — Save, Reset, and the pencil.**

@@ -118,6 +118,12 @@
           <span v-if="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }} - Diagram : {{ page.diagramTitle }}</span>
           <span v-else-if="page.pageDiagram == PageDiagram.inline" class="page-badge">(Page {{ page.pageNumber + 1 }} Diagram : {{ page.diagramTitle }})</span>
           <span v-else="page.pageDiagram == PageDiagram.full" class="page-badge">Page {{ page.pageNumber + 1 }}</span>
+          <!-- editing actions sit on the left, next to the page number, so they read as being about
+               this page rather than joining the view/image controls pinned on the right -->
+          <div v-if="activeEditPageNumber === page.pageNumber" class="page-edit-actions">
+            <Button label="Save" size="small" @click="pageRefs[page.pageNumber]?.save()" />
+            <Button label="Reset" outlined size="small" severity="secondary" @click="pageRefs[page.pageNumber]?.reset()" />
+          </div>
           <div class="page-header-actions">
             <Button
               icon="pi pi-image"
@@ -138,7 +144,7 @@
           </div>
         </div>
         <div v-if="page.pageDiagram != PageDiagram.inline" class="page-content">
-          <TranscriptPage :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="!!pageShowImages[page.pageNumber]" @requestEdit="handleEditRequest" @pageReady="handlePageReady" />
+          <TranscriptPage :ref="el => setPageRef(page.pageNumber, el)" :page="page" :nextPage="transcript.pages[index + 1] ?? null" :activeEditPageNumber="activeEditPageNumber" :showImages="!!pageShowImages[page.pageNumber]" @requestEdit="handleEditRequest" @pageReady="handlePageReady" />
         </div>
       </div>
     </div>
@@ -407,6 +413,17 @@ function toggleAllImages() {
   })
 }
 
+//the Save/Reset buttons live in the page header, which this view owns, while the text being edited
+//lives in the page component — so the header needs a handle on the page it is acting for. Keyed by
+//page number rather than collected as an array: a v-for ref array's order is not guaranteed to
+//match the rendered order. Vue calls the function ref with null on unmount, hence the delete.
+const pageRefs = ref<Record<number, { save: () => void; reset: () => void } | null>>({})
+
+function setPageRef(pageNumber: number, el: any) {
+  if (el) pageRefs.value[pageNumber] = el
+  else delete pageRefs.value[pageNumber]
+}
+
 function handleEditRequest(pageNumber: number, isClosing: boolean) {
   if (isClosing) {
     activeEditPageNumber.value = null
@@ -618,6 +635,13 @@ onMounted(async () => {
   padding: 0.5rem 1rem;
   background-color: var(--p-surface-50);
   border-bottom: 1px solid var(--p-surface-200);
+}
+
+.page-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 1rem;
 }
 
 .page-header-actions {
